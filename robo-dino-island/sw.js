@@ -1,5 +1,5 @@
 /* Offline cache for Leandro's Robo Dino Island. Only same-origin files; nothing is fetched from other sites. */
-const CACHE = 'robo-dino-island-808d347c6b';
+const CACHE = 'robo-dino-island-00f9f7e53b';
 const FILES = ['./',
   './assets/hdri/sky_1k.hdr',
   './assets/hdri/sky_2k.jpg',
@@ -25,9 +25,12 @@ const FILES = ['./',
   './js/game.js',
   './js/input.js',
   './js/main.js',
+  './js/mayhem.js',
   './js/mech.js',
+  './js/music.js',
   './js/noise.js',
   './js/proctex.js',
+  './js/rider.js',
   './js/vendor/three.bundle.min.js',
   './js/world.js',
   './manifest.webmanifest'];

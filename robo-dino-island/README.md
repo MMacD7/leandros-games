@@ -3,7 +3,7 @@
 An ad-free 3D browser game on a jungle island with a volcano, ruins and a sea. You play as either a **real dinosaur** (bite, roar, tail whip, horn charge, pounce) or a **robot mech dinosaur** (lasers, homing missiles, bite/stomp), and you battle a wild mix of both. A knocked-out robot falls over in a shower of sparks. A knocked-out real dino gets dizzy stars and limps off in a puff of dust. There is no gore or blood.
 
 * **No ads, purchases, external links, tracking or network calls.** Everything is static files from the same origin, and a CSP (`default-src 'self'`) enforces that.
-* All 16 dinos (8 real, 8 robot) and all upgrades are unlocked with **bolts**. You only earn bolts by playing.
+* **Everything is unlocked from the start**: all 16 dinos (8 real, 8 robot) and every upgrade at max level. Upgrade levels can be dialled up or down for free in the garage. Bolts are just a score now and don't gate anything. Older saves get everything unlocked when they load.
 * It's an installable PWA and works fully offline after the first load.
 
 ## Play / host
@@ -16,46 +16,72 @@ On iPhone/iPad: open it in Safari, tap **Share → Add to Home Screen**, then la
   * Collect energy cores (heal/boost), scrap and bolts.
   * Wild dinos (a mix of real and robot) patrol, roar, and chase you when you get close. Robots shoot and bite. Real dinos bite, charge, pounce, whip or stomp. They back off when they're damaged.
   * The glowing home-base pad repairs you and is a safe zone.
-* **Battle Arena**: 90-second timed rounds in the stone ruins. Each wave is tougher, and you get bonus bolts at the end.
-* **Dino Garage**: it has **Real**, **Robot** and **Upgrades** tabs. Unlock dinos with bolts. The 5-level upgrades apply to both kinds: Armor & Tough Hide, Lasers & Jaws, Missiles & Specials, Leg Power, Boost & Stamina.
-* If you get knocked out, you respawn at base with a short shield. You keep your bolts and unlocks.
-* Progress is saved in `localStorage` (key `robo-dino-island.v1`, unchanged). Saves from the first version load fine, and the free T-Rex is added to them.
+* **Battle Arena**: 90-second timed rounds in the stone ruins, with waves of enemies. Every 3rd wave is a **BOSS WAVE**: a giant MEGA ROBO-REX or TITAN T-REX with its own health bar (+30 s on the clock). Meteor-storm ☄️ and air-strike ✈️ power-ups appear in the arena. Hit combos and KO streak banners (DOUBLE KO!, TRIPLE KO!, MEGA KO!, RAMPAGE!) give bonus bolts. The round ends with a fireworks-and-explosions celebration.
+* **Dino Garage**: it has **Real**, **Robot** and **Upgrades** tabs. Pick any dino. The 5-level upgrades apply to both kinds: Armor & Tough Hide, Lasers & Jaws, Missiles & Specials, Leg Power, Boost & Stamina, and 🔥 Fire Power (hotter fire breath, burning missiles, and a roar that breathes fire for the real dinos).
+* If you get knocked out, you respawn at base with a short shield. You keep your bolts.
+* Progress is saved in `localStorage` (key `robo-dino-island.v1`, unchanged). Saves from older versions load fine.
 * Knocking out an enemy triggers a short slow-motion flash.
+
+### Fire and explosions (v3)
+* **Explosions** are layered: a fireball, rolling secondary blasts, shockwave rings, flying flaming debris, a smoke column, a scorch mark, a light flash, camera shake and a bass boom.
+* **Explosive barrels, fuel tanks and crates** sit in the arena and in depots around the island. Shoot, bite, stomp or burn them and they blow up, damage nearby enemies, and set off chain reactions. They respawn later.
+* **Fire**: missiles leave fire-and-smoke trails and set their targets on fire. Explosions leave burning ground patches. Boost and Ptero-Jet leave jet flames. Burning dinos take a little damage over time, and water puts the fire out.
+* **Volcano**: it erupts every minute or so, with a lava fountain and lava bombs. A red warning circle shows where each bomb will land, so you can dodge. It has glowing lava rivers (don't walk in them) and embers in the air.
+* **Title screen**: explosions behind the logo, embers, and volcano eruptions.
+* Particles are pooled and capped per quality tier. Low uses about a third of Ultra's particle budget, with fewer debris chunks and emitters.
+
+### Music
+* An original, high-energy soundtrack generated live in code (Web Audio step sequencer). There are no audio files and no downloads.
+* Tracks:
+  * Title: cinematic taiko drums, brass and pads.
+  * Free roam: jungle percussion and marimba.
+  * Battle: fast driving drums, bass, stabs and arps.
+  * Boss wave: double kick, distorted bass, brass and choir.
+  * Victory: a fanfare sting.
+* Tracks loop seamlessly, crossfade, and duck under explosions and roars. Music starts after the first tap (an iOS rule).
+* The 🎵 button (title screen) and Pause → Music turn it on or off, separately from sound effects. The setting is saved.
+
+### Leandro rides
+* A cartoony, low-poly kid rider (Leandro) sits on every dino: a leather saddle on the real ones and a cockpit seat on the robots. The seat is found automatically for each of the 16 bodies.
+* He bounces with the stride, leans into turns, holds on tight during roars, fire breath and boosts, and fist-pumps on every KO. He waves from the T-Rex on the title screen.
+* If your dino gets knocked out, he hops off safely, waves, and climbs back on when the dino comes back. He never gets hurt.
+* Turn him on or off with the 🧒 *Leandro rides* button in the garage or the pause menu. The setting is saved and is on by default.
+* He is built entirely in code from simple shapes (`js/rider.js`). No photos or image files of anyone are in the game.
 
 ### Real dinos
 Buttons: **BITE** (hold), **special** (with cooldown), **ROAR** (stuns enemies in front of you for a few seconds, 6 s cooldown), **RUN**.
 
-| Dino | Price | Special | Notes |
-|---|---|---|---|
-| T-Rex | free | MEGA CHOMP: lunging crushing bite | strongest bite, longest roar stun |
-| Carnotaurus | 200 | HORN CHARGE: fast bull charge with knockback | quick, bull horns |
-| Velociraptor | 350 | POUNCE: leaps onto a target from far away | smallest and fastest, sickle claws, feathers |
-| Spinosaurus | 600 | TAIL SWIPE: 360° tail whip | **swims**, big sail |
-| Triceratops | 800 | GORE CHARGE: horn charge that stuns | tough frill shield |
-| Ankylosaurus | 1000 | CLUB SMASH: club-tail whip that stuns | heaviest armor |
-| Stegosaurus | 1200 | SPIKE TAIL: spiked tail whip | back plates |
-| Brachiosaurus | 1600 | TITAN STOMP: rears up and slams down with a shockwave | biggest of all |
+| Dino | Special | Notes |
+|---|---|---|
+| T-Rex | MEGA CHOMP: lunging crushing bite | strongest bite, longest roar stun |
+| Carnotaurus | HORN CHARGE: fast bull charge with knockback | quick, bull horns |
+| Velociraptor | POUNCE: leaps onto a target from far away | smallest and fastest, sickle claws, feathers |
+| Spinosaurus | TAIL SWIPE: 360° tail whip | **swims**, big sail |
+| Triceratops | GORE CHARGE: horn charge that stuns | tough frill shield |
+| Ankylosaurus | CLUB SMASH: club-tail whip that stuns | heaviest armor |
+| Stegosaurus | SPIKE TAIL: spiked tail whip | back plates |
+| Brachiosaurus | TITAN STOMP: rears up and slams down with a shockwave | biggest of all |
 
 ### Robot dinos
 Buttons: **Laser** (hold), **Missile**, **Bite/Stomp**, **Boost**.
 
-| Dino | Price | Special |
-|---|---|---|
-| Robo-Rex | free (default) | all-rounder, big bite, strong lasers |
-| Raptor-X | 150 | very fast, double lasers |
-| Tri-Tank | 300 | very tough armor |
-| Stego-Blade | 450 | glowing blade plates, spiky tail |
-| Ptero-Jet | 600 | **flies** (hold Boost to climb) |
-| Spino-Sub | 800 | **swims** fast in the sea |
-| Ankylo-Hammer | 1000 | heavy armor, hammer tail |
-| Bronto-Titan | 1500 | the biggest |
+| Dino | Special |
+|---|---|
+| Robo-Rex | all-rounder, strong lasers, **FIRE BREATH** flamethrower (sets enemies and barrels on fire) |
+| Raptor-X | very fast, double lasers |
+| Tri-Tank | very tough armor |
+| Stego-Blade | glowing blade plates, spiky tail |
+| Ptero-Jet | **flies** (hold Boost to climb) |
+| Spino-Sub | **swims** fast in the sea |
+| Ankylo-Hammer | heavy armor, hammer tail |
+| Bronto-Titan | the biggest |
 
 ## Controls
 * **Touch**
   * Left side: floating joystick to move.
   * Right side: drag to orbit the camera.
   * Buttons: **Laser** (hold), **Missile** (homing, with cooldown), **Bite/Stomp** (bites an enemy in front of you, otherwise a shockwave stomp), **Boost**.
-* **Keyboard/mouse**: WASD/arrows to move, mouse drag to look, J = laser, K = missile, L = bite/stomp, Shift = boost. The pause button is at the top left.
+* **Keyboard/mouse**: WASD/arrows to move, mouse drag to look, J = laser, K = missile, L = bite/stomp (fire breath for Robo-Rex), Shift = boost. The pause button is at the top left.
 * Sound is synthesized live with WebAudio. Use the speaker button on the title screen or the pause menu to mute.
 
 ## Graphics and performance
