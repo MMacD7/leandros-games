@@ -32,14 +32,18 @@ window.G = window.G || {};
   G.stageOf = function (xp) { return xp >= 200 ? 2 : xp >= 60 ? 1 : 0; };
 
   const KEY = 'leandros-dino-world-v1';
-  const fresh = () => ({ bones: 0, total: 0, unlocked: ['raptor'], selected: 'raptor', xp: {}, best: { score: 0, dist: 0 },
-    eggs: 0, fossils: 0, muted: false, seenUnlock: ['raptor'] });
+  // Every dinosaur is unlocked from the start (bones are just a score).
+  const ALL = () => G.DINOS.map(d => d.id);
+  const fresh = () => ({ bones: 0, total: 0, unlocked: ALL(), selected: 'raptor', xp: {}, best: { score: 0, dist: 0 },
+    eggs: 0, fossils: 0, muted: false, seenUnlock: ALL() });
   G.save = fresh();
   G.load = function () {
     try {
       const s = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (s && typeof s === 'object') G.save = Object.assign(fresh(), s);
     } catch (e) { /* ignore */ }
+    G.save.unlocked = ALL(); G.save.seenUnlock = ALL(); // older saves: unlock everything on load
+    if (!G.DINO[G.save.selected]) G.save.selected = 'raptor';
     G.checkUnlocks(true);
   };
   G.persist = function () { try { localStorage.setItem(KEY, JSON.stringify(G.save)); } catch (e) { /* ignore */ } };
@@ -54,7 +58,7 @@ window.G = window.G || {};
     if (G.ui) G.ui.updateBones();
   };
   G.checkUnlocks = function (silent) {
-    G.DINOS.forEach(d => {
+    G.DINOS.forEach(d => { // (kept for safety: everything is already unlocked)
       if (G.save.total >= d.cost && G.save.unlocked.indexOf(d.id) < 0) {
         G.save.unlocked.push(d.id);
         if (!silent && G.ui) G.ui.queueUnlock(d.id); else G.save.seenUnlock.push(d.id);
