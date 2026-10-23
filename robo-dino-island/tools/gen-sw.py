@@ -6,7 +6,7 @@ for d, _, fs in os.walk(root):
     rel = os.path.relpath(d, root)
     if rel.split(os.sep)[0] in ('screenshots', 'tools', '.git'): continue
     for f in fs:
-        if f in ('sw.js', 'README.md') or f.endswith('.txt'): continue
+        if f in ('sw.js', 'README.md', 'PROGRESS.md') or f.endswith('.txt'): continue
         files.append(os.path.normpath(os.path.join(rel, f)).replace(os.sep, '/'))
 files.sort()
 h = hashlib.sha1()
