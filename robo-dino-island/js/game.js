@@ -1,0 +1,508 @@
+// Gameplay: player + wild robot and real dinos, AI, weapons and natural attacks, pickups, battle arena rounds, chase camera.
+import * as THREE from './vendor/three.bundle.min.js';
+import { Mech } from './mech.js';
+import { Beast } from './beast.js';
+import { DINOS, statsFor } from './data.js';
+import { BASE, ARENA, VOLC } from './world.js';
+import { sfx } from './audio.js';
+import { clamp, lerp, rng } from './noise.js';
+
+const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+const pool = new Map();
+export const makeDino = (def, assets, wild) => def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+function getMech(def, assets, wild) { const k = def.id + (wild ? '!' : ''); const p = pool.get(k); if (p && p.length) return p.pop(); return makeDino(def, assets, wild); }
+function freeMech(m) { const k = m.def.id + (m.wild ? '!' : ''); if (!pool.has(k)) pool.set(k, []); m.ko = 0; m.flash = 0; m.obj.scale.setScalar(1); m.obj.rotation.set(0, 0, 0); pool.get(k).push(m); }
+const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+class Dino {
+  constructor(game, def, wild, level = 1) {
+    this.g = game; this.def = def; this.wild = wild; this.level = level;
+    this.mech = getMech(def, game.assets, wild); game.scene.add(this.mech.obj);
+    this.pos = new THREE.Vector3(); this.yaw = 0; this.speedNow = 0; this.alive = true; this.koT = 0;
+    this.radius = def.radius ?? (def.kind === 'bronto' ? 3.2 : def.kind === 'raptor' ? 1.4 : def.kind === 'ptero' ? 2 : 2.4) * def.scale;
+    this.real = !!def.real; this.stunT = 0; this.slowT = 0; this.act = null; this.biteA = 0; this.chargeA = 0; this.whipA = 0; this.rearA = 0; this.air = 0;
+    this.tilt = new THREE.Quaternion(); this.laserT = 0; this.missileT = 0; this.meleeT = 0; this.jaw = 0; this.roar = 0; this.side = 0;
+    this.fly = !!def.fly; this.swim = !!def.swim; this.alt = 0; this.climb = 0; this.knock = new THREE.Vector3();
+    if (wild && def.real) { const m = 0.55 + 0.17 * level; this.st = { hp: Math.round(def.hp * m), speed: def.speed * 0.8, laser: 0, bite: 4 + level * 2.2, rate: Math.max(0.9, def.biteRate * 2.2), missiles: 0, missileCD: def.specialCD * 2.4, melee: 4 + level * 2.2, roar: def.roar * 0.5, roarCD: 12, boost: 0 }; }
+    else if (wild) { const m = 0.55 + 0.17 * level; this.st = { hp: Math.round(def.hp * m), speed: def.speed * 0.78, laser: 2.2 + level * 0.9, rate: 0.2, missiles: level >= 3 ? 2 : 0, missileCD: 9, melee: 6 + level * 2.5, boost: 0 }; }
+    else this.st = statsFor(def, game.save.up);
+    this.maxHp = this.st.hp; this.hp = this.maxHp; this.boostE = this.st.boost;
+    this.ai = { state: 'patrol', t: 0, wp: null, home: new THREE.Vector3(), burst: 0, retreated: false };
+  }
+  get center() { return tmp2.set(this.pos.x, this.pos.y + this.mech.height * 0.5, this.pos.z); }
+  forward(out) { return out.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+  place(x, z, yaw = 0) { this.pos.set(x, this.g.world.height(x, z), z); this.yaw = yaw; if (this.fly) this.alt = 7; this.groundY(); }
+  groundY() { const w = this.g.world, h = w.height(this.pos.x, this.pos.z); this.ground = h;
+    if (this.fly) { const base = Math.max(h, 0) + 2; this.pos.y = lerp(this.pos.y, Math.max(base, base + this.alt), 0.15); }
+    else if (this.swim && h < -0.8) this.pos.y = lerp(this.pos.y, Math.max(h, -1.7), 0.2);
+    else this.pos.y = h; }
+  hit(dmg, from, attacker) {
+    if (!this.alive) return;
+    if (this.shieldT > 0) { this.mech.flash = 0.4; return; }
+    this.hp -= dmg; this.mech.flash = 1; this.g.onHit(this, dmg);
+    if (from) { tmp.subVectors(this.pos, from).setY(0).normalize(); this.knock.addScaledVector(tmp, Math.min(8, dmg * 0.25)); }
+    if (this.wild && this.ai.state === 'patrol') this.ai.state = 'chase';
+    if (this.hp <= 0) { this.hp = 0; this.alive = false; this.koT = 0; this.g.onKO(this, attacker); }
+  }
+  move(dt, dir, mag, boost) {
+    const w = this.g.world;
+    if (this.stunT > 0) mag = 0;
+    const spd = this.st.speed * (boost ? 1.75 : 1) * (this.slowT > 0 ? 0.45 : 1) * (this.swim && this.ground < -0.8 ? 1.3 : 1) * (!this.swim && !this.fly && this.ground < -0.4 ? 0.6 : 1);
+    if (mag > 0.05) {
+      const want = Math.atan2(dir.x, dir.z), d = angDiff(this.yaw, want), tr = (this.def.kind === 'raptor' ? 6 : 4) * (boost ? 0.8 : 1);
+      this.turn = clamp(d, -1, 1); this.yaw += clamp(d, -tr * dt, tr * dt);
+      const k = Math.max(0.15, Math.cos(Math.min(Math.PI / 2, Math.abs(d))));
+      this.speedNow = lerp(this.speedNow, spd * mag * k, Math.min(1, dt * 6));
+    } else { this.speedNow = lerp(this.speedNow, 0, Math.min(1, dt * 7)); this.turn = 0; }
+    const ox = this.pos.x, oz = this.pos.z;
+    this.pos.x += Math.sin(this.yaw) * this.speedNow * dt + this.knock.x * dt; this.pos.z += Math.cos(this.yaw) * this.speedNow * dt + this.knock.z * dt;
+    this.knock.multiplyScalar(Math.max(0, 1 - dt * 5));
+    // water: only swimmers and flyers go deep
+    const h = w.height(this.pos.x, this.pos.z);
+    if (!this.fly && !this.swim && h < -1.6) { this.pos.x = ox; this.pos.z = oz; this.speedNow *= 0.5; }
+    const r = Math.hypot(this.pos.x, this.pos.z); if (r > 380) { this.pos.x *= 380 / r; this.pos.z *= 380 / r; }
+    w.collide(this.pos, this.radius * 0.6, this.fly && this.alt > 4);
+    this.groundY();
+  }
+  updateVisual(dt) {
+    const m = this.mech, w = this.g.world;
+    const n = w.normalAt(this.pos.x, this.pos.z, tmp);
+    if (this.fly || (this.swim && this.ground < -0.8)) n.set(0, 1, 0);
+    const q = new THREE.Quaternion().setFromUnitVectors(up, n.lerp(up, this.mech.quad ? 0.35 : 0.65).normalize());
+    this.tilt.slerp(q, Math.min(1, dt * 6));
+    m.obj.position.copy(this.pos);
+    m.obj.quaternion.copy(this.tilt).multiply(new THREE.Quaternion().setFromAxisAngle(up, this.yaw));
+    if (!this.alive) {
+      m.ko = Math.min(1, m.ko + dt * 1.6);
+      const e = 1 - Math.pow(1 - m.ko, 3);
+      m.obj.rotateZ(e * 1.35 * (this.side || 1)); m.obj.position.y -= e * 0.6 * this.def.scale;
+    }
+    this.jaw = Math.max(0, this.jaw - dt * 3); this.roar = Math.max(0, this.roar - dt * 1.2); this.biteA = Math.max(0, this.biteA - dt * 4); this.slowT -= dt;
+    const ro = this.real ? sstep(0, 0.35, this.roar) : (this.roar > 0.2 ? 1 : 0);
+    m.animate(dt, this.alive ? this.speedNow : 0, { jaw: Math.max(this.jaw, this.roar > 0 ? 1 : 0), roar: ro, turn: this.turn || 0, flying: this.fly, boost: this.boosting, climb: this.climb,
+      bite: Math.sin(this.biteA * Math.PI), charge: this.chargeA, whip: this.whipA, rear: this.rearA, air: this.air, pant: this.boosting ? 1 : 0, look: this.look || 0 });
+    // heavy footsteps: thump, dust at the foot and a camera rumble for big dinos near the camera
+    if (!this.fly && this.alive && this.speedNow > 1.5 && !this.air) { const s = Math.sin(m.phase * (m.quad ? 1 : 1)); if ((s > 0) !== (this._lastS > 0)) this.g.footstep(this, s > 0 ? 0 : 1); this._lastS = s; }
+  }
+  remove() { this.g.scene.remove(this.mech.obj); this.act = null; freeMech(this.mech); }
+}
+
+export class Game {
+  constructor(ctx) {
+    Object.assign(this, ctx); // renderer, scene, camera, world, fx, assets, save, input, hud, persist
+    this.enemies = []; this.bolts = []; this.pickups = []; this.player = null; this.mode = 'roam';
+    this.cam = { yaw: Math.PI, pitch: 0.2, dist: 14, pos: new THREE.Vector3(), look: new THREE.Vector3() };
+    this.respawnT = 0; this.spawnT = 1; this.lock = null; this.r = rng(99);
+    this.buildPickups();
+    const lockGeo = new THREE.RingGeometry(0.85, 1, 32); lockGeo.rotateX(-Math.PI / 2);
+    this.lockRing = new THREE.Mesh(lockGeo, new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    this.lockRing.visible = false; this.scene.add(this.lockRing);
+    this.dummy = { pos: new THREE.Vector3(), alive: true, mech: { height: 0 }, radius: 1.5 };
+    this.shots = []; this.timers = []; this.slowmo = 0;
+  }
+  later(t, fn) { this.timers.push({ t, fn }); }
+
+  // ---------- setup ----------
+  spawnPlayer(atArena) {
+    if (this.player) this.player.remove();
+    const def = DINOS.find(d => d.id === this.save.selected) || DINOS[0];
+    const p = new Dino(this, def, false); this.player = p;
+    if (atArena) p.place(ARENA.x - 30, ARENA.z, Math.PI / 2); else p.place(BASE.x, BASE.z - 6, Math.PI);
+    this.cam.yaw = p.yaw + Math.PI; this.snapCam = true;
+    if (this.hud.actions) this.hud.actions(def);
+    return p;
+  }
+  clearEnemies() { this.enemies.forEach(e => e.remove()); this.enemies = []; }
+  spawnEnemy(x, z, level, defId) {
+    // wild island life is a mix of real dinos and robots (alternating-ish so both always show up)
+    this.mixN = (this.mixN || 0) + 1; const wantReal = this.r() < 0.35 ? this.r() < 0.5 : this.mixN % 2 === 0;
+    const pickFrom = DINOS.filter(d => d.real === wantReal && !(d.fly && this.mode === 'battle'));
+    const def = defId ? DINOS.find(d => d.id === defId) : pickFrom[(this.r() * pickFrom.length) | 0];
+    const e = new Dino(this, def, true, level); e.place(x, z, this.r() * 6.28); e.ai.home.set(x, 0, z); e.laserT = 1 + this.r(); e.missileT = 2 + this.r() * 3; e.meleeT = 2;
+    this.enemies.push(e); return e;
+  }
+  roamSpawnPoint() {
+    for (let t = 0; t < 40; t++) {
+      const a = this.r() * Math.PI * 2, d = 60 + this.r() * 220, x = Math.cos(a) * d * 0.9, z = Math.sin(a) * d * 0.9;
+      const h = this.world.height(x, z);
+      if (h < 1.5 || h > 40) continue; if (Math.hypot(x - BASE.x, z - BASE.z) < 75) continue;
+      if (this.player && Math.hypot(x - this.player.pos.x, z - this.player.pos.z) < 45) continue;
+      if (Math.hypot(x - VOLC.x, z - VOLC.z) < 30) continue;
+      return [x, z, 1 + Math.min(3, Math.floor(Math.hypot(x - BASE.x, z - BASE.z) / 90))];
+    }
+    return [ARENA.x, ARENA.z, 2];
+  }
+
+  buildPickups() {
+    const coreGeo = new THREE.OctahedronGeometry(0.7, 0), scrapGeo = new THREE.TorusGeometry(0.45, 0.18, 6, 8), boltGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 6);
+    const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x40f0ff).multiplyScalar(1.6), toneMapped: false });
+    const scrapMat = new THREE.MeshStandardMaterial({ color: 0x9aa2ac, metalness: 1, roughness: 0.3 });
+    const boltMat = new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 1, roughness: 0.25, emissive: 0x4a2a00 });
+    this.pk = { core: new THREE.InstancedMesh(coreGeo, coreMat, 80), scrap: new THREE.InstancedMesh(scrapGeo, scrapMat, 80), bolt: new THREE.InstancedMesh(boltGeo, boltMat, 160) };
+    Object.values(this.pk).forEach(m => { m.count = 0; m.frustumCulled = false; this.scene.add(m); });
+    // fixed spawn points around the island
+    const r = rng(1234);
+    for (let i = 0; i < 90; i++) {
+      const a = r() * Math.PI * 2, d = 20 + r() * 260, x = Math.cos(a) * d, z = Math.sin(a) * d, h = this.world.height(x, z);
+      if (h < 1.2 || h > 45) continue;
+      this.pickups.push({ type: r() < 0.4 ? 'core' : 'scrap', x, z, y: h, alive: true, t: 0, ph: r() * 6 });
+    }
+  }
+  dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
+
+  // ---------- modes ----------
+  startRoam() { this.mode = 'roam'; this.clearEnemies(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
+  startBattle() {
+    this.mode = 'battle'; this.clearEnemies(); this.spawnPlayer(true);
+    this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false }; this.nextWave();
+  }
+  nextWave() {
+    const b = this.battle; b.wave++; const n = Math.min(5, 1 + b.wave);
+    for (let i = 0; i < n; i++) { const a = Math.PI / 2 + (i - (n - 1) / 2) * 0.5 + Math.PI; const e = this.spawnEnemy(ARENA.x + 24 + Math.cos(a + Math.PI) * 6, ARENA.z + Math.sin(a) * 18, Math.min(4, 1 + ((b.wave - 1) / 2 | 0))); e.ai.state = 'chase'; e.ai.home.copy(ARENA); e.yaw = -Math.PI / 2; e.roar = 1; }
+    this.hud.toast('Wave ' + b.wave + '!');
+    sfx.bigRoar(0.8, 0.8, false);
+  }
+
+  // ---------- events ----------
+  onHit(d, dmg) { if (d === this.player) this.hud.hurt(); }
+  onKO(d, attacker) {
+    d.side = this.r() < 0.5 ? -1 : 1; d.act = null; d.air = 0; d.chargeA = d.whipA = d.rearA = 0;
+    if (d.real) { sfx.ko(true); this.fx.dust(d.pos, 16, 2.5 * d.def.scale, 7); this.fx.impact(d.center.clone(), 2); }
+    else { sfx.ko(); this.fx.sparks(d.center.clone(), 40, { r: 1, g: 0.6, b: 0.2 }, 1.8); this.fx.explosion(d.center.clone(), 0.8); }
+    if (d === this.player) { this.hud.knockedOut(d.real); this.respawnT = 3.2; return; }
+    if (attacker === this.player) {
+      this.save.kos++; const n = 4 + d.level * 3; this.dropBolts(d.pos, n);
+      if (this.battle) { this.battle.kos++; }
+      // dramatic KO: slow motion, white flash, big rumble
+      this.slowmo = 0.75; this.hud.flash(); this.fx.shake = Math.max(this.fx.shake, 0.9); this.fx.ring(d.pos, 14, 0xfff0c0); sfx.slam();
+      const real = attacker.real;
+      this.hud.toast((real ? ['CHOMP! Knocked out!', 'Roar-some!', 'Dino power!', 'Unstoppable!'] : ['Knocked out!', 'Great shot!', 'Robo power!', 'Awesome!'])[(this.r() * 4) | 0]);
+    }
+  }
+  footstep(d, foot) {
+    const m = d.mech, s = d.def.scale, heavy = (d.real || m.quad || ['rex', 'bronto', 'spino', 'ankylo', 'tri'].includes(d.def.kind)) ? s * s : s * s * 0.5;
+    const cp = this.camera.position, dist = Math.hypot(d.pos.x - cp.x, d.pos.z - cp.z), near = clamp(1 - dist / 70, 0, 1);
+    if (near <= 0) return;
+    const run = d.speedNow > 8 ? 1.4 : 1;
+    if (d === this.player || near > 0.5) sfx.step((d === this.player ? 0.22 : 0.12 * near) * Math.min(1.6, heavy) * run);
+    if (heavy >= 0.8) this.fx.shake = Math.max(this.fx.shake, 0.16 * heavy * near * run);
+    const fp = new THREE.Vector3(); if (m.footPos) m.footPos(foot + (m.quad ? (this.r() < 0.5 ? 2 : 0) : 0), fp); else { const b = m.b[(foot ? 'R' : 'L') + 'foot']; if (b) b.getWorldPosition(fp); else fp.copy(d.pos); }
+    fp.y = d.ground + 0.2; if (d.ground > -0.6) this.fx.dust(fp, heavy > 0.8 ? 3 : 2, 0.9 * s + 0.3 * heavy, 2.2 * s * run);
+  }
+  mouthPos(d) { return d.mech.socketPos('mouth', new THREE.Vector3()); }
+  foesOf(d) { return d.wild ? [this.player] : this.enemies; }
+
+  // ---------- natural attacks (real dinos) ----------
+  bite(d, target) {
+    const foes = this.foesOf(d), fwd = d.forward(new THREE.Vector3()), s = d.def.scale;
+    let t = null, bd = Infinity;
+    for (const e of foes) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = Math.hypot(tmp.x, tmp.z) - e.radius - d.radius; tmp.y = 0; tmp.normalize();
+      if (dist < 3.4 * s + 1.5 && tmp.dot(fwd) > 0.15 && dist < bd) { bd = dist; t = e; } }
+    if (!t && target && target.alive && target.pos.distanceTo(d.pos) - target.radius - d.radius < 6.5 * s + 2.5) t = target; // lunge assist
+    d.biteA = 1; d.jaw = 1.6; sfx.bite(s);
+    if (t) {
+      d.yaw += angDiff(d.yaw, Math.atan2(t.pos.x - d.pos.x, t.pos.z - d.pos.z)) * 0.75;
+      const gap = d.pos.distanceTo(t.pos) - t.radius - d.radius; if (gap > 0.8) d.knock.addScaledVector(d.forward(tmp), Math.min(16, gap * 5));
+      this.later(0.11, () => { if (!t.alive || !d.alive) return; t.hit(d.st.bite, d.pos, d); this.fx.impact(this.mouthPos(d), 0.8 + 0.4 * s, t.real);
+        if (d === this.player || t === this.player) this.fx.shake = Math.max(this.fx.shake, 0.3 + 0.15 * s); sfx.chomp(s); });
+    }
+    return t;
+  }
+  roarAt(d) {
+    const s = d.def.scale, isP = d === this.player, cp = this.camera.position, near = clamp(1 - Math.hypot(d.pos.x - cp.x, d.pos.z - cp.z) / 90, 0, 1);
+    d.roar = 1.7; sfx.bigRoar(clamp(1.2 - s * 0.32, 0.55, 1.3), isP ? 1 : 0.25 + 0.6 * near, !d.real);
+    const fwd = d.forward(new THREE.Vector3());
+    this.fx.roarWave(this.mouthPos(d), fwd, s, d.mech.mats.glowColor);
+    this.fx.shake = Math.max(this.fx.shake, isP ? 1.0 : 0.7 * near);
+    if (isP) this.hud.roar();
+    for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length(); tmp.y = 0; tmp.normalize();
+      if (dist < 22 * s + 8 && tmp.dot(fwd) > -0.15) { this.stun(e, d.st.roar || 1); if (e !== this.player) { e.hit(4, d.pos, d); e.knock.addScaledVector(tmp, 7); } } }
+  }
+  stun(e, t) { if (e === this.player) { e.slowT = Math.max(e.slowT || 0, Math.min(t, 0.7)); return; } e.stunT = Math.max(e.stunT || 0, t); e.act = null; e.chargeA = e.whipA = e.rearA = 0; e.air = 0; }
+  special(d, target) {
+    const k = d.def.special, s = d.def.scale, fwd = new THREE.Vector3();
+    if (target && target.alive) d.yaw += angDiff(d.yaw, Math.atan2(target.pos.x - d.pos.x, target.pos.z - d.pos.z)) * 0.9;
+    d.forward(fwd);
+    if (k === 'chomp') d.act = { type: 'chomp', t: 0, dur: 0.5, dir: fwd.clone(), speed: 22 * s + 6, hit: new Set() };
+    else if (k === 'charge') d.act = { type: 'charge', t: 0, dur: 1.15, dir: fwd.clone(), speed: Math.max(20, d.st.speed * 2.3), hit: new Set() };
+    else if (k === 'pounce') { const to = target && target.alive && target.pos.distanceTo(d.pos) < 30 ? target.pos.clone() : d.pos.clone().addScaledVector(fwd, 14); const dist = to.distanceTo(d.pos);
+      d.act = { type: 'pounce', t: 0, dur: 0.55 + dist * 0.014, from: d.pos.clone(), to, h: 3 + dist * 0.16, target }; d.roar = 0.5; }
+    else if (k === 'whip') d.act = { type: 'whip', t: 0, dur: 0.75, yaw0: d.yaw, dir: this.r() < 0.5 ? 1 : -1, hit: new Set() };
+    else if (k === 'stomp') { d.act = { type: 'stomp', t: 0, dur: 1.2, slam: false }; d.roar = 0.8; }
+    sfx.whoosh(k === 'charge' || k === 'stomp' ? 0.6 : 1);
+  }
+  updateAct(d, dt) {
+    const A = d.act; if (!A) return false; A.t += dt; const u = Math.min(1, A.t / A.dur), s = d.def.scale, foes = this.foesOf(d);
+    const hitFoes = (R, dmg, knock, stunT, set, dirFn) => { let n = 0; for (const e of foes) { if (!e || !e.alive || (set && set.has(e))) continue; const dist = Math.hypot(e.pos.x - d.pos.x, e.pos.z - d.pos.z) - e.radius; if (dist > R) continue; if (set) set.add(e); n++;
+      e.hit(dmg, d.pos, d); const dir = dirFn ? dirFn(e) : new THREE.Vector3().subVectors(e.pos, d.pos).setY(0).normalize(); e.knock.addScaledVector(dir, knock); if (stunT) this.stun(e, stunT); this.fx.impact(e.center.clone(), 1.2 + knock * 0.03, e.real); } return n; };
+    const slide = (dir, sp) => { d.speedNow = sp; d.yaw = Math.atan2(dir.x, dir.z); d.pos.addScaledVector(dir, sp * dt); const h = this.world.height(d.pos.x, d.pos.z); if (h < -1.6 && !d.swim) d.pos.addScaledVector(dir, -sp * dt); this.world.collide(d.pos, d.radius * 0.6, false); d.groundY(); };
+    if (A.type === 'chomp') { slide(A.dir, A.speed * Math.max(0, 1 - u * 1.4)); d.biteA = Math.max(d.biteA, 0.6); d.jaw = u < 0.55 ? 1.8 : 0.1;
+      if (u > 0.55 && !A.done) { A.done = true; d.biteA = 1; if (hitFoes(d.radius + 3.5 * s, d.st.bite * 3, 12, 0.8, A.hit)) { this.fx.shake = Math.max(this.fx.shake, 0.8); sfx.chomp(1.5); } } }
+    else if (A.type === 'charge') { const sp = A.speed * Math.min(1, u * 5) * (u > 0.82 ? (1 - u) / 0.18 : 1); slide(A.dir, sp); d.chargeA = 1;
+      if (hitFoes(d.radius + 1.4, d.st.bite * 1.8, 24, 1.0, A.hit, e => A.dir.clone().multiplyScalar(0.8).add(tmp.subVectors(e.pos, d.pos).setY(0).normalize().multiplyScalar(0.5)))) { this.fx.shake = Math.max(this.fx.shake, 0.7); sfx.slam(); }
+      if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.4 * s, 4); }
+    else if (A.type === 'pounce') { if (A.target && A.target.alive && u < 0.7) A.to.lerp(A.target.pos, Math.min(1, dt * 5));
+      d.pos.x = A.from.x + (A.to.x - A.from.x) * u; d.pos.z = A.from.z + (A.to.z - A.from.z) * u; this.world.collide(d.pos, d.radius * 0.5, true); d.groundY(); d.pos.y += Math.sin(Math.PI * u) * A.h;
+      d.air = u < 0.9 ? 1 : 0; d.yaw = Math.atan2(A.to.x - A.from.x, A.to.z - A.from.z) || d.yaw; d.speedNow = 0; d.jaw = 1.4;
+      if (u >= 1) { d.air = 0; d.biteA = 1; hitFoes(d.radius + 3.2, d.st.bite * 2.6, 9, 1.6, null); this.fx.dust(d.pos, 12, 1.8, 7); this.fx.ring(d.pos, 8, 0xffc070); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.3); sfx.stomp(); sfx.chomp(1); } }
+    else if (A.type === 'whip') { d.yaw = A.yaw0 + A.dir * Math.PI * 2 * sstep(0, 1, u); d.whipA = Math.sin(u * Math.PI) * A.dir; d.speedNow = 0;
+      if (u > 0.2) hitFoes(d.radius + 5.5 * s, d.st.bite * 2.3, 20, 0.8, A.hit, e => { const r = tmp.subVectors(e.pos, d.pos).setY(0).normalize(); return new THREE.Vector3(-r.z * A.dir, 0, r.x * A.dir).multiplyScalar(0.6).add(r); });
+      if (this.r() < 0.6) { const tp = d.pos.clone().addScaledVector(new THREE.Vector3(-Math.sin(d.yaw), 0, -Math.cos(d.yaw)), 5 * s); tp.y = d.ground + 0.3; this.fx.dust(tp, 1, 1.4 * s, 4); } }
+    else if (A.type === 'stomp') { d.speedNow = 0; d.rearA = u < 0.55 ? sstep(0, 0.55, u) : Math.max(0, 1 - (u - 0.55) / 0.1);
+      if (u > 0.62 && !A.slam) { A.slam = true; hitFoes(16 * s, d.st.bite * 2.8, 16, 1.4, null); this.fx.dust(d.pos, 26, 3 * s, 14); this.fx.ring(d.pos, 18 * s, 0xffd8a0); this.fx.ring(d.pos, 10 * s, 0xffffff);
+        this.fx.shake = Math.max(this.fx.shake, d === this.player ? 1.4 : 0.8); sfx.boom(1.2); sfx.stomp(); } }
+    if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; }
+    return true;
+  }
+
+  // ---------- combat ----------
+  findTarget(from, fwd, range = 85, cone = 0.6) {
+    let best = null, bs = Infinity;
+    for (const e of this.enemies) { if (!e.alive) continue; tmp.subVectors(e.pos, from); const d = tmp.length(); if (d > range) continue; tmp.y = 0; tmp.normalize();
+      const dot = tmp.dot(fwd); if (dot < cone) continue; const s = d * (2 - dot); if (s < bs) { bs = s; best = e; } }
+    return best;
+  }
+  fireLaser(d, target, spread = 0) {
+    const m = d.mech, from = new THREE.Vector3(); m.socketPos('mouth', from);
+    const col = m.mats.glowColor, dir = new THREE.Vector3();
+    if (target) { dir.copy(target.center).sub(from).normalize(); } else { d.forward(dir); dir.y = -0.05; if (d.fly) dir.y = -0.25; dir.normalize(); }
+    if (spread) { dir.x += (this.r() - 0.5) * spread; dir.y += (this.r() - 0.5) * spread * 0.5; dir.z += (this.r() - 0.5) * spread; dir.normalize(); }
+    const speed = d.wild ? 45 : 75;
+    const vis = this.fx.laserBolt(from, dir, col, speed);
+    this.shots.push({ pos: from.clone(), vel: dir.clone().multiplyScalar(speed), life: 1.2, dmg: d.st.laser, owner: d, vis, col });
+    this.fx.muzzle(from, col, dir); d.jaw = 0.6;
+    sfx.laser(d.wild ? 0.5 : 1);
+  }
+  fireMissiles(d, target) {
+    const m = d.mech, n = d.st.missiles; const fwd = d.forward(new THREE.Vector3());
+    const targets = target ? [target] : [];
+    if (!target) { const others = this.enemies.filter(e => e.alive && e.pos.distanceTo(d.pos) < 90).sort((a, b) => a.pos.distanceTo(d.pos) - b.pos.distanceTo(d.pos)); targets.push(...others.slice(0, n)); }
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        if (!d.alive || !this.player) return;
+        const from = new THREE.Vector3(); m.socketPos(i % 2 ? 'podR' : 'podL', from);
+        let t = d.wild ? this.player : targets[i % Math.max(1, targets.length)];
+        if (!t) { const p = d.pos.clone().addScaledVector(fwd, 35 + i * 3); p.x += (i - n / 2) * 3; p.y = this.world.height(p.x, p.z); t = { pos: p, alive: true, mech: { height: 0 }, radius: 1.5 }; }
+        this.fx.launchMissile(from, fwd.clone().applyAxisAngle(up, (i % 2 ? -1 : 1) * 0.5), t, d, d.wild ? 7 : 26 * (1 + 0.15 * this.save.up.missile), m.mats.glowColor);
+        this.fx.muzzle(from, { r: 1, g: 0.6, b: 0.2 });
+      }, i * 140);
+    }
+  }
+  melee(d, foes) {
+    const fwd = d.forward(new THREE.Vector3());
+    let target = null, bd = Infinity;
+    for (const e of foes) { if (!e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length() - e.radius - d.radius; tmp.y = 0; tmp.normalize(); if (dist < 4.5 * d.def.scale + 1 && tmp.dot(fwd) > 0.3 && dist < bd) { bd = dist; target = e; } }
+    if (target) { d.jaw = 1.4; sfx.bite(); target.hit(d.st.melee, d.pos, d); this.fx.sparks(target.center.clone(), 16, { r: 1, g: 0.9, b: 0.5 }, 1.2); this.fx.shake = Math.max(this.fx.shake, 0.25); return 'bite'; }
+    // stomp shockwave
+    sfx.stomp(); this.fx.dust(d.pos, 14, 2.5, 9); this.fx.ring(d.pos, 10 * d.def.scale, d.mech.mats.glowColor.getHex()); this.fx.shake = Math.max(this.fx.shake, 0.4); d.roar = 0.6;
+    for (const e of foes) { if (!e.alive) continue; const dist = e.pos.distanceTo(d.pos); if (dist < 10 * d.def.scale + e.radius) e.hit(d.st.melee * 0.6 * (1 - dist / (14 * d.def.scale + e.radius)), d.pos, d); }
+    return 'stomp';
+  }
+  onMissileHit(M, p) {
+    const foes = M.owner.wild ? [this.player] : this.enemies;
+    for (const e of foes) { if (!e || !e.alive) continue; const d = e.center.distanceTo(p); if (d < 7 + e.radius) e.hit(M.dmg * (1 - d / (9 + e.radius)) + M.dmg * 0.2, p, M.owner); }
+  }
+  updateShots(dt) {
+    for (let i = this.shots.length - 1; i >= 0; i--) {
+      const s = this.shots[i]; s.life -= dt; const step = tmp.copy(s.vel).multiplyScalar(dt); const from = s.pos.clone(); s.pos.add(step);
+      let hit = null;
+      const foes = s.owner.wild ? [this.player] : this.enemies;
+      for (const e of foes) { if (!e || !e.alive) continue; const c = e.center, r = e.radius + 0.6;
+        // segment-sphere test
+        const ab = tmp2.copy(s.pos).sub(from), t = clamp(c.clone().sub(from).dot(ab) / Math.max(1e-6, ab.lengthSq()), 0, 1); const cp = from.clone().addScaledVector(ab, t);
+        if (cp.distanceToSquared(e.center) < r * r * 1.4) { hit = e; s.pos.copy(cp); break; } }
+      const gh = this.world.height(s.pos.x, s.pos.z);
+      if (hit) { hit.hit(s.dmg, s.owner.pos, s.owner); this.fx.sparks(s.pos, 8, { r: s.col.r, g: s.col.g, b: s.col.b }, 0.8); sfx.hit(); }
+      else if (s.pos.y < gh) { this.fx.sparks(s.pos, 5, { r: s.col.r, g: s.col.g, b: s.col.b }, 0.5); this.fx.dust(s.pos, 2, 0.8, 2); }
+      if (hit || s.pos.y < gh || s.life <= 0) { if (s.vis) for (const v of s.vis) v.age = v.life; this.shots.splice(i, 1); }
+    }
+  }
+
+  // ---------- update ----------
+  update(dt, inp) {
+    const p = this.player; if (!p) return;
+    const cam = this.cam;
+    // camera orbit from drag
+    cam.yaw -= inp.look.dx * 0.006; cam.pitch = clamp(cam.pitch + inp.look.dy * 0.004, 0.05, 1.05);
+    // player control (camera-relative)
+    if (p.alive) {
+      const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); // camera forward on ground
+      const dir = new THREE.Vector3(fx * -inp.y + (-fz) * inp.x, 0, fz * -inp.y + fx * inp.x);
+      const mag = Math.min(1, Math.hypot(inp.x, inp.y));
+      p.boosting = inp.btn.boost && p.boostE > 0.05;
+      if (p.boosting) { p.boostE = Math.max(0, p.boostE - dt); if (inp.pressed.boost) sfx.boost(); this.jetFlame(p); } else p.boostE = Math.min(p.st.boost, p.boostE + dt * 0.45);
+      if (p.fly) { p.climb = p.boosting ? 1 : 0; p.alt = clamp(p.alt + (p.boosting ? 9 : -2.5) * dt, 5, 40); }
+      if (!this.updateAct(p, dt)) p.move(dt, mag > 0.05 ? dir.normalize() : dir, mag, p.boosting && !p.fly ? true : p.boosting);
+      // weapons
+      p.laserT -= dt; p.missileT -= dt; p.meleeT -= dt;
+      const fwd = new THREE.Vector3(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
+      const pf = p.forward(new THREE.Vector3());
+      this.lock = this.findTarget(p.pos, mag > 0.1 ? pf : fwd.lerp(pf, 0.5).normalize(), p.real ? 45 : 85, 0.45);
+      if (p.real) {
+        if (inp.btn.laser && p.laserT <= 0 && !p.act) { p.laserT = p.st.rate; this.bite(p, this.lock); }
+        if (inp.pressed.missile) { if (p.missileT <= 0 && !p.act) { p.missileT = p.st.missileCD; this.special(p, this.lock); } else sfx.deny(); }
+        if (inp.pressed.melee) { if (p.meleeT <= 0) { p.meleeT = p.st.roarCD; this.roarAt(p); } else sfx.deny(); }
+      } else {
+      if (inp.btn.laser && p.laserT <= 0) { p.laserT = p.st.rate; this.fireLaser(p, this.lock, this.lock ? 0.02 : 0.03); if (p.def.kind === 'raptor') setTimeout(() => this.player === p && p.alive && this.fireLaser(p, this.lock, 0.05), 50); }
+      if (inp.pressed.missile) { if (p.missileT <= 0) { p.missileT = p.st.missileCD; this.fireMissiles(p, this.lock); } else sfx.deny(); }
+      if (inp.pressed.melee && p.meleeT <= 0) { p.meleeT = 0.7; this.melee(p, this.enemies); }
+      }
+      // base repairs
+      if (this.mode === 'roam' && Math.hypot(p.pos.x - this.world.baseGroup.position.x, p.pos.z - this.world.baseGroup.position.z) < 12 && p.hp < p.maxHp) { p.hp = Math.min(p.maxHp, p.hp + dt * 25); if (Math.random() < 0.3) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 4, p.pos.y + Math.random() * 3, p.pos.z + (Math.random() - 0.5) * 4), vel: { x: 0, y: 3, z: 0 }, size: 0.4, life: 0.8, r: 0.3, g: 2, b: 2.4, alpha: 1 }); }
+    } else {
+      p.speedNow = 0; this.respawnT -= dt;
+      if (Math.random() < 0.4) this.fx.sparks(p.center.clone(), 2, { r: 1, g: 0.7, b: 0.3 }, 0.6);
+      if (this.respawnT <= 0) {
+        if (this.mode === 'battle') { this.endBattle(); return; }
+        const keep = p; this.spawnPlayer(false); this.player.shieldT = 3.5; this.hud.revived(); sfx.beam(); this.fx.ring(this.player.pos, 8, 0x40e8ff);
+      }
+    }
+    for (let i = this.timers.length - 1; i >= 0; i--) { const T = this.timers[i]; T.t -= dt; if (T.t <= 0) { this.timers.splice(i, 1); T.fn(); } }
+    p.updateVisual(dt);
+    if (p.shieldT > 0) { p.shieldT -= dt; if (Math.random() < 0.5) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 5, p.pos.y + Math.random() * p.mech.height, p.pos.z + (Math.random() - 0.5) * 5), vel: { x: 0, y: 1.5, z: 0 }, size: 0.5, life: 0.6, r: 0.3, g: 1.8, b: 2.6, alpha: 1 }); }
+    if (!p.alive && this.player !== p) return;
+
+    // enemies
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      if (e.alive) this.think(e, dt);
+      else { e.koT += dt;
+        if (e.real) { if (Math.random() < dt * 6) this.fx.dizzy(e, true); }
+        else { if (Math.random() < 0.25) this.fx.sparks(e.center.clone(), 2, { r: 1, g: 0.5, b: 0.2 }, 0.5);
+          if (e.koT > 1.2 && Math.random() < 0.2) this.fx.smoke.spawn({ pos: e.center.clone(), vel: { x: 0, y: 3, z: 0 }, size: 1.5, size1: 5, life: 2, r: 0.2, g: 0.2, b: 0.2, alpha: 0.6, rv: 0.5 }); }
+        if (e.koT > 3) { if (e.real) { this.fx.dust(e.pos, 18, 3 * e.def.scale, 6); sfx.whoosh(0.5); } else { this.fx.glow.spawn({ pos: e.center.clone(), size: 8, size1: 1, life: 0.4, r: 1.2, g: 2, b: 3, alpha: 1 }); sfx.beam(); }
+          e.remove(); this.enemies.splice(i, 1); continue; } }
+      e.updateVisual(dt);
+    }
+    // separation between dinos
+    const all = [p, ...this.enemies];
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) { const a = all[i], b = all[j]; const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, d = Math.hypot(dx, dz), m = (a.radius + b.radius) * 0.8;
+      if (d < m && d > 1e-3 && !(a.fly && a.alt > 4) && !(b.fly && b.alt > 4)) { const push = (m - d) / 2 / d; a.pos.x -= dx * push; a.pos.z -= dz * push; b.pos.x += dx * push; b.pos.z += dz * push; } }
+
+    // spawning
+    if (this.mode === 'roam') { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
+      if (this.spawnT <= 0 && alive < this.quality.enemies) { this.spawnT = 4; const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
+      // despawn very far enemies so the island stays lively near the player
+      for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; if (e.alive && e.pos.distanceTo(p.pos) > 260) { e.remove(); this.enemies.splice(i, 1); } } }
+    else if (this.battle && !this.battle.over) {
+      this.battle.t -= dt; if (this.enemies.length === 0) this.nextWave();
+      if (this.battle.t <= 0) this.endBattle();
+    }
+    this.updateShots(dt);
+    this.updatePickups(dt);
+    this.updateCamera(dt, inp);
+    // lock-on ring
+    if (this.lock && this.lock.alive) { this.lockRing.visible = true; this.lockRing.position.set(this.lock.pos.x, this.lock.ground + 0.3, this.lock.pos.z); this.lockRing.scale.setScalar(this.lock.radius * 1.4); this.lockRing.rotation.y += dt * 2; }
+    else this.lockRing.visible = false;
+  }
+  jetFlame(d) {
+    if (d.real) { if (Math.random() < 0.5) this.fx.dust(d.pos, 1, 1.2 * d.def.scale, 3); return; }
+    const m = d.mech, f = d.forward(tmp).clone();
+    const at = new THREE.Vector3(); if (m.sockets.jet) m.sockets.jet.getWorldPosition(at); else at.copy(d.pos).addScaledVector(f, -1.2 * d.def.scale).setY(d.pos.y + m.height * 0.55);
+    const c = m.mats.glowColor; const v = { x: -f.x * 14, y: d.fly ? -4 : 1, z: -f.z * 14 };
+    this.fx.glow.spawn({ pos: at, vel: v, size: 1.3, size1: 0.2, life: 0.22, r: c.r * 2.4, g: c.g * 2.4, b: c.b * 2.4, alpha: 1 });
+    for (const k of ['jetL', 'jetR']) if (m.sockets[k]) { m.sockets[k].getWorldPosition(at); this.fx.glow.spawn({ pos: at, vel: v, size: 1, size1: 0.2, life: 0.2, r: 2.6, g: 1.6, b: 0.6, alpha: 1 }); }
+    if (!d.fly && Math.random() < 0.5) this.fx.dust(d.pos, 1, 1.2, 3);
+  }
+  think(e, dt) {
+    const p = this.player, ai = e.ai; ai.t -= dt;
+    e.laserT -= dt; e.missileT -= dt; e.meleeT -= dt;
+    if (e.stunT > 0) { e.stunT -= dt; e.move(dt, tmp.set(0, 0, 0), 0, false); if (Math.random() < dt * 7) this.fx.dizzy(e, e.real); return; }
+    if (this.updateAct(e, dt)) return;
+    const toP = tmp.subVectors(p.pos, e.pos); const dist = toP.length(); toP.y = 0;
+    const battle = this.mode === 'battle';
+    const pSafe = !battle && Math.hypot(p.pos.x - this.world.baseGroup.position.x, p.pos.z - this.world.baseGroup.position.z) < 12; // repair pad is a safe zone
+    const pAlive = p.alive && !pSafe;
+    if (ai.state === 'patrol') {
+      if (!ai.wp || ai.t <= 0 || Math.hypot(ai.wp.x - e.pos.x, ai.wp.z - e.pos.z) < 4) { const a = this.r() * 6.28; ai.wp = new THREE.Vector3(ai.home.x + Math.cos(a) * 30, 0, ai.home.z + Math.sin(a) * 30); ai.t = 8; }
+      const d = new THREE.Vector3(ai.wp.x - e.pos.x, 0, ai.wp.z - e.pos.z).normalize(); e.move(dt, d, 0.4, false);
+      if (pAlive && (dist < 42 || battle)) { ai.state = 'chase'; if (e.real && dist < 60) { this.roarAt(e); e.meleeT = e.st.roarCD; } else { e.roar = 1; sfx.roar(1.3 - e.def.scale * 0.35); } }
+    } else if (ai.state === 'chase') {
+      if (!pAlive || (!battle && (dist > 80 || e.pos.distanceTo(ai.home) > 140))) { ai.state = 'patrol'; ai.wp = null; }
+      if (e.real) { this.realThink(e, dt, p, dist, toP, pAlive, battle); if (e.hp < e.maxHp * 0.28 && !ai.retreated && !battle) { ai.state = 'retreat'; ai.t = 5; ai.retreated = true; } return; }
+      const meleeKind = ['raptor', 'ankylo', 'tri'].includes(e.def.kind);
+      const want = meleeKind ? 3 : 20;
+      const dir = toP.clone().normalize();
+      if (dist > want + e.radius + p.radius) e.move(dt, dir, 0.85, false);
+      else { e.move(dt, dir.clone().applyAxisAngle(up, Math.PI / 2 * (Math.sin(this.world.time * 0.6 + e.level) > 0 ? 1 : -1)), 0.25, false); e.yaw += clamp(angDiff(e.yaw, Math.atan2(dir.x, dir.z)), -3 * dt, 3 * dt); }
+      // attacks
+      if (pAlive && dist < 48) {
+        const facing = Math.cos(angDiff(e.yaw, Math.atan2(toP.x, toP.z))) > 0.7;
+        if (facing && e.laserT <= 0) { if (ai.burst <= 0) { ai.burst = 3; } this.fireLaser(e, p, 0.12); ai.burst--; e.laserT = ai.burst > 0 ? 0.22 : 2.2 + this.r() * 1.2; }
+        if (e.st.missiles && e.missileT <= 0 && dist > 15) { e.missileT = e.st.missileCD; this.fireMissiles(e, p); }
+        if (e.meleeT <= 0 && dist < e.radius + p.radius + 4) { e.meleeT = 1.6; this.melee(e, [p]); }
+      }
+      if (e.hp < e.maxHp * 0.28 && !ai.retreated && !battle) { ai.state = 'retreat'; ai.t = 5; ai.retreated = true; }
+    } else if (ai.state === 'retreat') {
+      e.move(dt, toP.clone().normalize().negate(), 1, false); e.hp = Math.min(e.maxHp, e.hp + dt * 3);
+      if (ai.t <= 0) { ai.state = 'chase'; e.roar = 1; }
+    }
+  }
+  realThink(e, dt, p, dist, toP, pAlive, battle) {
+    const s = e.def.scale, reach = e.radius + p.radius + 2.2 * s, dir = toP.clone().normalize(), ai = e.ai;
+    e.look = clamp(angDiff(e.yaw, Math.atan2(toP.x, toP.z)), -1, 1);
+    if (dist > reach) e.move(dt, dir, dist > 30 ? 1 : 0.85, false);
+    else { e.move(dt, dir.clone().applyAxisAngle(up, Math.PI / 2 * (Math.sin(this.world.time * 0.5 + e.level) > 0 ? 1 : -1)), 0.2, false); e.yaw += clamp(angDiff(e.yaw, Math.atan2(dir.x, dir.z)), -3 * dt, 3 * dt); }
+    if (!pAlive) return;
+    const facing = Math.cos(angDiff(e.yaw, Math.atan2(toP.x, toP.z))) > 0.6;
+    if (facing && dist < reach + 1.5 && e.laserT <= 0) { e.laserT = e.st.rate; this.bite(e, p); }
+    const k = e.def.special, inRange = k === 'chomp' ? dist < 12 : k === 'charge' ? dist > 8 && dist < 28 : k === 'pounce' ? dist > 6 && dist < 24 : k === 'whip' ? dist < e.radius + 6 * s : dist < 13 * s;
+    if (e.missileT <= 0 && inRange && facing) { e.missileT = e.st.missileCD; e.roar = 0.5; e.jaw = 1; this.later(0.4, () => { if (e.alive && !(e.stunT > 0) && !e.act) this.special(e, p); }); }
+    if (e.meleeT <= 0 && dist < 30 && this.r() < dt * 0.3) { e.meleeT = e.st.roarCD; this.roarAt(e); }
+  }
+  updatePickups(dt) {
+    const p = this.player, t = this.world.time; if (!p) return;
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+    let nc = 0, ns = 0, nb = 0;
+    const reach = (x, y, z) => (p.pos.x - x) ** 2 + (p.pos.z - z) ** 2 < (p.radius + 2.5) ** 2 && Math.abs(p.pos.y + 1 - y) < 6 + p.alt;
+    for (const k of this.pickups) {
+      if (!k.alive) { k.t -= dt; if (k.t <= 0) k.alive = true; continue; }
+      const dx = k.x - p.pos.x, dz = k.z - p.pos.z; if (dx * dx + dz * dz > 160 * 160) continue;
+      if (p.alive && reach(k.x, k.y + 1.2, k.z)) { k.alive = false; k.t = 60;
+        if (k.type === 'core') { this.addBolts(10); p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.35); p.boostE = p.st.boost; this.save.cores++; sfx.core(); this.hud.toast('+10 bolts  ⚡ Energy core!'); this.fx.sparks(v.set(k.x, k.y + 1.2, k.z), 20, { r: 0.3, g: 0.9, b: 1 }, 1); }
+        else { this.addBolts(3); sfx.pickup(); this.fx.sparks(v.set(k.x, k.y + 1, k.z), 8, { r: 1, g: 0.9, b: 0.6 }, 0.6); }
+        continue; }
+      const bob = Math.sin(t * 2 + k.ph) * 0.3;
+      q.setFromEuler(new THREE.Euler(k.type === 'scrap' ? 1.2 : 0, t * 1.5 + k.ph, 0));
+      m4.compose(v.set(k.x, k.y + 1.3 + bob, k.z), q, s);
+      if (k.type === 'core') { this.pk.core.setMatrixAt(nc++, m4); if (Math.random() < 0.08) this.fx.glow.spawn({ pos: v.clone(), vel: { x: 0, y: 1.5, z: 0 }, size: 2.4, size1: 0.3, life: 0.8, r: 0.2, g: 1.4, b: 1.8, alpha: 0.6 }); }
+      else this.pk.scrap.setMatrixAt(ns++, m4);
+    }
+    for (let i = this.bolts.length - 1; i >= 0; i--) {
+      const b = this.bolts[i]; b.t += dt; const g = this.world.height(b.x, b.z) + 0.4;
+      const dx = p.pos.x - b.x, dz = p.pos.z - b.z, dy = p.pos.y + 1 - b.y, d = Math.hypot(dx, dy, dz);
+      if (p.alive && b.t > 0.6 && d < 14) { const k = 30 / Math.max(1, d); b.vx = dx * k * 0.3; b.vy = dy * k * 0.3; b.vz = dz * k * 0.3; }
+      else { b.vy -= 25 * dt; }
+      b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; if (b.y < g && d >= 14) { b.y = g; b.vy *= -0.3; b.vx *= 0.7; b.vz *= 0.7; }
+      if (p.alive && d < p.radius + 1.5 && b.t > 0.5) { this.addBolts(b.v); sfx.pickup(); this.bolts.splice(i, 1); continue; }
+      if (b.t > 40) { this.bolts.splice(i, 1); continue; }
+      if (nb < 160) this.pk.bolt.setMatrixAt(nb++, m4.compose(v.set(b.x, b.y, b.z), q.setFromEuler(new THREE.Euler(1.2, b.t * 5, 0)), s));
+    }
+    this.pk.core.count = nc; this.pk.scrap.count = ns; this.pk.bolt.count = nb;
+    for (const m of Object.values(this.pk)) m.instanceMatrix.needsUpdate = true;
+  }
+  addBolts(n) { this.save.bolts += n; if (this.battle) this.battle.bolts += n; this.hud.bolts(); this.persist(); }
+  endBattle() {
+    const b = this.battle; if (!b || b.over) return; b.over = true;
+    const bonus = b.kos * 10 + b.wave * 5; this.addBolts(bonus);
+    this.save.bestBattle = Math.max(this.save.bestBattle || 0, b.kos); this.persist();
+    this.hud.results(b, bonus);
+  }
+
+  updateCamera(dt, inp) {
+    const p = this.player, c = this.cam, h = p.mech.height;
+    // auto-follow behind the dino while moving (unless the player is steering the camera)
+    if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI; c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
+    const dist = 4 + h * 1.55 + (p.fly ? 4 : 0) + (p.boosting ? 1.5 : 0);
+    c.dist = lerp(c.dist, dist, Math.min(1, dt * 3));
+    const tgt = tmp.set(p.pos.x, p.pos.y + h * 0.82, p.pos.z);
+    const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, tgt.y + Math.sin(c.pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
+    const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh;
+    if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
+    c.pos.lerp(cp, Math.min(1, dt * 8)); c.look.lerp(tgt, Math.min(1, dt * 12));
+    this.camera.position.copy(c.pos);
+    const sh = this.fx.shake; if (sh > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
+    this.camera.lookAt(c.look);
+  }
+}

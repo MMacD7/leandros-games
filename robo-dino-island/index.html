@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Robo Dinos">
+<meta name="theme-color" content="#0b1a24">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self'">
+<title>Leandro's Robo Dino Island</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="touch-zone"></div>
+<div id="hud" class="hidden">
+  <div id="hud-tl">
+    <button id="b-pause" class="icon-btn" aria-label="Menu">❚❚</button>
+    <div class="bars">
+      <div class="bar hp"><i id="hp"></i><span id="hp-t">100</span></div>
+      <div class="bar boost"><i id="boost"></i></div>
+    </div>
+  </div>
+  <div id="hud-tc" class="hidden"><div id="timer">01:30</div><div id="wave">Wave 1 · KOs 0</div></div>
+  <div id="hud-tr"><div id="bolts-box"><span class="nut">⬢</span> <b id="bolts">0</b></div><canvas id="radar" width="220" height="220"></canvas></div>
+  <div id="ebars"></div>
+  <div id="toast"></div>
+  <div id="hurt"></div>
+  <div id="joy-base"><div id="joy-knob"></div></div>
+  <div id="actions">
+    <button id="a-laser" class="act big" data-btn="laser"><span>LASER</span></button>
+    <button id="a-missile" class="act" data-btn="missile"><div id="mcd"></div><span>MISSILE</span></button>
+    <button id="a-melee" class="act" data-btn="melee"><div id="rcd"></div><span>BITE<br>STOMP</span></button>
+    <button id="a-boost" class="act" data-btn="boost"><span>BOOST</span></button>
+  </div>
+  <div id="flash"></div>
+  <div id="ko-msg" class="hidden"><h2>Knocked out!</h2><p id="ko-sub">Rebooting at the base…</p></div>
+</div>
+
+<div id="loading" class="screen"><h1>Leandro's<br><em>Robo Dino Island</em></h1><div class="load"><i id="load-bar"></i></div><p id="load-t">Building the island…</p></div>
+
+<div id="title" class="screen hidden">
+  <div class="logo"><small>Leandro's</small><b>ROBO DINO</b><em>ISLAND</em><i>REAL&nbsp;&nbsp;VS&nbsp;&nbsp;ROBOT</i></div>
+  <div class="menu">
+    <button id="b-roam" class="btn primary">▶ Explore the Island</button>
+    <button id="b-battle" class="btn">⚔ Battle Arena</button>
+    <button id="b-garage" class="btn">🦖 Dino Garage</button>
+  </div>
+  <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><span id="title-bolts"></span></div>
+</div>
+
+<div id="garage" class="screen hidden">
+  <div class="g-top"><button id="g-back" class="btn small">◀ Back</button><div class="g-bolts"><span class="nut">⬢</span> <b id="g-bolts">0</b></div></div>
+  <div class="g-nav"><button id="g-prev" class="arrow">‹</button><button id="g-next" class="arrow">›</button></div>
+  <div class="g-panel">
+    <div class="g-tabs"><button id="t-real" class="tab">🦖 Real</button><button id="t-robo" class="tab on">🤖 Robot</button><button id="t-ups" class="tab">Upgrades</button></div>
+    <div id="g-dino">
+      <h2 id="g-name">Robo-Rex</h2><p id="g-desc"></p><p id="g-abil"></p>
+      <div id="g-stats"></div>
+      <button id="g-action" class="btn primary">Select</button>
+      <div id="g-dots"></div>
+    </div>
+    <div id="g-ups" class="hidden"></div>
+  </div>
+</div>
+
+<div id="pause" class="screen dim hidden">
+  <div class="panel"><h2>Paused</h2>
+    <button id="p-resume" class="btn primary">▶ Keep playing</button>
+    <button id="p-garage" class="btn">🦖 Dino Garage</button>
+    <button id="p-sound" class="btn">🔊 Sound on</button>
+    <button id="p-quality" class="btn small">Graphics: Auto</button>
+    <button id="p-home" class="btn small">⌂ Title screen</button>
+  </div>
+</div>
+
+<div id="results" class="screen dim hidden">
+  <div class="panel"><h2>Battle over!</h2><p id="r-text"></p><button id="r-ok" class="btn primary">OK</button></div>
+</div>
+
+<div id="rotate" class="screen dim hidden">
+  <div class="panel"><div class="phone">📱</div><h2>Turn sideways!</h2><p>Robo Dino Island plays best in landscape.</p><button id="rot-ok" class="btn small">Play like this</button></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
