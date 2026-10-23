@@ -6,6 +6,8 @@ import { DINOS, statsFor } from './data.js';
 import { BASE, ARENA, VOLC } from './world.js';
 import { sfx } from './audio.js';
 import { clamp, lerp, rng } from './noise.js';
+import { Mayhem } from './mayhem.js';
+import { Rider } from './rider.js';
 
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -37,11 +39,11 @@ class Dino {
     if (this.fly) { const base = Math.max(h, 0) + 2; this.pos.y = lerp(this.pos.y, Math.max(base, base + this.alt), 0.15); }
     else if (this.swim && h < -0.8) this.pos.y = lerp(this.pos.y, Math.max(h, -1.7), 0.2);
     else this.pos.y = h; }
-  hit(dmg, from, attacker) {
+  hit(dmg, from, attacker, quiet) {
     if (!this.alive) return;
     if (this.shieldT > 0) { this.mech.flash = 0.4; return; }
-    this.hp -= dmg; this.mech.flash = 1; this.g.onHit(this, dmg);
-    if (from) { tmp.subVectors(this.pos, from).setY(0).normalize(); this.knock.addScaledVector(tmp, Math.min(8, dmg * 0.25)); }
+    this.hp -= dmg; this.mech.flash = quiet ? Math.max(this.mech.flash, 0.5) : 1; this.g.onHit(this, dmg, attacker, quiet);
+    if (from) { tmp.subVectors(this.pos, from).setY(0).normalize(); this.knock.addScaledVector(tmp, Math.min(8, dmg * 0.25) * (this.boss ? 0.15 : 1)); }
     if (this.wild && this.ai.state === 'patrol') this.ai.state = 'chase';
     if (this.hp <= 0) { this.hp = 0; this.alive = false; this.koT = 0; this.g.onKO(this, attacker); }
   }
@@ -85,7 +87,7 @@ class Dino {
     // heavy footsteps: thump, dust at the foot and a camera rumble for big dinos near the camera
     if (!this.fly && this.alive && this.speedNow > 1.5 && !this.air) { const s = Math.sin(m.phase * (m.quad ? 1 : 1)); if ((s > 0) !== (this._lastS > 0)) this.g.footstep(this, s > 0 ? 0 : 1); this._lastS = s; }
   }
-  remove() { this.g.scene.remove(this.mech.obj); this.act = null; freeMech(this.mech); }
+  remove() { const R = this.g.rider; if (R && (R.mounted === this.mech || R.popOf === this)) { R.unmount(); R.popOf = null; } this.g.scene.remove(this.mech.obj); this.act = null; freeMech(this.mech); }
 }
 
 export class Game {
@@ -100,14 +102,17 @@ export class Game {
     this.lockRing.visible = false; this.scene.add(this.lockRing);
     this.dummy = { pos: new THREE.Vector3(), alive: true, mech: { height: 0 }, radius: 1.5 };
     this.shots = []; this.timers = []; this.slowmo = 0;
+    this.mh = new Mayhem(this);
+    this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
   }
+  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && this.save.ride !== false) R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
 
   // ---------- setup ----------
   spawnPlayer(atArena) {
     if (this.player) this.player.remove();
     const def = DINOS.find(d => d.id === this.save.selected) || DINOS[0];
-    const p = new Dino(this, def, false); this.player = p;
+    const p = new Dino(this, def, false); this.player = p; this.mountRider();
     if (atArena) p.place(ARENA.x - 30, ARENA.z, Math.PI / 2); else p.place(BASE.x, BASE.z - 6, Math.PI);
     this.cam.yaw = p.yaw + Math.PI; this.snapCam = true;
     if (this.hud.actions) this.hud.actions(def);
@@ -155,27 +160,43 @@ export class Game {
   startRoam() { this.mode = 'roam'; this.clearEnemies(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
   startBattle() {
     this.mode = 'battle'; this.clearEnemies(); this.spawnPlayer(true);
-    this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false }; this.nextWave();
+    this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false, boss: null, bosses: 0 }; this.mh.resetArena(); this.nextWave();
+  }
+  bossWave() {
+    const b = this.battle, k = (b.wave / 3) | 0, real = k % 2 === 0, base = DINOS.find(d => d.id === (real ? 'trex' : 'rex')), S = 2.1;
+    const def = { ...base, id: 'boss-' + base.id, name: real ? 'TITAN T-REX' : 'MEGA ROBO-REX', scale: base.scale * S, radius: (base.radius ?? 2.4 * base.scale) * S, boss: true };
+    const e = new Dino(this, def, true, 4); e.boss = true; e.place(ARENA.x + 20, ARENA.z, -Math.PI / 2); e.ai.home.copy(ARENA); e.ai.state = 'chase';
+    const hp = 520 + 180 * (k - 1); e.st = { ...e.st, hp, speed: e.st.speed * 0.9, laser: e.st.laser * 1.8, melee: e.st.melee * 1.5, bite: e.st.bite * 1.3, missiles: real ? 0 : 3, missileCD: 6, rate: real ? e.st.rate : 0.2 };
+    e.maxHp = e.hp = hp; e.laserT = 2.5; e.missileT = 4; e.meleeT = 3; e.roar = 1.7; this.enemies.push(e);
+    for (let i = 0; i < 2; i++) { const m = this.spawnEnemy(ARENA.x + 24, ARENA.z + (i ? 16 : -16), 2); m.ai.state = 'chase'; m.ai.home.copy(ARENA); m.yaw = -Math.PI / 2; }
+    b.boss = e; b.bosses++; b.t += 30;
+    this.hud.banner('⚠️ BOSS WAVE ⚠️', 4); this.hud.toast(def.name + ' has arrived!  +30s');
+    sfx.bigRoar(0.55, 1.2, !real); sfx.bigBoom(1); this.fx.boom(new THREE.Vector3(e.pos.x, e.pos.y + 2, e.pos.z), 2.2, { groundY: e.pos.y, shake: 1.4 }); this.fx.ring(e.pos, 30, 0xff3020);
   }
   nextWave() {
-    const b = this.battle; b.wave++; const n = Math.min(5, 1 + b.wave);
+    const b = this.battle; b.wave++; if (b.wave % 3 === 0) return this.bossWave(); const n = Math.min(5, 1 + b.wave);
     for (let i = 0; i < n; i++) { const a = Math.PI / 2 + (i - (n - 1) / 2) * 0.5 + Math.PI; const e = this.spawnEnemy(ARENA.x + 24 + Math.cos(a + Math.PI) * 6, ARENA.z + Math.sin(a) * 18, Math.min(4, 1 + ((b.wave - 1) / 2 | 0))); e.ai.state = 'chase'; e.ai.home.copy(ARENA); e.yaw = -Math.PI / 2; e.roar = 1; }
     this.hud.toast('Wave ' + b.wave + '!');
     sfx.bigRoar(0.8, 0.8, false);
   }
 
   // ---------- events ----------
-  onHit(d, dmg) { if (d === this.player) this.hud.hurt(); }
+  onHit(d, dmg, attacker, quiet) { if (d === this.player && !quiet) this.hud.hurt(); this.mh.onHit(d, attacker, quiet); }
   onKO(d, attacker) {
-    d.side = this.r() < 0.5 ? -1 : 1; d.act = null; d.air = 0; d.chargeA = d.whipA = d.rearA = 0;
+    d.side = this.r() < 0.5 ? -1 : 1; d.act = null; d.air = 0; d.chargeA = d.whipA = d.rearA = 0; d.burnT = 0; d.breathT = 0;
     if (d.real) { sfx.ko(true); this.fx.dust(d.pos, 16, 2.5 * d.def.scale, 7); this.fx.impact(d.center.clone(), 2); }
-    else { sfx.ko(); this.fx.sparks(d.center.clone(), 40, { r: 1, g: 0.6, b: 0.2 }, 1.8); this.fx.explosion(d.center.clone(), 0.8); }
-    if (d === this.player) { this.hud.knockedOut(d.real); this.respawnT = 3.2; return; }
+    else { sfx.ko(); this.fx.sparks(d.center.clone(), 40, { r: 1, g: 0.6, b: 0.2 }, 1.8); this.fx.boom(d.center.clone(), 1.0, { groundY: d.ground, shake: d === this.player || attacker === this.player ? 1 : 0.4 }); sfx.boom(0.9); this.mh.damageAt(d.center, 5, 99, attacker); }
+    if (d.boss) { const c = d.center.clone(), S = d.def.scale; if (this.battle) this.battle.boss = null;
+      for (let i = 0; i < 7; i++) this.later(0.15 + i * 0.22, () => { const q = c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 5 * S, (Math.random() - 0.3) * 3 * S, (Math.random() - 0.5) * 5 * S)); this.fx.boom(q, 1.5 + Math.random(), { groundY: d.ground, shake: 1.2 }); sfx.bigBoom(1); });
+      this.hud.banner('💥 BOSS DEFEATED! 💥', 4); if (attacker === this.player || !attacker) { this.dropBolts(d.pos, 40); this.addBolts(25); } }
+    this.mh.onKO(d, attacker);
+    if (d === this.player) { this.hud.knockedOut(d.real); this.respawnT = 3.2; this.rider.pop(); this.rider.popOf = d; return; }
+    if (attacker === this.player) this.rider.cheer();
     if (attacker === this.player) {
       this.save.kos++; const n = 4 + d.level * 3; this.dropBolts(d.pos, n);
       if (this.battle) { this.battle.kos++; }
       // dramatic KO: slow motion, white flash, big rumble
-      this.slowmo = 0.75; this.hud.flash(); this.fx.shake = Math.max(this.fx.shake, 0.9); this.fx.ring(d.pos, 14, 0xfff0c0); sfx.slam();
+      this.slowmo = 0.75; if (!this.flashT || this.world.time - this.flashT > 2) { this.flashT = this.world.time; this.hud.flash(); } this.fx.shake = Math.max(this.fx.shake, 0.9); this.fx.ring(d.pos, 14, 0xfff0c0); sfx.slam();
       const real = attacker.real;
       this.hud.toast((real ? ['CHOMP! Knocked out!', 'Roar-some!', 'Dino power!', 'Unstoppable!'] : ['Knocked out!', 'Great shot!', 'Robo power!', 'Awesome!'])[(this.r() * 4) | 0]);
     }
@@ -200,7 +221,7 @@ export class Game {
     for (const e of foes) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = Math.hypot(tmp.x, tmp.z) - e.radius - d.radius; tmp.y = 0; tmp.normalize();
       if (dist < 3.4 * s + 1.5 && tmp.dot(fwd) > 0.15 && dist < bd) { bd = dist; t = e; } }
     if (!t && target && target.alive && target.pos.distanceTo(d.pos) - target.radius - d.radius < 6.5 * s + 2.5) t = target; // lunge assist
-    d.biteA = 1; d.jaw = 1.6; sfx.bite(s);
+    d.biteA = 1; d.jaw = 1.6; sfx.bite(s); this.mh.damageAt(d.pos.clone().addScaledVector(fwd, d.radius + 1.5 * s).setY(d.pos.y + 1), 2.5 * s + 1, d.st.bite, d);
     if (t) {
       d.yaw += angDiff(d.yaw, Math.atan2(t.pos.x - d.pos.x, t.pos.z - d.pos.z)) * 0.75;
       const gap = d.pos.distanceTo(t.pos) - t.radius - d.radius; if (gap > 0.8) d.knock.addScaledVector(d.forward(tmp), Math.min(16, gap * 5));
@@ -214,6 +235,7 @@ export class Game {
     d.roar = 1.7; sfx.bigRoar(clamp(1.2 - s * 0.32, 0.55, 1.3), isP ? 1 : 0.25 + 0.6 * near, !d.real);
     const fwd = d.forward(new THREE.Vector3());
     this.fx.roarWave(this.mouthPos(d), fwd, s, d.mech.mats.glowColor);
+    if (d.real) this.mh.fieryRoar(d, true);
     this.fx.shake = Math.max(this.fx.shake, isP ? 1.0 : 0.7 * near);
     if (isP) this.hud.roar();
     for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length(); tmp.y = 0; tmp.normalize();
@@ -241,7 +263,7 @@ export class Game {
       if (u > 0.55 && !A.done) { A.done = true; d.biteA = 1; if (hitFoes(d.radius + 3.5 * s, d.st.bite * 3, 12, 0.8, A.hit)) { this.fx.shake = Math.max(this.fx.shake, 0.8); sfx.chomp(1.5); } } }
     else if (A.type === 'charge') { const sp = A.speed * Math.min(1, u * 5) * (u > 0.82 ? (1 - u) / 0.18 : 1); slide(A.dir, sp); d.chargeA = 1;
       if (hitFoes(d.radius + 1.4, d.st.bite * 1.8, 24, 1.0, A.hit, e => A.dir.clone().multiplyScalar(0.8).add(tmp.subVectors(e.pos, d.pos).setY(0).normalize().multiplyScalar(0.5)))) { this.fx.shake = Math.max(this.fx.shake, 0.7); sfx.slam(); }
-      if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.4 * s, 4); }
+      if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.4 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.2, 40 * dt * 10, d); }
     else if (A.type === 'pounce') { if (A.target && A.target.alive && u < 0.7) A.to.lerp(A.target.pos, Math.min(1, dt * 5));
       d.pos.x = A.from.x + (A.to.x - A.from.x) * u; d.pos.z = A.from.z + (A.to.z - A.from.z) * u; this.world.collide(d.pos, d.radius * 0.5, true); d.groundY(); d.pos.y += Math.sin(Math.PI * u) * A.h;
       d.air = u < 0.9 ? 1 : 0; d.yaw = Math.atan2(A.to.x - A.from.x, A.to.z - A.from.z) || d.yaw; d.speedNow = 0; d.jaw = 1.4;
@@ -250,7 +272,7 @@ export class Game {
       if (u > 0.2) hitFoes(d.radius + 5.5 * s, d.st.bite * 2.3, 20, 0.8, A.hit, e => { const r = tmp.subVectors(e.pos, d.pos).setY(0).normalize(); return new THREE.Vector3(-r.z * A.dir, 0, r.x * A.dir).multiplyScalar(0.6).add(r); });
       if (this.r() < 0.6) { const tp = d.pos.clone().addScaledVector(new THREE.Vector3(-Math.sin(d.yaw), 0, -Math.cos(d.yaw)), 5 * s); tp.y = d.ground + 0.3; this.fx.dust(tp, 1, 1.4 * s, 4); } }
     else if (A.type === 'stomp') { d.speedNow = 0; d.rearA = u < 0.55 ? sstep(0, 0.55, u) : Math.max(0, 1 - (u - 0.55) / 0.1);
-      if (u > 0.62 && !A.slam) { A.slam = true; hitFoes(16 * s, d.st.bite * 2.8, 16, 1.4, null); this.fx.dust(d.pos, 26, 3 * s, 14); this.fx.ring(d.pos, 18 * s, 0xffd8a0); this.fx.ring(d.pos, 10 * s, 0xffffff);
+      if (u > 0.62 && !A.slam) { A.slam = true; hitFoes(16 * s, d.st.bite * 2.8, 16, 1.4, null); this.mh.damageAt(d.pos, 14 * s, 99, d); this.fx.dust(d.pos, 26, 3 * s, 14); this.fx.ring(d.pos, 18 * s, 0xffd8a0); this.fx.ring(d.pos, 10 * s, 0xffffff);
         this.fx.shake = Math.max(this.fx.shake, d === this.player ? 1.4 : 0.8); sfx.boom(1.2); sfx.stomp(); } }
     if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; }
     return true;
@@ -295,13 +317,16 @@ export class Game {
     for (const e of foes) { if (!e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length() - e.radius - d.radius; tmp.y = 0; tmp.normalize(); if (dist < 4.5 * d.def.scale + 1 && tmp.dot(fwd) > 0.3 && dist < bd) { bd = dist; target = e; } }
     if (target) { d.jaw = 1.4; sfx.bite(); target.hit(d.st.melee, d.pos, d); this.fx.sparks(target.center.clone(), 16, { r: 1, g: 0.9, b: 0.5 }, 1.2); this.fx.shake = Math.max(this.fx.shake, 0.25); return 'bite'; }
     // stomp shockwave
-    sfx.stomp(); this.fx.dust(d.pos, 14, 2.5, 9); this.fx.ring(d.pos, 10 * d.def.scale, d.mech.mats.glowColor.getHex()); this.fx.shake = Math.max(this.fx.shake, 0.4); d.roar = 0.6;
+    sfx.stomp(); this.mh.damageAt(d.pos, 10 * d.def.scale, 30, d); this.fx.dust(d.pos, 14, 2.5, 9); this.fx.ring(d.pos, 10 * d.def.scale, d.mech.mats.glowColor.getHex()); this.fx.shake = Math.max(this.fx.shake, 0.4); d.roar = 0.6;
     for (const e of foes) { if (!e.alive) continue; const dist = e.pos.distanceTo(d.pos); if (dist < 10 * d.def.scale + e.radius) e.hit(d.st.melee * 0.6 * (1 - dist / (14 * d.def.scale + e.radius)), d.pos, d); }
     return 'stomp';
   }
   onMissileHit(M, p) {
     const foes = M.owner.wild ? [this.player] : this.enemies;
-    for (const e of foes) { if (!e || !e.alive) continue; const d = e.center.distanceTo(p); if (d < 7 + e.radius) e.hit(M.dmg * (1 - d / (9 + e.radius)) + M.dmg * 0.2, p, M.owner); }
+    const lvl = M.owner === this.player ? (this.save.up.fire || 0) : 0;
+    for (const e of foes) { if (!e || !e.alive) continue; const d = e.center.distanceTo(p); if (d < 7 + e.radius) { e.hit(M.dmg * (1 - d / (9 + e.radius)) + M.dmg * 0.2, p, M.owner); if (e !== this.player || M.owner.boss) this.mh.ignite(e, 2.5 + 0.5 * lvl, M.owner); } }
+    this.mh.damageAt(p, 6, M.dmg, M.owner);
+    const gy = this.world.height(p.x, p.z); if (gy > -0.5 && p.y - gy < 3) this.mh.addFire(new THREE.Vector3(p.x, gy, p.z), 2 + 0.2 * lvl, 4 + lvl, M.owner);
   }
   updateShots(dt) {
     for (let i = this.shots.length - 1; i >= 0; i--) {
@@ -313,6 +338,7 @@ export class Game {
         const ab = tmp2.copy(s.pos).sub(from), t = clamp(c.clone().sub(from).dot(ab) / Math.max(1e-6, ab.lengthSq()), 0, 1); const cp = from.clone().addScaledVector(ab, t);
         if (cp.distanceToSquared(e.center) < r * r * 1.4) { hit = e; s.pos.copy(cp); break; } }
       const gh = this.world.height(s.pos.x, s.pos.z);
+      if (!hit && this.mh.hitSegment(from, s.pos, s.dmg, s.owner)) { this.fx.sparks(s.pos, 8, { r: s.col.r, g: s.col.g, b: s.col.b }, 0.8); sfx.hit(); if (s.vis) for (const v of s.vis) v.age = v.life; this.shots.splice(i, 1); continue; }
       if (hit) { hit.hit(s.dmg, s.owner.pos, s.owner); this.fx.sparks(s.pos, 8, { r: s.col.r, g: s.col.g, b: s.col.b }, 0.8); sfx.hit(); }
       else if (s.pos.y < gh) { this.fx.sparks(s.pos, 5, { r: s.col.r, g: s.col.g, b: s.col.b }, 0.5); this.fx.dust(s.pos, 2, 0.8, 2); }
       if (hit || s.pos.y < gh || s.life <= 0) { if (s.vis) for (const v of s.vis) v.age = v.life; this.shots.splice(i, 1); }
@@ -346,7 +372,8 @@ export class Game {
       } else {
       if (inp.btn.laser && p.laserT <= 0) { p.laserT = p.st.rate; this.fireLaser(p, this.lock, this.lock ? 0.02 : 0.03); if (p.def.kind === 'raptor') setTimeout(() => this.player === p && p.alive && this.fireLaser(p, this.lock, 0.05), 50); }
       if (inp.pressed.missile) { if (p.missileT <= 0) { p.missileT = p.st.missileCD; this.fireMissiles(p, this.lock); } else sfx.deny(); }
-      if (inp.pressed.melee && p.meleeT <= 0) { p.meleeT = 0.7; this.melee(p, this.enemies); }
+      if (inp.pressed.melee) { if (p.def.breath) { if (p.meleeT <= 0 && !(p.breathT > 0)) { p.meleeT = 3; this.mh.startBreath(p, 1.25 + 0.1 * (this.save.up.fire || 0)); } else sfx.deny(); }
+        else if (p.meleeT <= 0) { p.meleeT = 0.7; this.melee(p, this.enemies); } }
       }
       // base repairs
       if (this.mode === 'roam' && Math.hypot(p.pos.x - this.world.baseGroup.position.x, p.pos.z - this.world.baseGroup.position.z) < 12 && p.hp < p.maxHp) { p.hp = Math.min(p.maxHp, p.hp + dt * 25); if (Math.random() < 0.3) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 4, p.pos.y + Math.random() * 3, p.pos.z + (Math.random() - 0.5) * 4), vel: { x: 0, y: 3, z: 0 }, size: 0.4, life: 0.8, r: 0.3, g: 2, b: 2.4, alpha: 1 }); }
@@ -354,19 +381,19 @@ export class Game {
       p.speedNow = 0; this.respawnT -= dt;
       if (Math.random() < 0.4) this.fx.sparks(p.center.clone(), 2, { r: 1, g: 0.7, b: 0.3 }, 0.6);
       if (this.respawnT <= 0) {
-        if (this.mode === 'battle') { this.endBattle(); return; }
-        const keep = p; this.spawnPlayer(false); this.player.shieldT = 3.5; this.hud.revived(); sfx.beam(); this.fx.ring(this.player.pos, 8, 0x40e8ff);
+        if (this.mode === 'battle') { this.endBattle(); this.respawnT = 99; }
+        else { this.spawnPlayer(false); this.player.shieldT = 3.5; this.hud.revived(); sfx.beam(); this.fx.ring(this.player.pos, 8, 0x40e8ff); }
       }
     }
     for (let i = this.timers.length - 1; i >= 0; i--) { const T = this.timers[i]; T.t -= dt; if (T.t <= 0) { this.timers.splice(i, 1); T.fn(); } }
-    p.updateVisual(dt);
+    p.updateVisual(dt); this.rider.update(dt, p);
     if (p.shieldT > 0) { p.shieldT -= dt; if (Math.random() < 0.5) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 5, p.pos.y + Math.random() * p.mech.height, p.pos.z + (Math.random() - 0.5) * 5), vel: { x: 0, y: 1.5, z: 0 }, size: 0.5, life: 0.6, r: 0.3, g: 1.8, b: 2.6, alpha: 1 }); }
     if (!p.alive && this.player !== p) return;
 
     // enemies
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
-      if (e.alive) this.think(e, dt);
+      if (e.alive) { if (this.battle && this.battle.over) { e.move(dt, tmp.set(0, 0, 0), 0, false); e.breathT = 0; } else this.think(e, dt); }
       else { e.koT += dt;
         if (e.real) { if (Math.random() < dt * 6) this.fx.dizzy(e, true); }
         else { if (Math.random() < 0.25) this.fx.sparks(e.center.clone(), 2, { r: 1, g: 0.5, b: 0.2 }, 0.5);
@@ -389,6 +416,7 @@ export class Game {
       this.battle.t -= dt; if (this.enemies.length === 0) this.nextWave();
       if (this.battle.t <= 0) this.endBattle();
     }
+    this.mh.update(dt);
     this.updateShots(dt);
     this.updatePickups(dt);
     this.updateCamera(dt, inp);
@@ -402,7 +430,9 @@ export class Game {
     const at = new THREE.Vector3(); if (m.sockets.jet) m.sockets.jet.getWorldPosition(at); else at.copy(d.pos).addScaledVector(f, -1.2 * d.def.scale).setY(d.pos.y + m.height * 0.55);
     const c = m.mats.glowColor; const v = { x: -f.x * 14, y: d.fly ? -4 : 1, z: -f.z * 14 };
     this.fx.glow.spawn({ pos: at, vel: v, size: 1.3, size1: 0.2, life: 0.22, r: c.r * 2.4, g: c.g * 2.4, b: c.b * 2.4, alpha: 1 });
-    for (const k of ['jetL', 'jetR']) if (m.sockets[k]) { m.sockets[k].getWorldPosition(at); this.fx.glow.spawn({ pos: at, vel: v, size: 1, size1: 0.2, life: 0.2, r: 2.6, g: 1.6, b: 0.6, alpha: 1 }); }
+    for (let i = 0; i < this.fx.n(2); i++) this.fx.fire.spawn({ pos: at, vel: { x: v.x * (0.8 + Math.random() * 0.4) + (Math.random() - 0.5) * 3, y: v.y + (Math.random() - 0.5) * 3, z: v.z * (0.8 + Math.random() * 0.4) + (Math.random() - 0.5) * 3 }, size: 0.9 * d.def.scale, size1: 2.6 * d.def.scale, life: 0.3, r: 3.2, g: 1.4, b: 0.35, alpha: 1, drag: 1.5, rv: 3 });
+    if (Math.random() < 0.4 * this.fx.k) this.fx.smoke.spawn({ pos: at.clone().addScaledVector(f, -3), vel: { x: -f.x * 3, y: 1.5, z: -f.z * 3 }, size: 0.8, size1: 3.5, life: 1.1, r: 0.3, g: 0.29, b: 0.28, alpha: 0.4, drag: 1, rv: 1 });
+    for (const k of ['jetL', 'jetR']) if (m.sockets[k]) { m.sockets[k].getWorldPosition(at); this.fx.glow.spawn({ pos: at, vel: v, size: 1, size1: 0.2, life: 0.2, r: 2.6, g: 1.6, b: 0.6, alpha: 1 }); this.fx.fire.spawn({ pos: at, vel: v, size: 0.7, size1: 2, life: 0.26, r: 3.2, g: 1.3, b: 0.3, alpha: 1, drag: 1.5 }); }
     if (!d.fly && Math.random() < 0.5) this.fx.dust(d.pos, 1, 1.2, 3);
   }
   think(e, dt) {
@@ -431,7 +461,8 @@ export class Game {
         const facing = Math.cos(angDiff(e.yaw, Math.atan2(toP.x, toP.z))) > 0.7;
         if (facing && e.laserT <= 0) { if (ai.burst <= 0) { ai.burst = 3; } this.fireLaser(e, p, 0.12); ai.burst--; e.laserT = ai.burst > 0 ? 0.22 : 2.2 + this.r() * 1.2; }
         if (e.st.missiles && e.missileT <= 0 && dist > 15) { e.missileT = e.st.missileCD; this.fireMissiles(e, p); }
-        if (e.meleeT <= 0 && dist < e.radius + p.radius + 4) { e.meleeT = 1.6; this.melee(e, [p]); }
+        if (e.def.breath && facing && e.meleeT <= 0 && dist < 15 * e.def.scale + 4 && !(e.breathT > 0)) { e.meleeT = e.boss ? 4 : 6; this.mh.startBreath(e, e.boss ? 1.6 : 1.0); }
+        else if (e.meleeT <= 0 && dist < e.radius + p.radius + 4) { e.meleeT = 1.6; this.melee(e, [p]); }
       }
       if (e.hp < e.maxHp * 0.28 && !ai.retreated && !battle) { ai.state = 'retreat'; ai.t = 5; ai.retreated = true; }
     } else if (ai.state === 'retreat') {
@@ -487,7 +518,8 @@ export class Game {
     const b = this.battle; if (!b || b.over) return; b.over = true;
     const bonus = b.kos * 10 + b.wave * 5; this.addBolts(bonus);
     this.save.bestBattle = Math.max(this.save.bestBattle || 0, b.kos); this.persist();
-    this.hud.results(b, bonus);
+    if (this.player) this.player.shieldT = Math.max(this.player.shieldT || 0, 3.5);
+    this.mh.celebrate(); this.later(2.9, () => { if (this.battle === b) this.hud.results(b, bonus); });
   }
 
   updateCamera(dt, inp) {
@@ -504,5 +536,6 @@ export class Game {
     this.camera.position.copy(c.pos);
     const sh = this.fx.shake; if (sh > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
     this.camera.lookAt(c.look);
+    if (this.camHook) this.camHook(this.camera); // test/screenshot framing hook
   }
 }

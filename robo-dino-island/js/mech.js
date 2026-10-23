@@ -282,7 +282,7 @@ const SPECIES = {
     const o = quad(B, { s: 1, hipH: 2.6, chestDY: -0.45, bw: 1.8, bh: 1.65, bodyL: 2.3, legB: Object.assign([1.2, 1.1, 0.4], { w: 0.78 }), legF: Object.assign([0.85, 0.75, 0.3], { w: 0.68 }),
       neckN: 2, neckL: 0.6, neckRise: -0.1, neckW: 0.75, headL: 1.0, headW: 0.65, headH: 0.8, tailN: 6, tailL: 0.85 });
     const kite = [[0, -0.1], [0.42, 0.55], [0, 1.25], [-0.42, 0.55]];
-    for (let i = 0; i < 7; i++) { const z = -2.4 + i * 0.6, h = 0.75 + Math.sin((i + 1) / 8 * Math.PI) * 0.65;
+    for (let i = 0; i < 6; i++) { const z = -3.3 + i * 0.6, h = 0.75 + Math.sin((i + 1) / 7 * Math.PI) * 0.65; // front of the back stays clear: rider seat
       B.mirror(sd => { B.part('chest', plateXY(kite, 0.07), i % 2 ? 'plate' : 'frame', sd * 0.22, 0.75 + 0.12 * Math.sin(i), z, 0, Math.PI / 2, sd * -0.16, h, h, 1);
         B.part('chest', shell(0.05, 0.7 * h, 0.05, { e: 0.3 }), 'glow', sd * 0.25, 1.15 + 0.12 * Math.sin(i), z, 0, 0, sd * -0.16); }); }
     for (let k = 0; k < 4; k++) B.part('tail4', cone(0.09, 1.0, 6), k % 2 ? 'glow' : 'joint', (k % 2 ? 1 : -1) * 0.25, 0.15, -0.3 - (k >> 1) * 0.4, 0, 0, (k % 2 ? -1 : 1) * 1.1);

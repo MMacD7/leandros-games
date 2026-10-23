@@ -1,5 +1,5 @@
 // Synthesized sounds with WebAudio. No audio files, nothing downloaded.
-let ctx = null, master = null, muted = false, noiseBuf = null, ambient = null;
+let lastBoom = 0, ctx = null, master = null, muted = false, noiseBuf = null, ambient = null, musicBus = null, comp = null, onReady = null;
 const now = () => ctx.currentTime;
 
 export function initAudio() {
@@ -8,12 +8,22 @@ export function initAudio() {
   if (!AC) return;
   ctx = new AC();
   master = ctx.createGain(); master.gain.value = muted ? 0 : 0.7;
-  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+  comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
   master.connect(comp); comp.connect(ctx.destination);
+  // music has its own bus (separate on/off from sound effects) that ducks under explosions and roars
+  musicBus = ctx.createGain(); musicBus.gain.value = 1; musicBus.connect(comp);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   startAmbient();
+  if (onReady) onReady(ctx);
 }
+export const audioCtx = () => ctx;
+export const getMusicBus = () => musicBus;
+export const getNoise = () => noiseBuf;
+export function onAudioReady(fn) { onReady = fn; if (ctx) fn(ctx); }
+let duckUntil = 0;
+export function duck(amount = 0.6, dur = 1) { if (!ctx || !musicBus) return; const t = now(), g = musicBus.gain; g.cancelScheduledValues(t); g.setTargetAtTime(Math.max(0.15, 1 - amount), t, 0.03);
+  duckUntil = Math.max(duckUntil, t + dur); g.setTargetAtTime(1, duckUntil, 0.35); }
 export function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.7, now(), 0.05); }
 export function isMuted() { return muted; }
 
@@ -34,7 +44,21 @@ export const sfx = {
   laser(vol = 1) { if (!ctx) return; const t = now(); if (t - lastLaser < 0.05) return; lastLaser = t;
     tone(t, 'sawtooth', 1600 + Math.random() * 200, 220, 0.16, 0.12 * vol); tone(t, 'square', 900, 120, 0.12, 0.05 * vol); },
   missile() { if (!ctx) return; const t = now(); noise(t, 0.7, 'bandpass', 600, 2400, 0.35, 2); tone(t, 'sawtooth', 90, 50, 0.5, 0.12); },
-  boom(vol = 1) { if (!ctx) return; const t = now(); noise(t, 0.9, 'lowpass', 2200, 80, 0.8 * vol, 0.7); tone(t, 'sine', 110, 30, 0.6, 0.6 * vol); },
+  // explosion: sharp crack + mid crunch + long sub-bass thump + crackling tail
+  boom(vol = 1) { if (!ctx || vol < 0.03) return; const t = now(); if (t - lastBoom < 0.06) return; lastBoom = t; vol = Math.min(1.6, vol);
+    noise(t, 0.12, 'highpass', 3000, 1200, 0.5 * vol, 0.7);
+    noise(t, 1.1, 'lowpass', 2600, 70, 0.9 * vol, 0.7);
+    tone(t, 'sine', 95, 26, 1.4, 0.95 * vol, 0.004); tone(t, 'triangle', 160, 40, 0.5, 0.35 * vol);
+    for (let i = 0; i < 6; i++) noise(t + 0.25 + Math.random() * 0.9, 0.06, 'bandpass', 2500 + Math.random() * 2000, 1500, 0.12 * vol, 3);
+    duck(0.55 * Math.min(1, vol), 0.7 + 0.4 * vol); },
+  bigBoom(vol = 1) { if (!ctx) return; const t = now(); this.boom(vol); tone(t + 0.02, 'sine', 55, 22, 2.2, 0.8 * vol, 0.01); noise(t + 0.1, 2.4, 'lowpass', 600, 40, 0.5 * vol, 0.5); duck(0.75, 2); },
+  flame(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.2, 'bandpass', 700, 1200, 0.22 * v, 0.6); noise(t, 0.16, 'highpass', 4000, 6000, 0.05 * v, 1); },
+  ignite() { if (!ctx) return; const t = now(); noise(t, 0.5, 'bandpass', 500, 2400, 0.3, 0.8); tone(t, 'sine', 120, 60, 0.3, 0.2); },
+  rumble(dur = 4, v = 1) { if (!ctx) return; const t = now(); noise(t, dur, 'lowpass', 220, 60, 0.55 * v, 0.6); tone(t, 'sine', 40, 28, dur, 0.5 * v, 0.6); duck(0.4, dur * 0.6); },
+  whistle(v = 1) { if (!ctx) return; const t = now(); tone(t, 'sine', 1500 + Math.random() * 300, 380, 1.3, 0.05 * v, 0.2); },
+  jet() { if (!ctx) return; const t = now(); noise(t, 2.2, 'bandpass', 300, 2500, 0.35, 1.2); tone(t, 'sawtooth', 120, 60, 2, 0.05, 0.4); },
+  power() { if (!ctx) return; const t = now(); [392, 523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.05, 'square', f, f, 0.18, 0.08)); tone(t, 'sawtooth', 200, 1600, 0.5, 0.08, 0.05); },
+  banner(lvl = 1) { if (!ctx) return; const t = now(); const b = [262, 330, 392, 523][Math.min(3, lvl - 1)] || 262; [1, 1.26, 1.5, 2].forEach((m, i) => tone(t + i * 0.06, 'sawtooth', b * m, b * m, 0.25, 0.07)); noise(t, 0.6, 'highpass', 5000, 9000, 0.12, 0.5); },
   hit() { if (!ctx) return; const t = now(); noise(t, 0.12, 'bandpass', 3200, 1800, 0.25, 6); tone(t, 'triangle', 700, 500, 0.1, 0.06); },
   stomp() { if (!ctx) return; const t = now(); tone(t, 'sine', 80, 28, 0.45, 0.9); noise(t, 0.35, 'lowpass', 600, 60, 0.5); },
   step(vol = 0.25) { if (!ctx) return; const t = now(); tone(t, 'sine', 60, 35, 0.15, vol); noise(t, 0.08, 'bandpass', 1800, 900, vol * 0.25, 4); },
@@ -43,7 +67,7 @@ export const sfx = {
   whoosh(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.45, 'bandpass', 300, 1800 * v, 0.3, 1.2); },
   slam() { if (!ctx) return; const t = now(); tone(t, 'sine', 70, 25, 0.7, 0.9); noise(t, 0.6, 'lowpass', 1200, 60, 0.6, 0.7); tone(t, 'triangle', 220, 50, 0.3, 0.2); },
   // big dramatic roar: growling sub layer + roaring formant noise + snarl overtones (robots get a metallic ring-mod layer)
-  bigRoar(pitch = 1, vol = 1, robotic = false) { if (!ctx || vol <= 0.02) return; const t = now(), D = 1.5 + 0.4 / pitch;
+  bigRoar(pitch = 1, vol = 1, robotic = false) { if (!ctx || vol <= 0.02) return; const t = now(), D = 1.5 + 0.4 / pitch; if (vol > 0.4) duck(0.5, D * 0.8);
     const out = ctx.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.9 * vol, t + 0.12); out.gain.setValueAtTime(0.9 * vol, t + D * 0.6); out.gain.exponentialRampToValueAtTime(0.0001, t + D); out.connect(master);
     const ws = ctx.createWaveShaper(); const c = new Float32Array(512); for (let i = 0; i < 512; i++) { const x = i / 256 - 1; c[i] = Math.tanh(x * 6); } ws.curve = c;
     const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 2; f1.frequency.setValueAtTime(520 * pitch, t); f1.frequency.linearRampToValueAtTime(900 * pitch, t + 0.35); f1.frequency.linearRampToValueAtTime(380 * pitch, t + D);

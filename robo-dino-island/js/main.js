@@ -6,7 +6,9 @@ import { FX } from './fx.js';
 import { Game } from './game.js';
 import { makeDino } from './game.js';
 import { Input } from './input.js';
-import { DINOS, ROBOS, REALS, UPGRADES, MAX_UP, upCost, loadSave, writeSave, statsFor } from './data.js';
+import { music } from './music.js';
+import { Rider } from './rider.js';
+import { DINOS, ROBOS, REALS, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
 import { initAudio, setMuted, sfx } from './audio.js';
 import { smokeTexture, glowTexture } from './proctex.js';
 
@@ -51,6 +53,7 @@ function applyQuality(q) {
   const c = sun.shadow.camera; c.left = c.bottom = -Q.shadowR; c.right = c.top = Q.shadowR; c.near = 1; c.far = 400; c.updateProjectionMatrix();
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
   if (world) world.applyQuality(Q);
+  if (fx) fx.setTier(Q.tier);
   if (game) game.quality = Q;
   $('p-quality').textContent = 'Graphics: ' + (autoQ ? 'Auto (' + Q.name + ')' : Q.name);
   resize();
@@ -126,7 +129,7 @@ function titleEnemies() {
 let titleRoarT = 1, titleWho = 0;
 
 // ---------------- HUD ----------------
-let toastT = 0;
+let toastT = 0, bannerT = 0;
 const hud = {
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); toastT = 1.8; },
   hurt() { const el = $('hurt'); el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 120); },
@@ -135,11 +138,16 @@ const hud = {
   flash() { const el = $('flash'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); },
   roar() { document.body.classList.remove('roaring'); void document.body.offsetWidth; document.body.classList.add('roaring'); },
   actions(def) {
-    const L = def.real ? { laser: 'BITE', missile: def.specialName, melee: 'ROAR', boost: 'RUN' } : { laser: 'LASER', missile: 'MISSILE', melee: 'BITE<br>STOMP', boost: 'BOOST' };
+    const L = def.real ? { laser: 'BITE', missile: def.specialName, melee: (save.up.fire ? '🔥 ' : '') + 'ROAR', boost: 'RUN' } : { laser: 'LASER', missile: 'MISSILE', melee: def.breath ? 'FIRE<br>BREATH' : 'BITE<br>STOMP', boost: 'BOOST' };
+    document.body.classList.toggle('breath', !!def.breath);
     for (const k in L) document.querySelector(`[data-btn="${k}"] span`).innerHTML = L[k];
     document.body.classList.toggle('real-dino', !!def.real);
   },
   revived() { $('ko-msg').classList.add('hidden'); hud.toast('Back in action!'); },
+  banner(t, lvl = 1) { const el = $('banner'); el.textContent = t; el.className = 'lv' + lvl; void el.offsetWidth; el.classList.add('show'); bannerT = 1.6 + lvl * 0.2; },
+  combo(n) { const el = $('combo'); if (n >= 3) { el.innerHTML = `<b>${n}</b> HIT COMBO`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('show', 'pop'); } else el.classList.remove('show'); },
+  victory() { music.victory(); },
+  logoBoom() { const el = document.querySelector('#title .logo'); el.classList.remove('boom'); void el.offsetWidth; el.classList.add('boom'); },
   results(b, bonus) { $('r-text').innerHTML = `Wave reached: <b>${b.wave}</b><br>Robots knocked out: <b>${b.kos}</b><br>Bolts earned: <b>${b.bolts}</b> (incl. ${bonus} bonus)<br>Best ever: <b>${save.bestBattle}</b> KOs`; show('results'); $('ko-msg').classList.add('hidden'); },
 };
 const ebarEls = [];
@@ -148,8 +156,11 @@ function updateHUD(dt) {
   $('hp').style.width = (p.hp / p.maxHp * 100) + '%'; $('hp-t').textContent = Math.ceil(p.hp);
   $('boost').style.width = (p.boostE / p.st.boost * 100) + '%';
   $('mcd').style.setProperty('--p', Math.max(0, p.missileT / p.st.missileCD * 100) + '%');
-  $('rcd').style.setProperty('--p', p.real ? Math.max(0, p.meleeT / p.st.roarCD * 100) + '%' : '0%');
+  $('rcd').style.setProperty('--p', p.real ? Math.max(0, p.meleeT / p.st.roarCD * 100) + '%' : p.def.breath ? Math.max(0, p.meleeT / 3 * 100) + '%' : '0%');
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('show'); }
+  if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
+  const gb = game.battle, boss = gb && gb.boss && gb.boss.alive ? gb.boss : null; $('boss').classList.toggle('hidden', !boss);
+  if (boss) { $('boss-name').textContent = boss.def.name; $('boss-hp').style.width = (boss.hp / boss.maxHp * 100) + '%'; }
   const b = game.battle;
   $('hud-tc').classList.toggle('hidden', !b);
   if (b) { const t = Math.max(0, Math.ceil(b.t)); $('timer').textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); $('wave').textContent = `Wave ${b.wave} · KOs ${b.kos}`; }
@@ -188,7 +199,13 @@ function show(s) {
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${save.owned.length}/${DINOS.length} dinos`; }
   if (s === 'garage') { if (prevScreen !== 'garage') syncGarageToSelected(); refreshGarage(); }
-  hud.bolts(); checkRotate(); fpsReset();
+  if (s === 'title' && game) game.mh.titleEnter();
+  hud.bolts(); checkRotate(); fpsReset(); syncMusic();
+}
+function syncMusic() {
+  const b = game && game.battle;
+  const t = screen === 'title' || screen === 'garage' || screen === 'loading' ? 'title' : b ? (b.boss && b.boss.alive ? 'boss' : 'battle') : 'roam';
+  music.play(t);
 }
 let rotateDismissed = false;
 function checkRotate() { const portrait = window.innerHeight > window.innerWidth * 1.05; $('rotate').classList.toggle('hidden', !(portrait && !rotateDismissed && (screen === 'play' || screen === 'title'))); }
@@ -205,6 +222,12 @@ tap('r-ok', () => { game.startRoam(); show('play'); });
 const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '🔊'; $('p-sound').textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on'; };
 const toggleSound = () => { save.muted = !save.muted; setMuted(save.muted); persist(); soundLabel(); };
 tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
+const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
+const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
+const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); game.mountRider(); if (gMech) { if (save.ride) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
+tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); musicLabel();
 tap('p-quality', () => { if (autoQ) { autoQ = false; applyQuality(TIERS[0]); } else if (Q.tier < 3) applyQuality(TIERS[Q.tier + 1]); else { autoQ = true; applyQuality(TIERS[startTier]); } });
 document.addEventListener('gesturestart', e => e.preventDefault()); document.addEventListener('dblclick', e => e.preventDefault());
 document.addEventListener('touchmove', e => { if (!e.target.closest('.g-panel')) e.preventDefault(); }, { passive: false });
@@ -215,7 +238,7 @@ const gScene = new THREE.Scene(), gCam = new THREE.PerspectiveCamera(40, 1, 0.1,
 const GARAGE_YAW = 1.5; // ~3/4 front view (camera sits at yaw 0.67)
 let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo';
 const gListOf = () => gList === 'real' ? REALS : ROBOS;
-const gMechs = {};
+const gMechs = {}, gRider = new Rider();
 function buildGarage() {
   gScene.background = new THREE.Color(0x0b1520); gScene.environment = scene.environment; gScene.environmentIntensity = 0.7;
   gScene.fog = new THREE.Fog(0x0b1520, 20, 60);
@@ -234,6 +257,7 @@ function setGarageMech() {
   const def = gListOf()[gIdx]; if (gMech) gScene.remove(gMech.obj);
   gMech = gMechs[def.id] || (gMechs[def.id] = makeDino(def, assets, false)); gScene.add(gMech.obj);
   gMech.obj.position.set(0, 0, 0); if (def.fly) gMech.obj.position.y = 1.2;
+  if (save.ride !== false) gRider.mount(gMech); else gRider.unmount();
 }
 function refreshGarage() {
   if (gTab !== 'ups') gList = gTab;
@@ -245,11 +269,10 @@ function refreshGarage() {
     : [['Health', st.hp / 400], ['Speed', st.speed / 20], ['Laser', st.laser * (0.2 / st.rate) / 25], ['Missiles', st.missiles / 11], ['Bite', st.melee / 80]];
   $('g-stats').innerHTML = bars.map(([n, v]) => `<div class="stat"><span>${n}</span><div class="sb"><i style="width:${Math.min(100, v * 100)}%"></i></div></div>`).join('');
   const a = $('g-action');
-  if (owned) { a.textContent = save.selected === def.id ? '✓ Your dino' : 'Play as ' + def.name; a.disabled = save.selected === def.id; a.className = 'btn primary'; }
-  else { a.innerHTML = `🔓 Unlock for <span class="nut">⬢</span> ${def.price}`; a.disabled = save.bolts < def.price; a.className = 'btn'; if (save.bolts < def.price) a.innerHTML += `<br><small>Need ${def.price - save.bolts} more bolts - keep playing!</small>`; }
+  a.textContent = save.selected === def.id ? '✓ Your dino' : 'Play as ' + def.name; a.disabled = save.selected === def.id; a.className = 'btn primary';
   $('g-dots').innerHTML = list.map((d, i) => `<i class="${save.owned.includes(d.id) ? 'own' : ''} ${i === gIdx ? 'cur' : ''}"></i>`).join('');
-  $('g-ups').innerHTML = UPGRADES.map(u => { const l = save.up[u.id], c = upCost(l); return `<div class="up"><span class="ic">${u.icon}</span><div><h4>${u.name}</h4><p>${u.desc}</p><span class="pips">${'●'.repeat(l)}${'○'.repeat(MAX_UP - l)}</span></div>
-    <button data-up="${u.id}" ${l >= MAX_UP || save.bolts < c ? 'disabled' : ''}>${l >= MAX_UP ? 'MAX' : '⬢ ' + c}</button></div>`; }).join('');
+  $('g-ups').innerHTML = UPGRADES.map(u => { const l = save.up[u.id]; return `<div class="up"><span class="ic">${u.icon}</span><div><h4>${u.name}</h4><p>${u.desc}</p><span class="pips">${'●'.repeat(l)}${'○'.repeat(MAX_UP - l)}</span> <small class="lvl">Level ${l}/${MAX_UP}</small></div>
+    <span class="upb"><button data-up="${u.id}" data-d="-1" ${l <= 0 ? 'disabled' : ''} aria-label="less">−</button><button data-up="${u.id}" data-d="1" ${l >= MAX_UP ? 'disabled' : ''} aria-label="more">+</button></span></div>`; }).join('');
   $('g-dino').classList.toggle('hidden', gTab === 'ups'); $('g-ups').classList.toggle('hidden', gTab !== 'ups');
   for (const t of ['real', 'robo', 'ups']) $('t-' + t).classList.toggle('on', gTab === t);
   $('g-prev').parentElement.classList.toggle('hidden', gTab === 'ups');
@@ -263,12 +286,11 @@ tap('g-back', () => { if (garageFrom === 'pause') { if (game.player.def.id !== s
 $('g-action').addEventListener('click', () => {
   initAudio(); const def = gListOf()[gIdx];
   if (save.owned.includes(def.id)) { save.selected = def.id; sfx.ui(); gMech.roar = 1.6; sfx.bigRoar(def.real ? 1.1 - def.scale * 0.25 : 1.3 - def.scale * 0.3, def.real ? 1 : 0.6, !def.real); }
-  else if (save.bolts >= def.price) { save.bolts -= def.price; save.owned.push(def.id); save.selected = def.id; sfx.unlock(); hud.toast(def.name + ' unlocked!'); }
-  else { sfx.deny(); return; }
+  else { save.owned.push(def.id); save.selected = def.id; sfx.unlock(); }
   persist(); refreshGarage();
 });
-$('g-ups').addEventListener('click', e => { const b = e.target.closest('button[data-up]'); if (!b) return; initAudio(); const id = b.dataset.up, l = save.up[id], c = upCost(l);
-  if (l < MAX_UP && save.bolts >= c) { save.bolts -= c; save.up[id]++; persist(); sfx.unlock(); if (game.player) { const p = game.player; const f = p.hp / p.maxHp; p.st = statsFor(p.def, save.up); p.maxHp = p.st.hp; p.hp = p.maxHp * f; } } else sfx.deny(); refreshGarage(); });
+$('g-ups').addEventListener('click', e => { const b = e.target.closest('button[data-up]'); if (!b) return; initAudio(); const id = b.dataset.up, l = save.up[id], n = Math.max(0, Math.min(MAX_UP, l + (+b.dataset.d || 1)));
+  if (n !== l) { save.up[id] = n; persist(); n > l ? sfx.unlock() : sfx.ui(); if (game.player) { const p = game.player; const f = p.hp / p.maxHp; p.st = statsFor(p.def, save.up); p.maxHp = p.st.hp; p.hp = p.maxHp * f; } } else sfx.deny(); refreshGarage(); });
 
 // ---------------- adaptive quality ----------------
 let fpsAcc = 0, fpsN = 0, fpsWarm = 0, goodWindows = 0, lastDrop = -1e9, measured = 60; const dropped = new Set();
@@ -294,7 +316,7 @@ function loop(now) {
   if (screen === 'garage') {
     titleT += dt; { const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio'; gMech.obj.rotation.y = GARAGE_YAW - (tall ? 0.45 : 0) + Math.sin(titleT * 0.35) * (tall ? 0.3 : 0.55); } gMech.animate(dt, 0, { jaw: gMech.roar > 0 ? 1 : 0, roar: gMech.roar > 0.3 ? Math.min(1, gMech.roar) : 0, flying: gMech.def.fly });
     if (!gMech.roarT || titleT > gMech.roarT) { gMech.roarT = titleT + 6 + Math.random() * 3; if (gMech.roarT > 7) gMech.roar = 1.6; }
-    gMech.roar = Math.max(0, (gMech.roar || 0) - dt); if (gMech.def.fly) gMech.obj.position.y = 1.5 + Math.sin(titleT * 2) * 0.2;
+    gMech.roar = Math.max(0, (gMech.roar || 0) - dt); if (gRider.mounted) gRider.update(dt, { speedNow: 0, roar: gMech.roar, turn: 0 }); if (gMech.def.fly) gMech.obj.position.y = 1.5 + Math.sin(titleT * 2) * 0.2;
     const W = window.innerWidth, H = window.innerHeight, portrait = H > W, h = gMech.height, R = Math.max(gMech.fitR, 6);
     const t = Math.tan(THREE.MathUtils.degToRad(gCam.fov / 2)), dist = R / (portrait ? t * gCam.aspect * 1.0 : Math.min(t * 0.95, t * gCam.aspect * 0.52)) * (portrait ? 1.0 : 0.8) + 2;
     const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio', cy = h * (tall ? 0.85 : 0.5) + (gMech.def.fly ? 1.2 : 0);
@@ -306,12 +328,16 @@ function loop(now) {
   const c0 = performance.now();
   const inp = input.read();
   const real = dt; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; }
+  syncMusic();
   if (screen === 'play') { game.update(dt, inp); updateHUD(real); }
   else if (screen === 'title') {
     titleT += dt; const p = game.player, rival = game.enemies[0];
-    p.updateVisual(dt); for (const e of game.enemies) e.updateVisual(dt);
+    p.updateVisual(dt); for (const e of game.enemies) e.updateVisual(dt); game.rider.update(dt, p); if (game.rider.mounted && game.rider.waveT <= 0 && Math.random() < dt * 0.25) game.rider.wave(2.2);
     titleRoarT -= dt;
-    if (titleRoarT <= 0 && rival) { const who = titleWho++ % 2 ? rival : p; who.roar = 1.7; who.jaw = 1; titleRoarT = 3.6; fx.shake = Math.max(fx.shake, 0.35); fx.roarWave(game.mouthPos(who), who.forward(new THREE.Vector3()), who.def.scale, who.mech.mats.glowColor); sfx.bigRoar(who.real ? 0.85 : 1, 0.5, !who.real); }
+    if (titleRoarT <= 0 && rival) { const who = titleWho++ % 2 ? rival : p; who.roar = 1.7; who.jaw = 1; titleRoarT = 3.6; fx.shake = Math.max(fx.shake, 0.35); fx.roarWave(game.mouthPos(who), who.forward(new THREE.Vector3()), who.def.scale, who.mech.mats.glowColor); sfx.bigRoar(who.real ? 0.85 : 1, 0.5, !who.real);
+      if (who.real) game.mh.fieryRoar(who, false); else if (who.def.breath) game.mh.startBreath(who, 1.1); }
+    game.mh.safe = true; for (const d of [p, ...game.enemies]) if (d.breathT > 0) game.mh.updateBreath(d, dt);
+    game.mh.updateTitle(dt);
     const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
     const a = Math.sin(titleT * 0.12) * 0.22, r = (asp < 1 ? 28 : asp < 1.5 ? 17.5 : 15.5) + Math.sin(titleT * 0.2) * 1.0;
     camera.position.set(mid.x + Math.sin(a) * r, 0, mid.z + Math.cos(a) * r);
@@ -344,5 +370,5 @@ function emitSmoke(dt) {
 if ('serviceWorker' in navigator && location.protocol !== 'file:') { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { })); }
 
 // test / debug hooks (no network, local only)
-function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale }); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale }); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
+window.G = { defs: () => DINOS, get gRider() { return gRider; }, get gCam() { return gCam; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };

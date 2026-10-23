@@ -1,6 +1,6 @@
 // Roster (robot + real dinos), upgrades and save data. Everything is earned by playing: bolts are the only currency.
 export const ROBOS = [
-  { id: 'rex', name: 'Robo-Rex', price: 0, desc: 'The king of the island. Big bite, strong lasers.',
+  { id: 'rex', name: 'Robo-Rex', price: 0, desc: 'The king of the island. Strong lasers and FIRE BREATH!', breath: true,
     hp: 120, speed: 11, laser: 9, rate: 0.16, missiles: 2, melee: 30, scale: 1.0, kind: 'rex',
     body: 0x3a3f47, armor: 0x141518, glow: 0x35e8ff },
   { id: 'raptor', name: 'Raptor-X', price: 150, desc: 'Super fast and nimble. Double lasers!',
@@ -63,22 +63,28 @@ export const UPGRADES = [
   { id: 'missile', name: 'Missiles & Specials', desc: '+1 missile, faster missile & special reload', icon: '🚀' },
   { id: 'engine', name: 'Leg Power', desc: '+8% speed', icon: '⚙️' },
   { id: 'battery', name: 'Boost & Stamina', desc: 'Longer boost / run', icon: '🔋' },
+  { id: 'fire', name: 'Fire Power', desc: 'Hotter fire breath, burning missiles &amp; a roar that breathes fire', icon: '🔥' },
 ];
 export const MAX_UP = 5;
 export const upCost = lvl => [60, 120, 200, 320, 480][lvl] ?? Infinity;
 
 const KEY = 'robo-dino-island.v1';
-const fresh = () => ({ bolts: 0, owned: ['rex', 'trex'], selected: 'rex', up: { armor: 0, laser: 0, missile: 0, engine: 0, battery: 0 },
-  kos: 0, cores: 0, bestBattle: 0, muted: false });
+// Everything is unlocked from the start: every dino is owned and every upgrade starts at max level (levels can be
+// dialled down/up for free in the garage). Bolts are just a score now.
+const ALL_IDS = () => DINOS.map(d => d.id);
+const maxUps = () => Object.fromEntries(UPGRADES.map(u => [u.id, MAX_UP]));
+const fresh = () => ({ bolts: 0, owned: ALL_IDS(), selected: 'rex', up: maxUps(),
+  kos: 0, cores: 0, bestBattle: 0, muted: false, music: true, ride: true, allUnlocked: true });
 
 export function loadSave() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (!s) return fresh();
     const f = fresh();
-    const owned = Array.isArray(s.owned) && s.owned.length ? s.owned.filter(id => DINOS.some(d => d.id === id)) : ['rex'];
-    for (const id of ['rex', 'trex']) if (!owned.includes(id)) owned.push(id); // the free dinos (older saves predate the real T-Rex)
-    const out = { ...f, ...s, up: { ...f.up, ...(s.up || {}) }, owned };
+    const owned = ALL_IDS(); // older saves: everything gets unlocked on load
+    const up = s.allUnlocked ? { ...f.up, ...(s.up || {}) } : maxUps(); // first load after the update: max out every upgrade
+    for (const k in up) up[k] = Math.max(0, Math.min(MAX_UP, up[k] | 0));
+    const out = { ...f, ...s, up, owned, allUnlocked: true };
     if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex';
     return out;
   } catch (e) { return fresh(); }
@@ -92,7 +98,7 @@ export function statsFor(def, up) {
     bite: def.bite * (1 + 0.15 * up.laser), rate: def.biteRate, laser: 0, missiles: 0,
     missileCD: Math.max(def.specialCD * 0.55, def.specialCD - 0.35 * up.missile), // special cooldown
     melee: def.bite * (1 + 0.15 * up.laser), roar: def.roar, roarCD: 6,
-    boost: 3.5 + 0.8 * up.battery,
+    boost: 3.5 + 0.8 * up.battery, fire: up.fire || 0,
   };
   return {
     hp: Math.round(def.hp * (1 + 0.15 * up.armor)),
@@ -102,6 +108,6 @@ export function statsFor(def, up) {
     missiles: def.missiles + up.missile,
     missileCD: Math.max(2.2, 5 - 0.5 * up.missile),
     melee: def.melee * (1 + 0.1 * up.armor),
-    boost: 3 + 0.8 * up.battery,
+    boost: 3 + 0.8 * up.battery, fire: up.fire || 0,
   };
 }
