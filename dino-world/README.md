@@ -1,7 +1,7 @@
 # Leandro's Dinosaur World
 
 A dinosaur game for kids with no ads, no purchases, no links to other sites, and no tracking.
-Once it loads, it runs fully offline. Every dinosaur is unlocked by playing.
+Once it loads, it runs fully offline. Every dinosaur is unlocked from the start.
 
 ## Put it on an iPhone or iPad
 1. Open the game link in **Safari**.
@@ -13,7 +13,7 @@ Once it loads, it runs fully offline. Every dinosaur is unlocked by playing.
   Eat the right food for your dino (meat, leaves, or fish; the arrow points to the nearest food), and grow from hatchling to juvenile to adult.
   Collect golden eggs and fossils. If your dino gets tired, it naps at the nest and keeps everything it has earned.
 - **Run**: tap to jump. Swipe down, or hold the red button, to duck and chomp. Dodge rocks, logs, and fireballs, and grab snacks.
-- **Bones** come from both modes. They are never spent. Your total unlocks new dinos: Raptor, Triceratops,
+- **Bones** come from both modes and are your score. All 8 dinos are ready to play from the start: Raptor, Triceratops,
   Stegosaurus, Pteranodon, Ankylosaurus, Spinosaurus, Brachiosaurus, and T-Rex.
 
 Progress is saved on the device (localStorage).

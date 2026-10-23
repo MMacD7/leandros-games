@@ -1,5 +1,5 @@
 /* Offline cache. Everything is local; nothing is fetched from other sites. */
-const CACHE = 'leandros-dino-world-v1';
+const CACHE = 'leandros-dino-world-v2';
 const FILES = ['./', './index.html', './css/style.css', './js/data.js', './js/audio.js', './js/art.js', './js/island.js', './js/runner.js', './js/main.js',
   './manifest.webmanifest', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
