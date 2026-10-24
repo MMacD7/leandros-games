@@ -98,7 +98,45 @@ export class FX {
     this.rings = [];
     const rg = new THREE.RingGeometry(0.85, 1, 40); rg.rotateX(-Math.PI / 2); this.ringGeo = rg; this.ringGeoV = new THREE.RingGeometry(0.7, 1, 40); this.waves = [];
     this.shake = 0; this.v = new THREE.Vector3();
+    this.zaps = []; this.zapMats = {};
   }
+  // jagged lightning bolt between two points (two crossed ribbons so it reads from any angle) + glow beads
+  zap(a, b, col = { r: 0.75, g: 0.8, b: 1.0 }, w = 0.32, life = 0.16, jag = 0.08) {
+    const d = new THREE.Vector3().subVectors(b, a), L = d.length(); if (L < 0.2) return;
+    const n = Math.max(4, Math.min(16, Math.round(L / 2.5))), dn = d.clone().divideScalar(L);
+    const p1 = new THREE.Vector3().crossVectors(dn, Math.abs(dn.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)).normalize(), p2 = new THREE.Vector3().crossVectors(dn, p1).normalize();
+    const pts = []; for (let i = 0; i <= n; i++) { const t = i / n, j = i === 0 || i === n ? 0 : L * jag * (0.4 + Math.random() * 0.6);
+      pts.push(a.clone().addScaledVector(d, t).addScaledVector(p1, (Math.random() - 0.5) * 2 * j).addScaledVector(p2, (Math.random() - 0.5) * 2 * j)); }
+    const pos = [];
+    for (const P of [p1, p2]) for (let i = 0; i < n; i++) { const A = pts[i], B = pts[i + 1], ww = w * (1 - 0.5 * i / n);
+      const a0 = A.clone().addScaledVector(P, ww), a1 = A.clone().addScaledVector(P, -ww), b0 = B.clone().addScaledVector(P, ww), b1 = B.clone().addScaledVector(P, -ww);
+      pos.push(a0.x, a0.y, a0.z, a1.x, a1.y, a1.z, b0.x, b0.y, b0.z, a1.x, a1.y, a1.z, b1.x, b1.y, b1.z, b0.x, b0.y, b0.z); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const key = [col.r, col.g, col.b].join(','); let mat = this.zapMats[key];
+    if (!mat) mat = this.zapMats[key] = new THREE.MeshBasicMaterial({ color: new THREE.Color(col.r * 2.6, col.g * 2.6, col.b * 2.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false });
+    const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 4; this.scene.add(m); this.zaps.push({ m, t: 0, life });
+    if (this.zaps.length > 40) { const z = this.zaps.shift(); this.scene.remove(z.m); z.m.geometry.dispose(); }
+    for (let i = 0; i <= n; i += 2) this.glow.spawn({ pos: pts[i], size: 1.6 * w * 4, size1: 0.5, life: 0.12, r: col.r * 2, g: col.g * 2, b: col.b * 2, alpha: 0.9 });
+    this.glow.spawn({ pos: b, size: 4, size1: 1, life: 0.14, r: col.r * 2.6, g: col.g * 2.6, b: col.b * 2.6, alpha: 1 });
+    this.light.position.copy(b); this.light.position.y += 1; this.light.color.setRGB(col.r, col.g, col.b); this.light.intensity = Math.max(this.light.intensity, 50); this.light.distance = Math.max(this.light.distance, 40);
+  }
+  // frost breath puff (call every frame while breathing)
+  frost(pos, dir, len = 1, power = 1) {
+    const n = this.n(5 * power);
+    for (let i = 0; i < n; i++) { const sp = (17 + Math.random() * 12) * len, j = () => (Math.random() - 0.5) * 0.3;
+      const v = { x: (dir.x + j()) * sp, y: (dir.y + j() * 0.6) * sp + 1, z: (dir.z + j()) * sp };
+      this.fire.spawn({ pos, vel: v, size: 0.5 * power, size1: Math.min(7, 4 * power * len), life: 0.45 + Math.random() * 0.2, r: 0.35, g: 0.9 + Math.random() * 0.3, b: 2.4, alpha: 0.7, alpha1: 0, drag: 2.2, rv: (Math.random() - 0.5) * 3 }); }
+    if (Math.random() < 0.6 * this.k) { const e = pos.clone().addScaledVector(dir, (4 + Math.random() * 6) * len); this.smoke.spawn({ pos: e, vel: { x: dir.x * 6, y: 1, z: dir.z * 6 }, size: 1.5, size1: 6, life: 1.1, r: 0.85, g: 0.95, b: 1.05, alpha: 0.45, drag: 1.5, rv: 1, fadeIn: 0.1 }); }
+    for (let i = 0; i < 2; i++) this.glow.spawn({ pos, vel: { x: dir.x * 24 + (Math.random() - 0.5) * 9, y: dir.y * 24 + (Math.random() - 0.5) * 6, z: dir.z * 24 + (Math.random() - 0.5) * 9 }, size: 0.16, life: 0.55, r: 2.2, g: 2.6, b: 3, alpha: 1, drag: 1.2 });
+    this.light.position.copy(pos).addScaledVector(dir, 4); this.light.color.setRGB(0.5, 0.8, 1); this.light.intensity = Math.max(this.light.intensity, 45 * power); this.light.distance = Math.max(this.light.distance, 30);
+  }
+  // icy shatter / goo splat bursts
+  shatter(pos, power = 1) { for (let i = 0; i < this.n(14 * power); i++) { const v = { x: (Math.random() - 0.5) * 16 * power, y: 3 + Math.random() * 10 * power, z: (Math.random() - 0.5) * 16 * power };
+      this.glow.spawn({ pos, vel: v, size: 0.22, life: 0.7, len: 0.5, r: 1.6, g: 2.4, b: 3, alpha: 1, grav: 20, drag: 0.8 }); }
+    this.smoke.spawn({ pos, size: 2 * power, size1: 6 * power, life: 0.9, r: 0.85, g: 0.95, b: 1.05, alpha: 0.6, drag: 1, fadeIn: 0.05 }); this.ring(pos, 6 * power, 0x9fe8ff); }
+  goo(pos, power = 1) { for (let i = 0; i < this.n(14 * power); i++) { const v = { x: (Math.random() - 0.5) * 12 * power, y: 3 + Math.random() * 7, z: (Math.random() - 0.5) * 12 * power };
+      this.glow.spawn({ pos, vel: v, size: 0.35, size1: 0.15, life: 0.8, r: 0.8, g: 2.6, b: 0.3, alpha: 1, grav: 22, drag: 0.6 }); }
+    this.smoke.spawn({ pos, size: 1.5 * power, size1: 5 * power, life: 1.2, r: 0.45, g: 0.75, b: 0.2, alpha: 0.55, drag: 1, fadeIn: 0.05 }); this.ring(pos, 5 * power, 0x9aff2a); }
   setTier(t) {
     const T = [{ s: 450, g: 650, f: 380, k: 0.42, d: 10, e: 14 }, { s: 750, g: 1050, f: 650, k: 0.65, d: 20, e: 24 }, { s: 1200, g: 1600, f: 1050, k: 1, d: 32, e: 34 }, { s: 1700, g: 2300, f: 1500, k: 1.25, d: 44, e: 44 }][t] || {};
     this.smoke.cap = T.s; this.glow.cap = T.g; this.fire.cap = T.f; this.k = T.k; this.maxDebris = T.d; this.maxEm = T.e;
@@ -258,6 +296,7 @@ export class FX {
     for (const S of this.scorches) if (S.m.visible) { S.t += dt; S.m.material.opacity = 0.7 * Math.min(1, S.t * 6) * Math.max(0, 1 - Math.max(0, S.t - 10) / 4); if (S.t > 14) S.m.visible = false; }
     for (let i = this.warns.length - 1; i >= 0; i--) { const w = this.warns[i]; w.t += dt; const u = w.t / w.dur, pl = 0.5 + 0.5 * Math.sin(w.t * (8 + u * 18));
       w.m.material.opacity = 0.45 + 0.5 * pl; w.f.material.opacity = 0.08 + 0.25 * u; w.f.scale.setScalar(Math.min(1, u)); if (w.t >= w.dur || w.dead) { this.scene.remove(w.m); w.m.material.dispose(); w.f.material.dispose(); this.warns.splice(i, 1); } }
+    for (let i = this.zaps.length - 1; i >= 0; i--) { const z = this.zaps[i]; z.t += dt; z.m.visible = z.t < z.life && (z.t < 0.05 || Math.random() < 0.8); if (z.t >= z.life) { this.scene.remove(z.m); z.m.geometry.dispose(); this.zaps.splice(i, 1); } }
     this.light.intensity *= Math.max(0, 1 - dt * 7);
     this.shake = Math.max(0, this.shake - dt * 2.2);
     this.smoke.update(dt, fog); this.glow.update(dt, fog); this.fire.update(dt, fog);

@@ -424,6 +424,136 @@ const SPECIES = {
     scutes(B, 2, 12, 1);
     return o;
   },
+  // ---------------- v4: more dinos ----------------
+  giga(B) {
+    const P = B.pal;
+    const o = theropod(B, { hipH: 3.2, hipW: 0.6, body: 2.2, w: 0.95, hs: 1.1, neck: [1.05, 0.7], tailN: 10, tailL: 0.82, tailR: 0.72,
+      hipR: [0.88, 1.05], bellyR: [1.02, 1.2], chestR: [0.95, 1.12], neckR: [0.66, 0.76], leg: [1.4, 1.35, 0.78], legW: 1.22, foot: 0.8, toeSpread: 0.24,
+      shW: 0.52, shY: 0.42, arm: [0.42, 0.36], armW: 0.95, fingers: 3, jawY: -0.24, jawZ: 0.02,
+      headPts: [[-0.3, 0.08, 0.44, 0.5], [0.12, 0.14, 0.52, 0.6], [0.6, 0.12, 0.46, 0.58], [1.1, 0.05, 0.38, 0.5], [1.55, -0.02, 0.3, 0.42], [1.9, -0.07, 0.26, 0.34], [2.1, -0.12, 0.16, 0.18]],
+      jawPts: [[-0.18, 0, 0.36, 0.32], [0.4, -0.05, 0.4, 0.35], [1.0, -0.01, 0.34, 0.28], [1.5, 0.02, 0.27, 0.2], [1.9, 0.05, 0.2, 0.14], [2.04, 0.06, 0.1, 0.07]],
+      teeth: [0.35, 2.0, 10, 0.28], eyeP: [0.4, 0.36, 0.6], eyeR: 0.1, browTilt: 0.25, scar: [1.4, 2.2], sf: 2.6 });
+    // knobbly ridge along the snout + heavy brow horns
+    for (let i = 0; i < 6; i++) B.horn('head', [0, 0.62 - i * 0.04, 0.55 + i * 0.22], [-0.25, 0, 0], 0.12 + 0.04 * Math.sin(i), 0.07, -0.2, P.hornDark, P.hornDark.clone().lerp(P.horn, 0.4), 'horn', 6, 2);
+    for (const sd of [1, -1]) { B.horn('head', [sd * 0.38, 0.52, 0.45], [-0.6, 0, sd * -0.5], 0.28, 0.13, -0.3, P.hornDark, P.hornDark.clone().lerp(P.back, 0.5)); B.blob('head', [sd * 0.4, -0.05, 0.1], [0.2, 0.3, 0.4], [0, 0, 0], P.back.clone().multiplyScalar(0.95)); }
+    scutes(B, 3, 18, 1.5);
+    return o;
+  },
+  allo(B) {
+    const P = B.pal;
+    const o = theropod(B, { hipH: 2.9, hipW: 0.55, body: 1.9, w: 0.85, hs: 0.95, neck: [1.0, 0.7], tailN: 10, tailL: 0.75, tailR: 0.62,
+      hipR: [0.78, 0.94], bellyR: [0.88, 1.06], chestR: [0.84, 1.0], neckR: [0.52, 0.6], leg: [1.3, 1.35, 0.8], legW: 0.98, foot: 0.72, toeSpread: 0.2,
+      shW: 0.48, shY: 0.4, arm: [0.5, 0.42], armW: 0.95, fingers: 3, handClaw: 1.3, jawY: -0.22, jawZ: 0.02,
+      headPts: [[-0.25, 0.05, 0.38, 0.44], [0.15, 0.12, 0.44, 0.52], [0.6, 0.08, 0.38, 0.46], [1.05, 0.0, 0.3, 0.38], [1.4, -0.06, 0.24, 0.28], [1.6, -0.1, 0.14, 0.15]],
+      jawPts: [[-0.15, 0, 0.32, 0.26], [0.4, -0.04, 0.34, 0.26], [0.95, 0, 0.28, 0.2], [1.4, 0.03, 0.2, 0.13], [1.55, 0.04, 0.1, 0.07]],
+      teeth: [0.3, 1.5, 8, 0.2], eyeP: [0.35, 0.3, 0.55], eyeR: 0.085, browTilt: 0.3, sf: 3.6 });
+    // the famous horn crests in front of the eyes + twin nasal ridges
+    for (const sd of [1, -1]) { B.horn('head', [sd * 0.27, 0.5, 0.68], [-0.35, 0, sd * -0.25], 0.36, 0.14, -0.25, P.accent.clone().multiplyScalar(0.7), P.hornDark);
+      for (let i = 0; i < 4; i++) B.horn('head', [sd * 0.14, 0.5 - i * 0.05, 0.95 + i * 0.16], [-0.2, 0, sd * -0.15], 0.09, 0.05, 0, P.hornDark, P.hornDark.clone().lerp(P.horn, 0.3), 'horn', 6, 2); }
+    scutes(B, 4, 17, 1.0);
+    return o;
+  },
+  dilo(B) {
+    const P = B.pal;
+    const o = theropod(B, { hipH: 2.5, hipW: 0.42, body: 1.55, w: 0.72, hs: 0.85, neck: [1.05, 0.85], tailN: 10, tailL: 0.72, tailR: 0.48,
+      hipR: [0.62, 0.74], bellyR: [0.68, 0.82], chestR: [0.64, 0.78], neckR: [0.38, 0.42], leg: [1.15, 1.25, 0.75], legW: 0.8, foot: 0.62, toeSpread: 0.16,
+      shW: 0.4, shY: 0.36, arm: [0.5, 0.45], armW: 0.8, fingers: 3, handClaw: 1.1, jawY: -0.17, jawZ: 0.02,
+      headPts: [[-0.22, 0.05, 0.31, 0.33], [0.15, 0.07, 0.34, 0.34], [0.55, 0.03, 0.27, 0.27], [0.98, -0.03, 0.18, 0.19], [1.3, -0.06, 0.13, 0.13], [1.42, -0.08, 0.07, 0.07]],
+      jawPts: [[-0.15, 0, 0.25, 0.17], [0.4, -0.02, 0.24, 0.16], [0.95, 0.01, 0.15, 0.1], [1.32, 0.02, 0.09, 0.06], [1.4, 0.02, 0.05, 0.04]],
+      teeth: [0.3, 1.32, 9, 0.11], eyeP: [0.27, 0.2, 0.48], eyeR: 0.075, browTilt: 0.3, sf: 4 });
+    // twin head crests
+    const cc = v => P.accent.clone().lerp(P.stripe, 0.6 * sstep(0.25, 0.5, Math.sin(v.x * 9)));
+    for (const sd of [1, -1]) B.plate('head', [[-0.35, 0], [-0.2, 0.28], [0.25, 0.5], [0.75, 0.26], [1.0, 0]], 0.04, M([sd * 0.11, 0.28, 0.25], [0, -Math.PI / 2, sd * 0.14]), cc, 'skin', 0.02);
+    // the folding neck frill (opens when it spits)
+    const fan = sd => { const pts = [[0, -0.28]]; for (let i = 0; i <= 10; i++) { const a = -1.25 + i / 10 * 2.5, r = 1.05 + 0.08 * Math.cos(i * Math.PI); pts.push([sd * Math.cos(a) * r, Math.sin(a) * r]); } pts.push([0, 0.28]); return pts; };
+    const fc = v => { const d = Math.hypot(v.x, v.y); return P.accent.clone().lerp(P.stripe, sstep(0.55, 0.7, d) * (1 - sstep(0.8, 0.95, d))).lerp(C(0xffe060), sstep(0.92, 1.05, d) * 0.8); };
+    for (const [sd, S] of [[1, 'L'], [-1, 'R']]) { B.bone('frill' + S, 'head', sd * 0.22, -0.02, -0.12); B.plate('frill' + S, fan(sd), 0.03, M([0, 0, 0]), fc, 'skin', 0.015);
+      for (let i = 0; i < 5; i++) { const a = -1.0 + i * 0.5; B.horn('frill' + S, [0, 0, 0.02], [0, 0, -sd * (Math.PI / 2 - a)], 0.95, 0.025, 0, P.stripe, P.accent, 'horn', 5, 2); } }
+    return o;
+  },
+  pachy(B) {
+    const P = B.pal;
+    const o = theropod(B, { hipH: 2.2, hipW: 0.45, body: 1.5, w: 0.85, hs: 0.8, neck: [0.8, 0.55], tailN: 9, tailL: 0.62, tailR: 0.52,
+      hipR: [0.7, 0.82], bellyR: [0.82, 0.92], chestR: [0.72, 0.82], neckR: [0.42, 0.48], leg: [1.05, 1.05, 0.6], legW: 0.88, foot: 0.6, toeSpread: 0.18,
+      shW: 0.4, shY: 0.35, arm: [0.3, 0.26], armW: 0.75, fingers: 3, handClaw: 0.6, jawY: -0.14, jawZ: 0.05,
+      headPts: [[-0.25, 0.1, 0.34, 0.38], [0.1, 0.12, 0.38, 0.42], [0.45, 0.0, 0.3, 0.32], [0.75, -0.12, 0.18, 0.2], [0.88, -0.18, 0.1, 0.1]],
+      jawPts: [[-0.1, 0, 0.26, 0.16], [0.35, -0.03, 0.24, 0.14], [0.7, -0.02, 0.12, 0.08], [0.8, -0.01, 0.06, 0.05]],
+      teeth: [0.3, 0.8, 5, 0.08], eyeP: [0.3, 0.15, 0.42], eyeR: 0.08, browTilt: 0.1, sf: 3 });
+    // the thick bony battering dome, ringed with knobs and spikes
+    const dome = P.horn.clone().lerp(P.accent, 0.25);
+    B.blob('head', [0, 0.42, 0.05], [0.46, 0.42, 0.54], [0.15, 0, 0], v => dome.clone().lerp(P.hornDark, sstep(0.2, -0.6, v.y) * 0.5), 'horn', 18);
+    for (let i = 0; i < 11; i++) { const a = -Math.PI * 0.95 + i / 10 * Math.PI * 1.9; const x = Math.sin(a) * 0.45, z = 0.05 + Math.cos(a) * 0.5;
+      B.horn('head', [x, 0.3, z], [Math.cos(a) * 1.2, 0, -Math.sin(a) * 1.2], 0.16 + 0.06 * (i % 2), 0.06, 0, P.hornDark, P.horn, 'horn', 6, 2); }
+    for (let i = 0; i < 3; i++) B.horn('head', [0, 0.12 - i * 0.05, 0.5 + i * 0.13], [0.6, 0, 0], 0.08, 0.05, 0, P.hornDark, P.horn, 'horn', 6, 2);
+    scutes(B, 4, 14, 0.9);
+    return o;
+  },
+  para(B) {
+    const P = B.pal;
+    const o = quadruped(B, { hipH: 2.4, hipW: 0.7, shW: 0.6, body: 2.2, spineY: 0.12, chestY: -0.25, neckN: 3, neckL: 0.55, neckRise: 0.25, headZ: 0.4, headY: 0.05, tailN: 9, tailL: 0.75, tailR: 0.6, tailDrop: 0.03,
+      hipR: [0.9, 1.1], bellyR: [1.0, 1.15], chestR: [0.85, 0.95], neckR: [0.5, 0.55], neckTaper: 0.45,
+      legB: [1.25, 1.1, 0.4], legF: [0.8, 0.75, 0.25], legW: 1.05, legWF: 0.7,
+      jawY: -0.15, jawZ: 0.1, eyeP: [0.24, 0.14, 0.3], eyeR: 0.065, browTilt: 0.2, sf: 2.4,
+      headPts: [[-0.25, 0.0, 0.3, 0.3], [0.15, 0.02, 0.3, 0.28], [0.5, -0.06, 0.24, 0.2], [0.8, -0.12, 0.2, 0.14], [0.95, -0.14, 0.18, 0.1]],
+      jawPts: [[0, 0, 0.22, 0.1], [0.5, -0.02, 0.18, 0.08], [0.85, -0.03, 0.14, 0.06]] });
+    // the long hollow trumpet crest
+    B.tube([{ b: 'head', p: [0, 0.18, 0.5], r: [0.1, 0.12] }, { b: 'head', p: [0, 0.42, 0.05], r: [0.12, 0.15] }, { b: 'head', p: [0, 0.72, -0.55], r: [0.11, 0.14] }, { b: 'head', p: [0, 0.95, -1.25], r: [0.08, 0.09] }],
+      { seg: 12, per: 4, ts: 0.5, color: (up, arc) => P.accent.clone().lerp(P.stripe, sstep(0.6, 0.9, Math.sin(arc * 7)) * 0.6) });
+    scutes(B, 3, 15, 0.7);
+    return o;
+  },
+  // ---------------- v4: DRAGONS (fire / ice / storm / the Dragon King) ----------------
+  dragon(B) {
+    const P = B.pal, el = B.def.element || 'fire', king = el === 'king', K = king ? 1.35 : 1;
+    const o = quadruped(B, { hipH: 2.3, hipW: 0.62, shW: 0.6, body: 2.2, spineY: 0.12, chestY: 0.05, neckN: 4, neckL: 0.62, neckRise: 0.32, headZ: 0.5, headY: 0.05, tailN: 11, tailL: 0.72, tailR: 0.62, tailDrop: 0.02,
+      hipR: [0.9, 1.02], bellyR: [1.08, 1.18], chestR: [1.08, 1.2], neckR: [0.66, 0.7], neckTaper: 0.52, ridge: 0.1,
+      legB: [1.05, 0.95, 0.4], legF: [0.95, 0.85, 0.32], legW: 0.95, legWF: 0.82,
+      jawY: -0.2, jawZ: 0.05, eyeP: [0.3, 0.24, 0.42], eyeR: 0.08, browTilt: 0.4, sf: 3,
+      headPts: [[-0.3, 0.05, 0.38, 0.36], [0.1, 0.1, 0.42, 0.4], [0.5, 0.06, 0.34, 0.3], [0.95, -0.02, 0.26, 0.22], [1.3, -0.06, 0.21, 0.17], [1.5, -0.08, 0.1, 0.1]],
+      jawPts: [[-0.1, 0, 0.3, 0.16], [0.5, -0.03, 0.27, 0.14], [1.05, 0, 0.19, 0.1], [1.4, 0.02, 0.1, 0.06]] });
+    teethRow(B, 'head', 0.3, 1.38, 8, z => 0.3 - 0.1 * z, z => -0.12 - 0.04 * z, true, 0.15, 1);
+    teethRow(B, 'jaw', 0.35, 1.3, 7, z => 0.24 - 0.1 * z, () => 0.03, false, 0.11, 1);
+    // element colours for horns + spikes
+    const HC = { fire: [0x1a0e0a, 0xd9c3a0], ice: [0x6aa8d8, 0xeafaff], storm: [0x1c1a2c, 0xfff08a], king: [0x0e0b08, 0xffc23a] }[el];
+    P.hornDark = C(HC[0]); P.horn = C(HC[1]);
+    const dirRot = d => { const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize())); return [e.x, e.y, e.z]; };
+    // horns: big swept-back pair, a second pair, cheek blades, nose horn (+ a crown for the king)
+    for (const sd of [1, -1]) {
+      B.horn('head', [sd * 0.24, 0.38, -0.05], dirRot(V(sd * 0.3, 0.45, -1)), 1.15 * K, 0.13 * K, 0.22, P.hornDark, P.horn, 'horn', 10, 8);
+      B.horn('head', [sd * 0.33, 0.18, -0.12], dirRot(V(sd * 0.7, 0.2, -1)), 0.65 * K, 0.08 * K, 0.18, P.hornDark, P.horn);
+      for (let i = 0; i < 3; i++) B.horn('jaw', [sd * (0.27 - i * 0.04), -0.08, 0.1 + i * 0.25], dirRot(V(sd, -0.5, -0.6)), 0.3 - i * 0.06, 0.05, 0, P.hornDark, P.horn, 'horn', 6, 2);
+      if (king) for (let i = 0; i < 3; i++) B.horn('head', [sd * (0.12 + i * 0.07), 0.42, 0.2 - i * 0.12], dirRot(V(sd * 0.25 * i, 1, -0.4)), 0.4 + 0.12 * i, 0.06, 0.1, P.hornDark, P.horn);
+    }
+    B.horn('head', [0, 0.14, 1.12], [0.7, 0, 0], 0.26, 0.06, -0.2, P.hornDark, P.horn);
+    // spikes all down the neck, back and tail
+    const bp = B.bodyPts;
+    for (let i = 1; i < bp.length - 1; i++) { const q = bp[i], big = 0.25 + q.r[1] * 0.5;
+      B.horn(q.b, [0, q.p[1] + q.r[1] * 0.93, q.p[2]], [-0.55, 0, 0], big * (king ? 1.2 : 1), q.r[0] * 0.14 + 0.03, -0.3, P.hornDark, P.horn, 'horn', 6, 3); }
+    // spade tail blade
+    B.plate('tail10', [[0, 0.25], [0.6, -0.35], [0.15, -0.55], [0, -1.35], [-0.15, -0.55], [-0.6, -0.35]], 0.05, M([0, 0, -0.35], [Math.PI / 2, 0, 0]), v => P.back.clone().lerp(P.accent, sstep(0.2, 0.6, Math.abs(v.x))), 'horn', 0.02);
+    // inner-fire glow: throat + chest vents in the eye colour (pulses with the roar)
+    for (const sd of [1, -1]) for (let i = 0; i < 3; i++) B.blob('ribs', [sd * 0.9, -0.15 + i * 0.12, -0.25 + i * 0.28], [0.03, 0.06, 0.28], [0, sd * 0.25, 0.3 * sd], P.eye, 'eye', 8);
+    B.blob('neck1', [0, -0.42, 0.05], [0.18, 0.06, 0.32], [0, 0, 0], P.eye, 'eye', 8);
+    if (el === 'ice') for (let i = 3; i < 14; i += 2) { const q = bp[i]; for (const sd of [1, -1]) B.horn(q.b, [sd * q.r[0] * 0.55, q.p[1] + q.r[1] * 0.7, q.p[2]], dirRot(V(sd * 0.8, 1, -0.3)), 0.35, 0.07, 0, P.hornDark, P.horn, 'horn', 5, 2); }
+    // wings: arm bones + leathery membranes in three hinged sections + finger spars and claws
+    const mem = P.accent.clone().lerp(P.back, 0.4).multiplyScalar(0.8), memC = v => mem.clone().lerp(P.back.clone().multiplyScalar(0.6), sstep(-0.3, -2.2, v.y) * 0.5).lerp(P.stripe, 0.4 * sstep(0.6, 0.95, Math.sin(v.x * 3.5 + v.y * 2)));
+    for (const [sd, S] of [[1, 'L'], [-1, 'R']]) {
+      B.bone(S + 'wing', 'chest', sd * 0.55, 0.82, 0.25); B.bone(S + 'wing2', S + 'wing', sd * 2.3, 0, 0); B.bone(S + 'wing3', S + 'wing2', sd * 2.1, 0, -0.1);
+      B.tube([{ b: S + 'wing', p: [-sd * 0.25, -0.05, 0], r: [0.24, 0.26] }, { b: S + 'wing2', p: [0, 0, 0], r: [0.14, 0.15] }, { b: S + 'wing3', p: [0, 0, 0], r: [0.11, 0.11] }, { b: S + 'wing3', p: [sd * 1.9, 0, -0.3], r: [0.035, 0.035] }],
+        { seg: 10, per: 3, up: [0, 0, 1], ts: 0.6, stripes: false });
+      const mk = (bone, pts) => B.plate(bone, pts.map(([x, y]) => [sd * x, y]), 0.035, M([0, -0.02, 0], [Math.PI / 2, 0, 0]), memC, 'skin', 0.01);
+      mk(S + 'wing', [[-0.15, 0.12], [2.35, 0.08], [2.35, -1.8], [1.6, -2.1], [0.8, -2.65], [-0.3, -2.45], [-0.45, -0.6]]);
+      mk(S + 'wing2', [[0, 0.08], [2.1, 0.0], [1.95, -1.1], [1.4, -2.65], [0.7, -2.05], [-0.05, -1.85]]);
+      mk(S + 'wing3', [[-0.3, 0.05], [1.95, -0.32], [1.2, -0.9], [1.1, -1.95], [0.5, -1.35], [-0.1, -2.2], [-0.35, -1.0]]);
+      for (const [bn, d] of [[S + 'wing2', V(1.4, 0, -2.6)], [S + 'wing3', V(1.1, 0, -1.95)], [S + 'wing3', V(-0.1, 0, -2.2)], [S + 'wing', V(0.8, 0, -2.6)]])
+        B.horn(bn, [0, 0, 0], dirRot(V(sd * d.x, 0, d.z)), d.length(), 0.055, 0, P.hornDark, P.back, 'horn', 5, 2);
+      B.horn(S + 'wing3', [0, 0.05, 0.08], dirRot(V(sd * 0.3, 0.35, 1)), 0.42, 0.07, 0.3, P.claw, P.horn);
+      B.horn(S + 'wing', [sd * 0.1, 0.18, 0], dirRot(V(sd * 0.2, 1, -0.6)), 0.45, 0.1, -0.2, P.hornDark, P.horn);
+      B.horn(S + 'wing3', [sd * 1.9, 0, -0.3], dirRot(V(sd, 0.1, -0.2)), 0.35, 0.04, 0, P.hornDark, P.horn, 'horn', 5, 2);
+    }
+    B.socket('chest', 'jet', 0, 0.4, -0.3);
+    return { ...o, flyer: true };
+  },
 };
 
 export class Beast {
@@ -434,7 +564,7 @@ export class Beast {
     this.rig = B.finish(assets); this.obj.add(this.rig); this.rig.scale.setScalar(def.scale);
     this.b = B.bones; this.sockets = B.sockets; this.mats = B.mats; this.meshes = B.meshes; this.def = def; this.wild = wild; this.real = true;
     this.phase = Math.random() * 6; this.t = Math.random() * 10; this.seed = Math.random() * 10; this.jaw = 0; this.flash = 0; this.ko = 0;
-    this.quad = !!this.b.LFhip; this.flyer = false;
+    this.quad = !!this.b.LFhip; this.flyer = !!this.info.flyer;
     this.feet = Object.keys(this.b).filter(k => /^(L|R)F?foot$/.test(k));
     // drop the rig so the feet stand on the ground
     this.rig.updateMatrixWorld(true); let minY = Infinity; const v = V(0, 0, 0);
@@ -461,7 +591,8 @@ export class Beast {
     const idle = (1 - k) * (1 - ko), roar = (o.roar || 0) * (1 - ko), bite = o.bite || 0, charge = o.charge || 0, rear = o.rear || 0, air = o.air || 0;
     const snarl = Math.pow(Math.max(0, Math.sin(t * 0.8 + this.seed)), 10) * idle;
     const R = (n, x = 0, y = 0, z = 0) => { const bo = b[n]; if (bo) bo.rotation.set(x, y, z); };
-    const crouch = 0.6 * idle + 0.4 * charge + 0.5 * ko;
+    const fly = this.flyer && o.flying && ko < 0.5 ? 1 : 0;
+    const crouch = (0.6 * idle + 0.4 * charge + 0.5 * ko) * (1 - fly);
     // ---- body lean / sway
     const lean = (this.quad ? 0.02 : 0.1) * run + 0.12 * charge + 0.05 * crouch - 0.16 * roar - 0.55 * rear + (this.quad ? 0 : 0.04 * idle);
     const sway = Math.sin(ph) * 0.05 * k;
@@ -471,7 +602,10 @@ export class Beast {
     if (b.ribs) b.ribs.scale.set(1 + br * 0.7, 1 + br, 1);
     // ---- legs
     const flat = (n, chainSum) => R(n, -chainSum);
-    if (!this.quad) {
+    if (fly) { // dragon in flight: legs tucked under, body banks into turns and pitches up to climb
+      R('pelvis', 0.04 * k - 0.28 * (o.climb || 0) - 0.1 * roar, 0, -(o.turn || 0) * 0.45);
+      for (const S of ['L', 'R']) { R(S + 'hip', 1.0); R(S + 'knee', 0.45); R(S + 'ankle', -0.25); R(S + 'foot', 0.7); R(S + 'Fhip', -0.35 + 0.1 * Math.sin(t * 2)); R(S + 'Fknee', 1.1); R(S + 'Fankle', -0.5); R(S + 'Ffoot', 0.4); }
+    } else if (!this.quad) {
       for (const [S, off] of [['L', 0], ['R', Math.PI]]) {
         const s = Math.sin(ph + off), c = Math.cos(ph + off), lift = Math.max(0, -c);
         const A = (0.4 + 0.25 * run) * k;
@@ -506,17 +640,26 @@ export class Beast {
     // ---- neck / head: stabilised, low and aggressive when idle, raised and shaking when roaring, lunging when biting
     const nk = Object.keys(b).filter(n => /^neck\d$/.test(n)).length || 1, lookY = (o.look || 0) * 0.35 / nk;
     const headLow = this.quad ? 0.06 * idle + 0.25 * charge : 0.1 * idle + 0.1 * charge;
-    for (let i = 0; i < nk; i++) R('neck' + i, (headLow + Math.cos(ph * 2) * 0.025 * k - (0.45 * roar + 0.12 * rear) / nk * (i ? 0.7 : 1.3) + 0.3 * bite / nk + 0.25 * ko) * (this.def.kind === 'brachio' ? 0.4 : 1), lookY + snarl * 0.2 * Math.sin(t * 9), 0);
-    R('head', -lean * 0.8 - 0.12 * roar + 0.22 * bite + Math.sin(t * 26) * 0.045 * roar + snarl * 0.08, lookY + snarl * 0.12 * Math.sin(t * 11), Math.sin(t * 19) * 0.06 * roar + Math.sin(t * 13) * 0.05 * snarl);
+    const nf = fly ? 0.11 : 0;
+    for (let i = 0; i < nk; i++) R('neck' + i, nf + (headLow + Math.cos(ph * 2) * 0.025 * k - (0.45 * roar + 0.12 * rear) / nk * (i ? 0.7 : 1.3) + 0.3 * bite / nk + 0.25 * ko) * (this.def.kind === 'brachio' ? 0.4 : 1), lookY + snarl * 0.2 * Math.sin(t * 9), 0);
+    R('head', -nf * nk * 0.8 - lean * 0.8 - 0.12 * roar + 0.22 * bite + Math.sin(t * 26) * 0.045 * roar + snarl * 0.08, lookY + snarl * 0.12 * Math.sin(t * 11), Math.sin(t * 19) * 0.06 * roar + Math.sin(t * 13) * 0.05 * snarl);
+    if (b.frillL) { this.frill = (this.frill || 0) + ((o.frill || roar > 0.3 ? 1 : 0) - (this.frill || 0)) * Math.min(1, dt * 10); const f = this.frill;
+      R('frillL', 0, 1.45 * (1 - f), 0); R('frillR', 0, -1.45 * (1 - f), 0); b.frillL.scale.setScalar(0.35 + 0.65 * f); b.frillR.scale.setScalar(0.35 + 0.65 * f); }
+    if (this.flyer) { const fq = o.boost ? 6.4 : 3.7, A = (o.boost ? 0.95 : 0.72) * (fly ? 1 : 0), w = (this.wingPh = (this.wingPh || 0) + dt * fq);
+      for (const [S, sd] of [['L', 1], ['R', -1]]) { let z1, y1, z2, y2, z3, y3;
+        if (fly) { const s = Math.sin(w); z1 = 0.1 + s * A; y1 = 0.1 - 0.12 * Math.cos(w); z2 = Math.sin(w - 0.6) * A * 0.5 - 0.05; y2 = 0.05; z3 = Math.sin(w - 1.1) * A * 0.4; y3 = 0.06 + 0.1 * Math.cos(w); }
+        else { const brw = Math.sin(t * 1.2) * 0.06; z1 = 0.72 + brw + 0.35 * roar; y1 = 0.55 - 0.35 * roar; z2 = -0.55 + 0.45 * roar; y2 = 0.42 - 0.3 * roar; z3 = -0.45 + 0.4 * roar; y3 = 0.5 - 0.35 * roar; }
+        R(S + 'wing', 0, sd * y1, sd * z1); R(S + 'wing2', 0, sd * y2, sd * z2); R(S + 'wing3', 0, sd * y3, sd * z3); }
+      this.flapS = fly ? Math.sin(w) : 0; }
     this.jaw += (Math.max(o.jaw || 0, roar * 1.25, snarl * 0.6, ko * 0.5) - this.jaw) * Math.min(1, dt * 16);
     R('jaw', this.jaw * (this.quad ? 0.45 : 0.62) + 0.02 + Math.max(0, br) * 0.4);
     // ---- keep the planted foot on the ground (pelvis follows the legs)
     let target = this.hip0;
-    if (!air && ko < 0.5) {
+    if (!air && !fly && ko < 0.5) {
       b.pelvis.position.y = this.hip0; this.rig.updateMatrixWorld(true); this._inv.copy(this.rig.matrixWorld).invert();
       let minY = Infinity; for (const f of this.feet) { this._v.setFromMatrixPosition(b[f].matrixWorld).applyMatrix4(this._inv); minY = Math.min(minY, this._v.y); }
       target = this.hip0 - minY + 0.02;
-    } else if (air) target = this.hip0;
+    } else if (air || fly) target = this.hip0 - (fly ? Math.sin((this.wingPh || 0) - 0.3) * 0.12 : 0);
     this.pelvisY += (target - this.pelvisY) * Math.min(1, dt * 18); b.pelvis.position.y = this.pelvisY;
     // ---- hit flash / KO dim / angry eye pulse
     this.flash = Math.max(0, this.flash - dt * 5);

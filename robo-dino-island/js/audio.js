@@ -40,7 +40,14 @@ function tone(t, type, f0, f1, dur, peak, a = 0.005) {
   return o;
 }
 let lastLaser = 0;
+// Ricky & Bobby: a yappy terrier bark (two quick 'ruff's) and a stadium crowd cheer
+function bark(t, p, v) { tone(t, 'sawtooth', 820 * p, 380 * p, 0.09, 0.22 * v, 0.004); tone(t, 'square', 560 * p, 260 * p, 0.1, 0.12 * v, 0.004); noise(t, 0.08, 'bandpass', 1500 * p, 700 * p, 0.25 * v, 2); }
+function cheer(t, v) { noise(t, 2.6, 'bandpass', 900, 1400, 0.38 * v, 0.6); noise(t + 0.1, 2.4, 'bandpass', 2400, 1800, 0.18 * v, 0.8);
+  for (let i = 0; i < 9; i++) { const s = t + 0.1 + Math.random() * 1.6, f = 380 + Math.random() * 420; const o = tone(s, 'triangle', f, f * (1.3 + Math.random() * 0.4), 0.45, 0.04 * v, 0.06); o.detune.value = (Math.random() - 0.5) * 40; }
+  for (let i = 0; i < 14; i++) noise(t + 0.3 + Math.random() * 1.8, 0.03, 'highpass', 2500, 2400, 0.1 * v, 1); }
 export const sfx = {
+  bark(p = 1, v = 1) { if (!ctx) return; const t = now(); bark(t, p, v); bark(t + 0.17, p * 1.06, v * 0.85); },
+  cheer(v = 1) { if (!ctx) return; cheer(now(), v); duck(0.35, 2.4); },
   laser(vol = 1) { if (!ctx) return; const t = now(); if (t - lastLaser < 0.05) return; lastLaser = t;
     tone(t, 'sawtooth', 1600 + Math.random() * 200, 220, 0.16, 0.12 * vol); tone(t, 'square', 900, 120, 0.12, 0.05 * vol); },
   missile() { if (!ctx) return; const t = now(); noise(t, 0.7, 'bandpass', 600, 2400, 0.35, 2); tone(t, 'sawtooth', 90, 50, 0.5, 0.12); },
@@ -100,6 +107,18 @@ export const sfx = {
   unlock() { if (!ctx) return; const t = now(); [523, 659, 784, 1047, 1319].forEach((f, i) => tone(t + i * 0.09, 'triangle', f, f, 0.3, 0.18)); },
   boost() { if (!ctx) return; const t = now(); noise(t, 0.5, 'bandpass', 400, 1600, 0.25, 1.5); },
   beam() { if (!ctx) return; const t = now(); tone(t, 'sine', 300, 1800, 0.6, 0.15, 0.05); },
+  // v4: dragons + new dinos
+  zap(v = 1) { if (!ctx || v < 0.03) return; const t = now(); noise(t, 0.18, 'highpass', 2500, 6000, 0.35 * v, 0.8); tone(t, 'sawtooth', 2400 + Math.random() * 800, 200, 0.14, 0.08 * v); noise(t + 0.02, 0.3, 'bandpass', 900, 300, 0.25 * v, 2); },
+  thunder(v = 1, delay = 0) { if (!ctx || v < 0.03) return; const t = now() + delay; noise(t, 0.25, 'highpass', 3000, 900, 0.3 * v, 0.7); noise(t + 0.05, 2.6, 'lowpass', 900, 60, 0.75 * v, 0.6); tone(t + 0.05, 'sine', 70, 28, 2.2, 0.55 * v, 0.05);
+    for (let i = 0; i < 4; i++) noise(t + 0.3 + Math.random() * 1.2, 0.5, 'lowpass', 500, 80, 0.3 * v, 0.8); },
+  freeze() { if (!ctx) return; const t = now(); for (let i = 0; i < 5; i++) tone(t + i * 0.04, 'triangle', 2400 + i * 400, 3200 + i * 300, 0.12, 0.06); noise(t, 0.4, 'highpass', 5000, 9000, 0.18, 1); },
+  frost(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.2, 'highpass', 3500, 6500, 0.18 * v, 0.7); noise(t, 0.2, 'bandpass', 900, 1500, 0.1 * v, 0.8); },
+  spit() { if (!ctx) return; const t = now(); noise(t, 0.18, 'bandpass', 1800, 600, 0.35, 2); tone(t, 'sine', 500, 160, 0.15, 0.15); },
+  splat() { if (!ctx) return; const t = now(); noise(t, 0.25, 'lowpass', 1200, 200, 0.4, 1.5); tone(t, 'sine', 180, 60, 0.2, 0.2); },
+  honk() { if (!ctx) return; const t = now(); for (const [f, g] of [[110, 0.35], [165, 0.22], [220, 0.12]]) { const o = tone(t, 'sawtooth', f, f * 0.92, 1.1, g, 0.06); o.detune.value = Math.random() * 10; } noise(t, 1.0, 'bandpass', 600, 300, 0.15, 2); duck(0.5, 1); },
+  flap(v = 1) { if (!ctx || v < 0.03) return; const t = now(); noise(t, 0.35, 'lowpass', 500, 120, 0.4 * v, 0.9); tone(t, 'sine', 60, 35, 0.3, 0.2 * v); },
+  rage() { if (!ctx) return; const t = now(); noise(t, 0.6, 'bandpass', 400, 1400, 0.3, 1.2); tone(t, 'sawtooth', 90, 180, 0.6, 0.12); },
+  headbutt() { if (!ctx) return; const t = now(); tone(t, 'square', 300, 90, 0.18, 0.25); noise(t, 0.15, 'bandpass', 2500, 900, 0.4, 3); tone(t, 'sine', 90, 40, 0.4, 0.6); },
 };
 
 function startAmbient() {

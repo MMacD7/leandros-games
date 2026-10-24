@@ -24,6 +24,12 @@ export const ROBOS = [
   { id: 'bronto', name: 'Bronto-Titan', price: 1500, desc: 'A giant long-neck mech. Biggest of them all!',
     hp: 300, speed: 9, laser: 12, rate: 0.2, missiles: 6, melee: 50, scale: 1.25, kind: 'bronto',
     body: 0x44464c, armor: 0x141518, glow: 0xff5a1a },
+  { id: 'gmech', name: 'Giga-Mech', price: 0, desc: 'A colossal mech. Its piston fists SLAM the ground in a QUAKE shockwave!', quake: true,
+    hp: 260, speed: 10, laser: 11, rate: 0.18, missiles: 4, melee: 46, scale: 1.18, kind: 'gmech',
+    body: 0x3e3a36, armor: 0x121212, glow: 0xff3a2a },
+  { id: 'dblast', name: 'Dilo-Blaster', price: 0, desc: 'A frilled blaster bot. Sprays sticky GOO that slows foes down!', goo: true,
+    hp: 105, speed: 14.5, laser: 7, rate: 0.11, missiles: 2, melee: 20, scale: 0.82, kind: 'dblast',
+    body: 0x2c3a24, armor: 0x101410, glow: 0x9aff2a },
 ];
 ROBOS.forEach(d => { d.real = false; });
 
@@ -53,9 +59,43 @@ export const REALS = [
   { id: 'brachio', name: 'Brachiosaurus', price: 1600, kind: 'brachio', desc: 'The tallest of all! Rears up for an earth-shaking stomp.',
     hp: 330, speed: 8.5, bite: 14, biteRate: 0.6, special: 'stomp', specialName: 'TITAN<br>STOMP', specialCD: 5.5, roar: 1.8, scale: 1.25, radius: 3.4,
     back: 0x474c52, belly: 0xa69e8c, stripe: 0x24272c, accent: 0x7a8696, eye: 0xffb21a },
+  { id: 'giga', name: 'Giganotosaurus', price: 0, kind: 'giga', desc: 'Even bigger than a T-Rex! Goes into a BERSERK RAGE: faster and fiercer.',
+    hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'rage', specialName: 'BERSERK<br>RAGE', specialCD: 9, roar: 2.8, scale: 1.12, radius: 2.8,
+    back: 0x4a4038, belly: 0xa8967a, stripe: 0x1a1410, accent: 0x9a2a14, eye: 0xff6a1a },
+  { id: 'allo', name: 'Allosaurus', price: 0, kind: 'allo', desc: 'The lion of the Jurassic. A lightning-fast TRIPLE BITE combo!',
+    hp: 140, speed: 13, bite: 24, biteRate: 0.45, special: 'combo', specialName: 'TRIPLE<br>BITE', specialCD: 4.5, roar: 2.0, scale: 0.92, radius: 2.2,
+    back: 0x6a4a2a, belly: 0xd0b48a, stripe: 0x2a1408, accent: 0xd8501a, eye: 0xffc21a },
+  { id: 'dilo', name: 'Dilophosaurus', price: 0, kind: 'dilo', desc: 'Twin crests and a pop-out frill. SPITS sticky venom goo that slows and stings!',
+    hp: 95, speed: 15.5, bite: 16, biteRate: 0.35, special: 'spit', specialName: 'VENOM<br>SPIT', specialCD: 2.4, roar: 1.4, scale: 0.8, radius: 1.6,
+    back: 0x3a4a1a, belly: 0xc8c08a, stripe: 0x1a2208, accent: 0xff5a1a, eye: 0xd8ff3a },
+  { id: 'pachy', name: 'Pachycephalosaurus', price: 0, kind: 'pachy', desc: 'A rock-hard dome head. Charges in for a HEAD-BUTT that sends foes flying!',
+    hp: 150, speed: 13.5, bite: 14, biteRate: 0.5, special: 'headbutt', specialName: 'HEAD<br>BUTT', specialCD: 3.5, roar: 1.3, scale: 0.86, radius: 1.8,
+    back: 0x4a3a2a, belly: 0xb8a080, stripe: 0x22180e, accent: 0x3a8ab8, eye: 0xffa21a },
+  { id: 'para', name: 'Parasaurolophus', price: 0, kind: 'para', desc: 'Its trumpet crest blasts a SONIC HONK that knocks everything back!',
+    hp: 200, speed: 11, bite: 12, biteRate: 0.6, special: 'honk', specialName: 'SONIC<br>HONK', specialCD: 4.5, roar: 1.6, scale: 1.0, radius: 2.4,
+    back: 0x2a5a4a, belly: 0xc0b890, stripe: 0x0e2a22, accent: 0xff7a2a, eye: 0xffd21a },
 ];
 REALS.forEach(d => { d.real = true; d.melee = d.bite; });
-export const DINOS = [...ROBOS, ...REALS];
+
+// Dragons: they fly (Boost = climb). Primary = element blast, special = element BREATH, roar stuns.
+export const DRAGONS = [
+  { id: 'dfire', name: 'Fire Dragon', price: 0, kind: 'dragon', element: 'fire', desc: 'Spits FIREBALLS and breathes a roaring river of FIRE!',
+    hp: 175, speed: 15, bite: 18, biteRate: 0.5, special: 'breath', specialName: 'FIRE<br>BREATH', specialCD: 4, roar: 2.2, scale: 1.2, radius: 3.0,
+    back: 0x5a120c, belly: 0xd08a4a, stripe: 0x1a0606, accent: 0xff4a12, eye: 0xffa21a },
+  { id: 'dice', name: 'Ice Dragon', price: 0, kind: 'dragon', element: 'ice', desc: 'Fires ICE SHARDS. Its FROST BREATH slows foes and FREEZES them solid!',
+    hp: 175, speed: 15, bite: 15, biteRate: 0.42, special: 'breath', specialName: 'FROST<br>BREATH', specialCD: 4, roar: 2.2, scale: 1.2, radius: 3.0,
+    back: 0x2a4a6a, belly: 0xcfe6f2, stripe: 0x0e1e30, accent: 0x7ad8ff, eye: 0x8af4ff },
+  { id: 'dstorm', name: 'Storm Dragon', price: 0, kind: 'dragon', element: 'storm', desc: 'Throws LIGHTNING BOLTS and calls a chain-lightning STORM!',
+    hp: 165, speed: 16, bite: 14, biteRate: 0.55, special: 'breath', specialName: 'LIGHTNING<br>STORM', specialCD: 4.5, roar: 2.2, scale: 1.15, radius: 2.9,
+    back: 0x2a2440, belly: 0x8a86a8, stripe: 0x0e0c1a, accent: 0x7a5aff, eye: 0xffe24a },
+  { id: 'rdragon', name: 'Robo-Dragon', price: 0, kind: 'rdragon', desc: 'A jet-winged dragon mech: lasers, missiles and FLAME JETS!', breath: true, fly: true, robodragon: true,
+    hp: 165, speed: 15.5, laser: 9, rate: 0.14, missiles: 4, melee: 30, scale: 1.1, radius: 2.8,
+    body: 0x3a2a2a, armor: 0x121010, glow: 0xff5a1a },
+];
+DRAGONS.forEach(d => { d.dragon = true; d.fly = true; if (d.kind === 'dragon') { d.real = true; d.melee = d.bite; } else d.real = false; });
+// the Dragon Peak arena boss (not in the garage)
+export const DRAGON_KING = { ...DRAGONS[0], id: 'dking', name: 'DRAGON KING', element: 'king', back: 0x1c1410, belly: 0x9a7a3a, stripe: 0x060403, accent: 0xffb41a, eye: 0xffd23a, scale: 2.5, radius: 6.2, boss: true };
+export const DINOS = [...ROBOS, ...REALS, ...DRAGONS];
 
 export const UPGRADES = [
   { id: 'armor', name: 'Armor & Tough Hide', desc: '+15% health for every dino', icon: '🛡️' },
@@ -74,7 +114,7 @@ const KEY = 'robo-dino-island.v1';
 const ALL_IDS = () => DINOS.map(d => d.id);
 const maxUps = () => Object.fromEntries(UPGRADES.map(u => [u.id, MAX_UP]));
 const fresh = () => ({ bolts: 0, owned: ALL_IDS(), selected: 'rex', up: maxUps(),
-  kos: 0, cores: 0, bestBattle: 0, muted: false, music: true, ride: true, allUnlocked: true });
+  kos: 0, cores: 0, bestBattle: 0, muted: false, music: true, ride: true, allUnlocked: true, level: 'jungle', voice: true });
 
 export function loadSave() {
   try {
@@ -86,6 +126,8 @@ export function loadSave() {
     for (const k in up) up[k] = Math.max(0, Math.min(MAX_UP, up[k] | 0));
     const out = { ...f, ...s, up, owned, allUnlocked: true };
     if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex';
+    if (out.level !== 'peak') out.level = 'jungle';
+    out.voice = out.voice !== false;
     return out;
   } catch (e) { return fresh(); }
 }

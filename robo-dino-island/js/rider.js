@@ -6,6 +6,7 @@ const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 // where along the body the seat goes: t = 0 at the hips, 1 at the chest, >1 toward the neck (in front of sails/plates)
 const SEATS = {
   rex: { t: 0.42 }, raptor: { t: 0.5 }, tri: { t: 0.32 }, stego: { t: 1.4 }, ptero: { t: 0.55, up: 0.05 }, spino: { t: 1.02, pct: 0.45 }, ankylo: { t: 0.5 }, bronto: { t: 1.12 },
+  giga: { t: 0.45 }, allo: { t: 0.48 }, dilo: { t: 0.5 }, pachy: { t: 0.5 }, para: { t: 0.4 }, dragon: { t: 1.18 }, gmech: { t: 0.42 }, dblast: { t: 0.5 }, rdragon: { t: 0.5 },
   trex: { t: 0.45 }, carno: { t: 0.45 }, velo: { t: 0.5 }, spinos: { t: 1.05 }, trice: { t: 0.32 }, ankys: { t: 0.5 }, stegos: { t: 1.45 }, brachio: { t: 1.12 },
 };
 const seatCache = new Map();

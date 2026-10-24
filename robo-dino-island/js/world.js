@@ -3,12 +3,14 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { fbm, noise2, rng, smooth, clamp, lerp } from './noise.js';
 import { leafTexture, broadLeafTexture, barkTexture, waterNormal } from './proctex.js';
+import { rawHeightPeak, buildLavaSea, buildPeakVegetation, buildCastle, buildPeakExtras, updatePeak } from './peak.js';
 
 export const S = 820, N = 256, R_ISLAND = 300;
 export const BASE = new THREE.Vector3(15, 0, 212);
 export const ARENA = new THREE.Vector3(105, 0, 40);
 export const VOLC = new THREE.Vector3(-40, 0, -110);
 
+export const TITLE = new THREE.Vector3(16, 0, 181);
 function rawHeight(x, z) {
   const d0 = Math.hypot(x, z);
   const r = d0 / R_ISLAND + fbm(x * 0.0055 + 3.1, z * 0.0055 - 1.7, 4) * 0.2;
@@ -32,23 +34,27 @@ function rawHeight(x, z) {
 }
 
 export class World {
-  constructor(scene, assets, quality) {
+  constructor(scene, assets, quality, level = 'jungle') {
     this.scene = scene; this.assets = assets; this.q = quality; this.time = 0;
-    this.colliders = []; this.grid = new Map();
+    this.level = level; this.peak = level === 'peak'; this.lava = this.peak;
+    this.root = new THREE.Group(); this.root.name = 'world-' + level; scene.add(this.root);
+    this.colliders = []; this.grid = new Map(); this.braziers = []; this.flashT = 0;
     this.buildHeight();
     this.buildTerrain();
-    this.buildWater();
+    if (this.peak) buildLavaSea(this); else this.buildWater();
     this.buildVolcano();
-    this.buildVegetation();
-    this.buildRuins();
+    if (this.peak) buildPeakVegetation(this); else this.buildVegetation();
+    if (this.peak) buildCastle(this); else this.buildRuins();
     this.buildBase();
     this.buildGrass();
+    if (this.peak) buildPeakExtras(this);
   }
+  setVisible(v) { this.root.visible = v; }
 
   // ---------- height field ----------
   buildHeight() {
     const n = N + 1; this.H = new Float32Array(n * n); this.splat = new Float32Array(n * n * 4); this.dens = new Float32Array(n * n * 2);
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) this.H[j * n + i] = rawHeight(-S / 2 + i * S / N, -S / 2 + j * S / N);
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) this.H[j * n + i] = (this.peak ? rawHeightPeak : rawHeight)(-S / 2 + i * S / N, -S / 2 + j * S / N);
     const hm = new Uint16Array(n * n * 4); const toH = THREE.DataUtils.toHalfFloat;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
       const k = j * n + i, x = -S / 2 + i * S / N, z = -S / 2 + j * S / N, h = this.H[k];
@@ -62,8 +68,9 @@ export class World {
       dirt *= (1 - sand) * (1 - rock);
       const grass = Math.max(0, 1 - sand - rock - dirt);
       this.splat.set([grass, sand, rock, dirt], k * 4);
+      if (this.peak) { rock = clamp(rock + smooth(0.95, 0.8, ny) * 0.5 + smooth(14, 28, h) * 0.4, 0, 1); }
       let g = grass * smooth(1.8, 3.4, h) * (0.75 + 0.25 * smooth(-0.3, 0.3, fbm(x * 0.03, z * 0.03, 3))) * smooth(13, 20, db);
-      g = clamp(g * 1.5, 0, 1);
+      g = clamp(g * (this.peak ? 0.9 : 1.5), 0, 1);
       const fl = g * smooth(-0.02, 0.28, fbm(x * 0.022 + 11, z * 0.022 + 5, 3));
       this.dens[k * 2] = g; this.dens[k * 2 + 1] = fl;
       hm[k * 4] = toH(h); hm[k * 4 + 1] = toH(g); hm[k * 4 + 2] = toH(fl); hm[k * 4 + 3] = toH(rock);
@@ -100,12 +107,17 @@ export class World {
     geo.setAttribute('splat', new THREE.BufferAttribute(sp, 4)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     geo.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0, normalMap: A.grassNor, normalScale: new THREE.Vector2(1.1, 1.1) });
+    this.terrainU = { uTime: { value: 0 } };
+    if (this.peak) { mat.defines = { PEAK: '' }; mat.customProgramCacheKey = () => 'terrain-peak'; }
     mat.onBeforeCompile = sh => {
+      sh.uniforms.uTime = this.terrainU.uTime;
       Object.assign(sh.uniforms, { tG: { value: A.grass }, tS: { value: A.sand }, tR: { value: A.rock }, tD: { value: A.dirt }, nS: { value: A.sandNor }, nR: { value: A.rockNor } });
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 splat; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;')
         .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvSplat = splat; vWP = (modelMatrix * vec4(transformed,1.0)).xyz; vWN = normalize(mat3(modelMatrix) * objectNormal);');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-uniform sampler2D tG, tS, tR, tD, nS, nR; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tG, tS, tR, tD, nS, nR; uniform float uTime; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;
+float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+float vno(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h21(i), h21(i+vec2(1.0,0.0)), f.x), mix(h21(i+vec2(0.0,1.0)), h21(i+vec2(1.0,1.0)), f.x), f.y); }
 vec3 triR(float s){ vec3 b = pow(abs(vWN), vec3(4.0)); b /= (b.x+b.y+b.z);
   return texture2D(tR, vWP.zy*s).rgb*b.x + texture2D(tR, vWP.xz*s).rgb*b.y + texture2D(tR, vWP.xy*s).rgb*b.z; }`)
         .replace('#include <map_fragment>', `
@@ -116,11 +128,28 @@ float gl = dot(cg, vec3(0.3,0.59,0.11)); cg = mix(cg, gl * vec3(0.55,1.05,0.22) 
 vec3 cs = texture2D(tS, wuv*0.12).rgb * vec3(1.08,1.0,0.86);
 vec3 cr = sp.z > 0.02 ? triR(0.045) * vec3(0.78,0.74,0.72) : vec3(0.0);
 vec3 cd = texture2D(tD, wuv*0.11).rgb * vec3(1.05,0.95,0.8);
+#ifdef PEAK
+cg = gl * vec3(0.55,0.32,0.22) * 1.1; cs *= vec3(0.34,0.31,0.32); cr *= vec3(0.62,0.56,0.6); cd *= vec3(0.7,0.44,0.32);
+float vn = vno(vWP.xz*0.018) * 0.62 + vno(vWP.xz*0.047 + 7.0) * 0.28 + vno(vWP.xz*0.16) * 0.1;
+float gpm = fwidth(vn) / max(1e-4, fwidth(vWP.x) + fwidth(vWP.z));
+float dM = abs(vn - 0.5) / max(gpm, 1e-5), pix = fwidth(vWP.x) + fwidth(vWP.z);
+float vein = (1.0 - smoothstep(0.35, 0.75 + pix, dM)) + exp(-dM * 0.6) * 0.22;
+vein *= (1.0 - sp.x * 0.5) * smoothstep(26.0, 40.0, length(vWP.xz - vec2(${ARENA.x.toFixed(1)}, ${ARENA.z.toFixed(1)}))) * smoothstep(22.0, 34.0, length(vWP.xz - vec2(${BASE.x.toFixed(1)}, ${BASE.z.toFixed(1)})));
+float heat = 0.5 + 0.5 * (1.0 - smoothstep(0.4, 8.0, vWP.y));
+float vcd = length(vWP.xz - vec2(${VOLC.x.toFixed(1)}, ${VOLC.z.toFixed(1)}));
+heat = max(heat, smoothstep(150.0, 60.0, vcd) * 0.9);
+float pulse = 0.8 + 0.2 * sin(vWP.x * 0.07 + vWP.z * 0.05 + uTime * 1.3);
+vec3 lavaE = vec3(2.2, 0.42, 0.05) * max(vein * heat, (1.0 - smoothstep(-0.6, 0.9, vWP.y)) * 0.85) * pulse;
+#endif
 diffuseColor.rgb *= cg*sp.x + cs*sp.y + cr*sp.z + cd*sp.w;`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+#ifdef PEAK
+totalEmissiveRadiance += lavaE;
+#endif`)
         .replace('vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
           'vec3 mapN = (texture2D(normalMap, vWP.xz*0.09).xyz*sp.x + texture2D(nS, vWP.xz*0.12).xyz*sp.y + texture2D(nR, vWP.xz*0.045).xyz*(sp.z+sp.w))*2.0-1.0;');
     };
-    const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; this.scene.add(m); this.terrain = m;
+    const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; this.root.add(m); this.terrain = m;
   }
 
   // ---------- sea ----------
@@ -146,7 +175,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
           'vec3 mapN = (texture2D(normalMap, vWP.xz*0.035 + vec2(uTime*0.012, uTime*0.006)).xyz + texture2D(normalMap, vWP.zx*0.021 - vec2(uTime*0.009, -uTime*0.011)).xyz)-1.0;');
     };
     const g = new THREE.PlaneGeometry(5000, 5000, 1, 1); g.rotateX(-Math.PI / 2);
-    const w = new THREE.Mesh(g, mat); w.position.y = 0; w.renderOrder = 2; this.scene.add(w); this.water = w;
+    const w = new THREE.Mesh(g, mat); w.position.y = 0; w.renderOrder = 2; this.root.add(w); this.water = w;
   }
 
   // ---------- volcano: lava glow (smoke particles are emitted from main via fx) ----------
@@ -154,9 +183,9 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     let lowest = Infinity; for (let a = 0; a < 6.28; a += 0.5) lowest = Math.min(lowest, this.height(VOLC.x + Math.cos(a) * 3, VOLC.z + Math.sin(a) * 3));
     this.craterY = this.height(VOLC.x, VOLC.z) + 1.5;
     const lava = new THREE.Mesh(new THREE.CircleGeometry(16, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a12, toneMapped: false }));
-    lava.position.set(VOLC.x, this.craterY, VOLC.z); this.scene.add(lava);
+    lava.position.set(VOLC.x, this.craterY, VOLC.z); this.root.add(lava);
     this.lavaGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.assets.glow, color: 0xff6a20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false }));
-    this.lavaGlow.scale.set(60, 40, 1); this.lavaGlow.position.set(VOLC.x, this.craterY + 8, VOLC.z); this.scene.add(this.lavaGlow);
+    this.lavaGlow.scale.set(60, 40, 1); if (this.peak) this.lavaGlow.material.color.set(0xff4a10); this.lavaGlow.position.set(VOLC.x, this.craterY + 8, VOLC.z); this.root.add(this.lavaGlow);
     this.smokeOrigin = new THREE.Vector3(VOLC.x, this.craterY + 4, VOLC.z);
   }
 
@@ -213,7 +242,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     const mkSet = (geos, mats, items, scaleFn, colR, castHi) => {
       const hi = geos.hi.map((g, i) => new THREE.InstancedMesh(g, mats[i], items.length));
       const lo = geos.lo.map((g, i) => new THREE.InstancedMesh(g, mats[i], items.length));
-      [...hi, ...lo].forEach(m => { m.castShadow = castHi; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(m); });
+      [...hi, ...lo].forEach(m => { m.castShadow = castHi; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.root.add(m); });
       lo.forEach(m => m.castShadow = false);
       const mats4 = items.map(([x, z, h]) => { const s = scaleFn(); const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), r() * 6.283);
         if (colR) this.addCollider(x, z, colR * s, geos.H ? geos.H * s : 12);
@@ -232,7 +261,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     const rocks = pick((x, z, h) => h > 0.5 && away(x, z) && r() < 0.6, 120, 8000);
     const rm = new THREE.InstancedMesh(rockGeo, rockMat, rocks.length); rm.castShadow = rm.receiveShadow = true;
     rocks.forEach(([x, z, h], i) => { const s = 0.8 + Math.pow(r(), 2.5) * 5; rm.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(x, h + s * 0.15, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(r(), r() * 6, r() * 0.4)), new THREE.Vector3(s * (1 + r() * 0.6), s, s))); if (s > 1.6) this.addCollider(x, z, s * 1.0, h + s); });
-    this.scene.add(rm);
+    this.root.add(rm);
     this.rockMat = rockMat;
     this.lodTimer = 0;
   }
@@ -276,7 +305,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     pillars.forEach(([x, y, z, w, h, a], i) => pm.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.4, z), new THREE.Quaternion(), new THREE.Vector3(w, h + 0.4, w))));
     const bm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), stone, blocks.length); bm.castShadow = bm.receiveShadow = true;
     blocks.forEach(([x, y, z, sx, sy, sz, a], i) => bm.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a), new THREE.Vector3(sx, sy, sz))));
-    this.scene.add(pm, bm);
+    this.root.add(pm, bm);
   }
 
   // ---------- home base (repair pad + garage) ----------
@@ -296,7 +325,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     // beacon so kids can always find home
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 1.6, 120, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0x3de8ff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
     beam.position.y = 60; g.add(beam); this.beam = beam;
-    this.scene.add(g); this.addCollider(BASE.x, BASE.z + 16, 8.5, 12); this.baseGroup = g;
+    this.root.add(g); this.addCollider(BASE.x, BASE.z + 16, 8.5, 12); this.baseGroup = g;
   }
 
   // ---------- grass & flowers (GPU instanced, wraps around the player) ----------
@@ -324,7 +353,8 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
       for (let i = 0; i < MAX; i++) { inst[i * 4] = r() * tile; inst[i * 4 + 1] = r() * tile; inst[i * 4 + 2] = r() * 6.283; inst[i * 4 + 3] = 0.75 + r() * 0.6; }
       ig.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4)); ig.instanceCount = MAX;
       const u = this.hmUniforms({ uTime: this.windU.uTime, uCenter: { value: new THREE.Vector3() }, uTile: { value: tile }, uRadius: { value: 60 }, uPlayer: { value: new THREE.Vector4(0, 0, 0, 3) } });
-      const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide });
+      const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }); const peak = this.peak;
+      mat.customProgramCacheKey = () => (peak ? 'grass-peak-' : 'grass-jungle-') + isFlower;
       mat.onBeforeCompile = sh => {
         Object.assign(sh.uniforms, u);
         sh.vertexShader = sh.vertexShader.replace('#include <common>', `#include <common>
@@ -350,6 +380,13 @@ float push = (1.0 - smoothstep(uPlayer.w * 0.5, uPlayer.w, pd)) * k * sc;
 p.xz += normalize(toP + 1e-4) * push * 1.3; p.y -= push * 0.6;
 vec3 transformed = vec3(wp.x, hm.r - 0.08, wp.y) + p;
 vY = uv.y; vVar = hsh;`);
+        if (peak) { sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vY; varying float vVar;')
+          .replace('vec4 diffuseColor = vec4( diffuse, opacity );', isFlower ?
+            `vec3 fc = vY > 0.55 ? mix(vec3(0.3,0.03,0.005), vec3(0.42,0.12,0.01), clamp((vY-0.6)*2.0 + vVar*0.4, 0.0, 1.0)) : vec3(0.05,0.025,0.015);
+vec4 diffuseColor = vec4(fc, 1.0);` :
+            `vec3 tip = mix(vec3(0.30,0.12,0.05), vec3(0.52,0.30,0.12), vVar);
+vec4 diffuseColor = vec4(mix(vec3(0.05,0.025,0.02), tip, smoothstep(0.0, 1.0, vY)), 1.0);`)
+          .replace('#include <emissivemap_fragment>', isFlower ? '#include <emissivemap_fragment>\nif (vY > 0.55) totalEmissiveRadiance += vec3(0.9, 0.16, 0.02) * (0.45 + 0.4 * vVar);' : '#include <emissivemap_fragment>'); return; }
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vY; varying float vVar;')
           .replace('vec4 diffuseColor = vec4( diffuse, opacity );', isFlower ?
             `vec3 fc = vY > 0.55 ? mix(vec3(0.28,0.07,0.55), vec3(0.75,0.42,1.0), clamp((vY-0.6)*2.0 + vVar*0.4, 0.0, 1.0)) : vec3(0.05,0.12,0.02);
@@ -357,7 +394,7 @@ vec4 diffuseColor = vec4(fc, 1.0);` :
             `vec3 tip = mix(vec3(0.16,0.42,0.03), vec3(0.40,0.58,0.10), vVar);
 vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)), 1.0);`);
       };
-      const m = new THREE.Mesh(ig, mat); m.frustumCulled = false; m.receiveShadow = true; this.scene.add(m);
+      const m = new THREE.Mesh(ig, mat); m.frustumCulled = false; m.receiveShadow = true; this.root.add(m);
       return { mesh: m, geo: ig, u, max: MAX };
     };
     this.grass = mkMesh(grassGeo, false, 16000);
@@ -376,7 +413,8 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
   }
 
   update(dt, cam, player) {
-    this.time += dt; this.windU.uTime.value = this.time; this.waterU.uTime.value = this.time;
+    this.time += dt; this.windU.uTime.value = this.time; this.waterU.uTime.value = this.time; this.terrainU.uTime.value = this.time;
+    if (this.peak) updatePeak(this, dt, cam);
     // grass center slightly ahead of camera toward player so the field fills the view
     const cx = lerp(cam.x, player.x, 0.7), cz = lerp(cam.z, player.z, 0.7);
     for (const g of [this.grass, this.flowers]) { g.u.uCenter.value.set(cx, 0, cz); g.u.uPlayer.value.set(player.x, 0, player.z, 3.2 * (player.scale || 1)); }
@@ -388,7 +426,7 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
 }
 
 // ----- geometry builders -----
-function trunkGeo(H, lean, rad, sides, rings) {
+export function trunkGeo(H, lean, rad, sides, rings) {
   const pos = [], nor = [], uv = [], idx = [];
   for (let i = 0; i <= rings; i++) {
     const t = i / rings, y = t * H, off = lean * t * t, r = rad * (1.25 - 0.45 * t) * (i === 0 ? 1.35 : 1) * (1 + 0.06 * Math.sin(t * 40));
@@ -413,7 +451,7 @@ function palmCrown(H, lean, n, segs) {
   }
   return mergeGeometries(parts);
 }
-function crownGeo(H, rad, n) {
+export function crownGeo(H, rad, n) {
   // clusters of crossed leaf cards around a sphere -> lush broadleaf canopy / bush
   const r = rng((H * 13 + n) | 0), parts = [];
   for (let i = 0; i < n; i++) {
@@ -432,6 +470,7 @@ function fernCluster(n) {
 }
 export function triplanar(mat, scale) {
   // object-space triplanar so instanced rocks/stones do not show UV seams
+  mat.customProgramCacheKey = () => 'triplanar-' + scale;
   mat.onBeforeCompile = sh => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vOP; varying vec3 vON;').replace('#include <begin_vertex>', `#include <begin_vertex>
       #ifdef USE_INSTANCING

@@ -25,13 +25,22 @@ export class Mayhem {
     this.volc = { t: 35, on: 0, bombT: 0, n: 0, glow: 0 };
     this.combo = { n: 0, t: 0, best: 0 }; this.streak = { n: 0, t: 0 }; this.titleBoomT = 2; this.puT = 8; this.puKind = 0;
     this.stats = { explosions: 0, chain: 0, bombs: 0, ignites: 0, meteors: 0 };
-    this.buildProps(); this.buildLava(); this.buildFallMeshes();
+    this.buildPropMeshes(); this.buildLavaTex(); this.buildFallMeshes(); this.world = null; this.setWorld(game.world);
   }
   near(pos, R = 160) { const c = this.g.camera.position; return clamp(1 - Math.hypot(pos.x - c.x, pos.z - c.z) / R, 0, 1); }
   dinos() { const p = this.g.player; return p ? [p, ...this.g.enemies] : this.g.enemies; }
 
   // ---------- explosive props ----------
-  buildProps() {
+  // per-level state (props + lava rivers) is built once per world and cached on it
+  setWorld(w) {
+    if (this.world && this.world.mhState) { const s = this.world.mhState; s.lavaMesh.visible = false; s.lavaGlows.forEach(g => g.visible = false); }
+    this.world = w; this.fires = []; for (const F of this.falls) { this.scene.remove(F.m); if (F.warn) F.warn.dead = true; } this.falls = [];
+    for (const p of this.powerups) this.scene.remove(p.m); this.powerups = [];
+    if (!w.mhState) { this.items = []; this.placeProps(); this.buildLavaRivers(); w.mhState = { items: this.items, lavaMesh: this.lavaMesh, lavaGlows: this.lavaGlows, lavaPts: this.lavaPts }; }
+    const s = w.mhState; this.items = s.items; this.lavaMesh = s.lavaMesh; this.lavaGlows = s.lavaGlows; this.lavaPts = s.lavaPts;
+    this.lavaMesh.visible = true; this.lavaGlows.forEach(g => g.visible = true); this.dirty = true;
+  }
+  buildPropMeshes() {
     const barrelT = canvasTex(512, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#8e140c'); gr.addColorStop(0.5, '#d42a18'); gr.addColorStop(1, '#8e140c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
       g.fillStyle = 'rgba(0,0,0,.35)'; for (const y of [10, 118, 240]) g.fillRect(0, y, w, 6); hazard(g, 28, 22, w); hazard(g, 206, 22, w); flameIcon(g, w * 0.25, 128, 48); flameIcon(g, w * 0.75, 128, 48); });
     const fuelT = canvasTex(512, 256, (g, w, h) => { g.fillStyle = '#d8d2c4'; g.fillRect(0, 0, w, h); g.fillStyle = '#e0541a'; g.fillRect(0, 96, w, 64); g.fillStyle = '#222'; g.font = 'bold 48px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -45,6 +54,8 @@ export class Mayhem {
       fuel: mk(new THREE.CylinderGeometry(1.3, 1.3, 3.4, 18), null, [new THREE.MeshStandardMaterial({ map: fuelT, metalness: 0.5, roughness: 0.45 }), new THREE.MeshStandardMaterial({ color: 0xbab4a8, metalness: 0.6, roughness: 0.4 }), cap], 40),
       crate: mk(new THREE.BoxGeometry(1.8, 1.8, 1.8), crateT, null, 80),
     };
+  }
+  placeProps() {
     const W = this.world, ok = (x, z, r) => { const h = W.height(x, z); if (h < 1.2 || h > 38 || W.normalAtY(x, z) < 0.93) return false;
       for (const c of W.colliders) if ((c.x - x) ** 2 + (c.z - z) ** 2 < (c.r + r + 1.5) ** 2) return false; for (const it of this.items) if ((it.x - x) ** 2 + (it.z - z) ** 2 < (it.r + r + 0.4) ** 2) return false; return true; };
     const add = (type, x, z, zone) => { const T = TYPES[type]; if (!ok(x, z, T.r)) return false; this.items.push({ type, x, z, y: W.height(x, z), r: T.r, h: T.h, hp: T.hp, alive: true, t: 0, zone, rot: Math.random() * 6 }); return true; };
@@ -114,29 +125,43 @@ export class Mayhem {
       d.burnTick -= dt; if (d.burnTick <= 0 && !this.safe) { d.burnTick = 0.35; const isP = d === this.g.player; const dps = isP ? 3 : (d.burnBy === this.g.player ? 7 + 2.5 * lvl : 5); d.hit(dps * 0.35, null, d.burnBy, true); } }
   }
   // Robo-Rex fire breath (player + wild)
-  startBreath(d, dur = 1.25) { d.breathT = dur; d.breathTick = 0; d.breathSfx = 0; d.breathFire = 0.25; sfx.whoosh(0.8); sfx.ignite(); }
+  startBreath(d, dur = 1.25, kind = 'fire') { d.breathT = dur; d.breathTick = 0; d.breathSfx = 0; d.breathFire = 0.25; d.breathKind = kind === 'king' ? 'fire' : kind; sfx.whoosh(0.8); if (d.breathKind === 'fire') sfx.ignite(); else if (d.breathKind === 'ice') sfx.freeze(); else sfx.thunder(0.5); }
   updateBreath(d, dt) {
     if (!(d.breathT > 0)) return; if (!d.alive || d.stunT > 0) { d.breathT = 0; return; }
     d.breathT -= dt; d.jaw = Math.max(d.jaw, 1.3); const g = this.g, isP = d === g.player, lvl = isP ? (g.save.up.fire || 0) : 0, s = d.def.scale;
-    const m = g.mouthPos(d), dir = d.forward(new THREE.Vector3()); dir.y = -0.1; const tgt = isP ? g.lock : g.player;
-    if (tgt && tgt.alive) { V.copy(tgt.center).sub(m); const L = V.length(); if (L < 22 * s) { V.normalize(); if (V.dot(dir) > 0.75) dir.lerp(V, 0.6); } }
-    dir.normalize(); const len = (1 + 0.08 * lvl) * (d.boss ? 1.6 : 1) * Math.max(0.8, s), pw = (1.05 + 0.06 * lvl) * Math.max(0.85, s) * (d.boss ? 1.4 : 1);
-    this.fx.flame(m, dir, len, pw); if (isP) this.fx.shake = Math.max(this.fx.shake, 0.18);
-    d.breathSfx -= dt; if (d.breathSfx <= 0) { d.breathSfx = 0.12; const v = isP ? 1 : this.near(d.pos, 90) * 0.6; if (v > 0.02) sfx.flame(v); }
+    const m = g.mouthPos(d), dir = d.forward(new THREE.Vector3()); dir.y = d.fly ? -0.32 : -0.1; let tgt = isP ? g.lock : g.player; const kind = d.breathKind || 'fire';
+    if (isP && !(tgt && tgt.alive)) { let best = d.fly ? 0.25 : 0.5; for (const e of g.foesOf(d)) { if (!e || !e.alive) continue; V.copy(e.center).sub(m); const L = V.length(); if (L > 26 * Math.max(1, s) + (d.fly ? 8 : 0)) continue; const k = V.normalize().dot(dir); if (k > best) { best = k; tgt = e; } } } // kid-friendly aim assist
+    if (tgt && tgt.alive) { V.copy(tgt.center).sub(m); const L = V.length(); if (L < 22 * Math.max(1, s) + (d.fly ? 8 : 0)) { V.normalize(); if (V.dot(dir) > (d.fly ? 0.25 : 0.7)) dir.lerp(V, d.fly ? 0.85 : 0.7); } }
+    dir.normalize(); const len = (1 + 0.08 * lvl) * (d.boss ? 1.6 : 1) * Math.max(0.8, Math.min(1.4, s)), pw = (1.05 + 0.06 * lvl) * Math.max(0.85, Math.min(1.6, s)) * (d.boss ? 1.4 : 1);
+    if (kind === 'storm') return this.stormBreath(d, dt, m, dir, len, isP);
+    if (kind === 'ice') this.fx.frost(m, dir, len, pw); else this.fx.flame(m, dir, len, pw); if (isP) this.fx.shake = Math.max(this.fx.shake, 0.18);
+    d.breathSfx -= dt; if (d.breathSfx <= 0) { d.breathSfx = 0.12; const v = isP ? 1 : this.near(d.pos, 90) * 0.6; if (v > 0.02) kind === 'ice' ? sfx.frost(v) : sfx.flame(v); }
     d.breathTick -= dt; if (d.breathTick <= 0 && !this.safe) { d.breathTick = 0.25; const R = 15 * len + 2;
       const dps = isP ? 34 * (1 + 0.15 * lvl) : (d.boss ? 22 : 9 + d.level * 2);
       for (const e of g.foesOf(d)) { if (!e || !e.alive) continue; V.copy(e.center).sub(m); const L = V.length() - e.radius; if (L > R) continue; V.normalize(); if (V.dot(dir) < 0.78 && L > 2) continue;
-        e.hit(dps * 0.25, d.pos, d); this.ignite(e, 2 + 0.5 * lvl, d); }
+        e.hit(dps * 0.25 * (kind === 'ice' ? 0.75 : 1), d.pos, d); if (kind === 'ice') g.chill(e, 0.2, d); else this.ignite(e, 2 + 0.5 * lvl, d); }
       for (const it of this.items) { if (!it.alive) continue; V.set(it.x - m.x, it.y + it.h / 2 - m.y, it.z - m.z); const L = V.length(); if (L < R && V.normalize().dot(dir) > 0.75) this.damageItem(it, 5, d); } }
-    d.breathFire -= dt; if (d.breathFire <= 0) { d.breathFire = 0.4; const e = m.clone().addScaledVector(dir, 9 * len); const gy = this.world.height(e.x, e.z); if (gy > -0.5 && e.y - gy < 4) this.addFire(V2.set(e.x, gy, e.z), 1.5, 2.5, d); }
+    d.breathFire -= dt; if (d.breathFire <= 0) { d.breathFire = 0.4; const e = m.clone().addScaledVector(dir, 9 * len); const gy = this.world.height(e.x, e.z); if (kind === 'fire' && gy > -0.5 && e.y - gy < (d.fly ? 9 : 4)) this.addFire(V2.set(e.x, gy, e.z), 1.5, 2.5, d); }
+  }
+  // Storm Dragon breath: a crackling stream of lightning that forks into every foe in the cone
+  stormBreath(d, dt, m, dir, len, isP) {
+    const g = this.g, R = 26 * len + 4, col = { r: 0.75, g: 0.72, b: 1 };
+    this.fx.glow.spawn({ pos: m, size: 3, size1: 1, life: 0.08, r: 2, g: 2, b: 3, alpha: 1 }); if (isP) this.fx.shake = Math.max(this.fx.shake, 0.2);
+    d.breathTick -= dt; if (d.breathTick > 0) return; d.breathTick = 0.11;
+    const foes = g.foesOf(d).filter(e => e && e.alive && (V.copy(e.center).sub(m), V.length() - e.radius < R && V.normalize().dot(dir) > 0.6));
+    if (foes.length && !this.safe) { const t = foes[(Math.random() * foes.length) | 0]; g.zapChain(d, t, (isP ? 9 : d.boss ? 7 : 3 + d.level), 2); }
+    else { const e = m.clone().addScaledVector(dir, R * (0.6 + Math.random() * 0.4)); e.x += (Math.random() - 0.5) * 8; e.z += (Math.random() - 0.5) * 8; const gy = this.world.height(e.x, e.z); if (e.y < gy) e.y = gy + 0.2;
+      this.fx.zap(m, e, col, 0.3, 0.14); if (!this.safe) this.damageAt(e, 4, 12, d); const v = isP ? 0.8 : this.near(d.pos, 90) * 0.4; if (v > 0.03) sfx.zap(v); }
   }
   // fiery roar for the real dinos: a gout of flame with the roar (damages + ignites once Fire Power is upgraded)
   fieryRoar(d, dmgOn) {
     const g = this.g, s = d.def.scale, isP = d === g.player, lvl = isP ? (g.save.up.fire || 0) : 0;
     if (!isP && this.near(d.pos, 120) <= 0) return;
-    this.fx.emit(0.65, () => { if (!d.alive && g.player !== d) return; const m = g.mouthPos(d), dir = d.forward(new THREE.Vector3()); dir.y = -0.05; dir.normalize(); this.fx.flame(m, dir, (0.8 + 0.07 * lvl) * Math.max(0.7, s), (0.9 + 0.08 * lvl) * Math.max(0.7, s)); });
+    const el = d.def.element === 'ice' ? 'ice' : d.def.element === 'storm' ? 'storm' : 'fire';
+    this.fx.emit(0.65, (dt, t) => { if (!d.alive && g.player !== d) return; const m = g.mouthPos(d), dir = d.forward(new THREE.Vector3()); dir.y = d.fly ? -0.25 : -0.05; dir.normalize(); const a = (0.8 + 0.07 * lvl) * Math.max(0.7, Math.min(1.4, s)), b = (0.9 + 0.08 * lvl) * Math.max(0.7, Math.min(1.6, s));
+      if (el === 'ice') this.fx.frost(m, dir, a, b); else if (el === 'storm') { if (Math.random() < 0.3) { const e = m.clone().addScaledVector(dir, 10 + Math.random() * 8); e.x += (Math.random() - 0.5) * 8; e.y += (Math.random() - 0.5) * 6; this.fx.zap(m, e, { r: 0.75, g: 0.72, b: 1 }, 0.25, 0.12); } } else this.fx.flame(m, dir, a, b); });
     if (dmgOn && lvl > 0) { const fwd = d.forward(new THREE.Vector3());
-      for (const e of g.foesOf(d)) { if (!e || !e.alive) continue; V.subVectors(e.pos, d.pos); const L = V.length(); V.y = 0; V.normalize(); if (L < 16 * s + 6 && V.dot(fwd) > 0.5) { e.hit(6 + 5 * lvl, d.pos, d); this.ignite(e, 1.5 + 0.4 * lvl, d); } }
+      for (const e of g.foesOf(d)) { if (!e || !e.alive) continue; V.subVectors(e.pos, d.pos); const L = V.length(); V.y = 0; V.normalize(); if (L < 16 * s + 6 && V.dot(fwd) > 0.5) { e.hit(6 + 5 * lvl, d.pos, d); if (el === 'ice') g.chill(e, 0.3, d); else if (el === 'fire') this.ignite(e, 1.5 + 0.4 * lvl, d); } }
       this.damageAt(this.g.mouthPos(d).addScaledVector(fwd, 6), 8 * s, 4 + 3 * lvl, d); }
   }
 
@@ -170,12 +195,15 @@ export class Mayhem {
   }
 
   // ---------- volcano ----------
-  buildLava() {
-    const W = this.world, tex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#ff6a10'; g.fillRect(0, 0, w, h);
+  buildLavaTex() {
+    const tex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#ff6a10'; g.fillRect(0, 0, w, h);
       for (let i = 0; i < 260; i++) { const x = Math.random() * w, y = Math.random() * h, r = 6 + Math.random() * 22; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(40,8,4,.95)'); gr.addColorStop(0.7, 'rgba(60,12,4,.6)'); gr.addColorStop(1, 'rgba(60,12,4,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
       g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,220,90,.85)'; g.lineWidth = 3; for (let i = 0; i < 30; i++) { g.beginPath(); let x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (Math.random() - 0.5) * 50; y += Math.random() * 40; g.lineTo(x, y); } g.stroke(); } });
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping; this.lavaTex = tex;
-    const mat = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.9, 1.25, 1.0), toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+    this.lavaRiverMat = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1.9, 1.25, 1.0), toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+  }
+  buildLavaRivers() {
+    const W = this.world, mat = this.lavaRiverMat;
     this.lavaPts = []; const pos = [], uv = [], idx = []; const r = rng(31);
     for (let f = 0; f < 6; f++) {
       const a0 = f / 6 * Math.PI * 2 + r() * 0.6; let x = VOLC.x + Math.cos(a0) * 25, z = VOLC.z + Math.sin(a0) * 25; const pts = [];
@@ -216,6 +244,9 @@ export class Mayhem {
     // embers drifting in the air near the volcano
     const dv = Math.hypot(cp.x - VOLC.x, cp.z - VOLC.z);
     if (dv < 200 && Math.random() < dt * (10 + 30 * Vc.glow) * (1 - dv / 200)) fx.embers({ x: cp.x + (VOLC.x - cp.x) * 0.08, y: cp.y + 2, z: cp.z + (VOLC.z - cp.z) * 0.08 }, 40, 2, 2.5);
+    // Dragon Peak: the molten sea and canyons burn walkers
+    const pl = this.g.player; if (!title && W.lava && pl && pl.alive && !pl.fly && pl.ground < -0.3) { this.seaTick = (this.seaTick || 0) - dt;
+      if (this.seaTick <= 0) { this.seaTick = 0.4; pl.hit(3, null, null, true); pl.burnT = Math.max(pl.burnT || 0, 0.8); if (Math.random() < 0.15) this.g.hud.toast('🔥 Hot lava! Get out!'); } }
     // lava rivers hurt
     const p = this.g.player; if (!title && p && p.alive && !(p.fly && p.alt > 3) && Math.hypot(p.pos.x - VOLC.x, p.pos.z - VOLC.z) < 260) { this.lavaTick = (this.lavaTick || 0) - dt;
       if (this.lavaTick <= 0) { this.lavaTick = 0.35; for (const [x, , z, w] of this.lavaPts) if ((p.pos.x - x) ** 2 + (p.pos.z - z) ** 2 < (w + p.radius * 0.4) ** 2) { p.hit(4, null, null, true); this.ignite(p, 1.2, null); break; } } }
@@ -269,14 +300,14 @@ export class Mayhem {
     if (J.t > 3.2) { this.scene.remove(J.m); this.jets.splice(i, 1); } } }
 
   // ---------- combo + KO streak ----------
-  onHit(d, attacker, quiet) { const g = this.g; if (attacker !== g.player || d === g.player || quiet) return; const C = this.combo; C.n = C.t > 0 ? C.n + 1 : 1; C.t = 2.6; C.best = Math.max(C.best, C.n); g.hud.combo(C.n); }
+  onHit(d, attacker, quiet) { const g = this.g; if (attacker !== g.player || d === g.player || quiet) return; const C = this.combo; C.n = C.t > 0 ? C.n + 1 : 1; C.t = 2.6; C.best = Math.max(C.best, C.n); g.hud.combo(C.n); if (C.n >= 5 && C.n % 5 === 0) g.hud.say?.('LEANDRO! ' + C.n + ' hit combo!', { prio: 1, cd: 3000 }); }
   onKO(d, attacker) {
     const g = this.g; if (attacker !== g.player || d === g.player) return; const S = this.streak; S.n = S.t > 0 ? S.n + 1 : 1; S.t = 5;
-    if (S.n >= 2) { const name = S.n === 2 ? 'DOUBLE KO!' : S.n === 3 ? 'TRIPLE KO!' : S.n === 4 ? 'MEGA KO!' : S.n === 5 ? 'RAMPAGE!' : 'UNSTOPPABLE!'; g.hud.banner(name, Math.min(4, S.n - 1)); sfx.banner(Math.min(4, S.n - 1)); g.addBolts(S.n * 2); this.fx.shake = Math.max(this.fx.shake, 0.6); }
+    if (S.n >= 2) { const name = S.n === 2 ? 'DOUBLE KO!' : S.n === 3 ? 'TRIPLE KO!' : S.n === 4 ? 'MEGA KO!' : S.n === 5 ? 'RAMPAGE!' : 'UNSTOPPABLE!'; g.hud.banner(name, Math.min(4, S.n - 1)); sfx.banner(Math.min(4, S.n - 1)); g.hud.say?.(S.n >= 5 ? name + ' LEANDRO!' : name, { prio: 2, cd: 1200 }); g.addBolts(S.n * 2); this.fx.shake = Math.max(this.fx.shake, 0.6); }
   }
   // ---------- end-of-battle celebration ----------
   celebrate() {
-    const g = this.g; g.hud.banner('🏆 BATTLE OVER! 🏆', 4); if (g.hud.victory) g.hud.victory();
+    const g = this.g; if (g.hud.leandroWins) { g.hud.winAt = 0; g.hud.leandroWins('🏆 Battle over!'); } else g.hud.banner('🏆 BATTLE OVER! 🏆', 4); if (g.westies) g.later(0.3, () => g.westies.trigger('victory')); if (g.hud.victory) g.hud.victory();
     for (let i = 0; i < 12; i++) g.later(0.15 + i * 0.2, () => { const a = Math.random() * 6.28, d = 8 + Math.random() * 22, x = ARENA.x + Math.cos(a) * d, z = ARENA.z + Math.sin(a) * d, gy = g.world.height(x, z);
       if (i % 2 === 0) { this.fx.boom(V.set(x, gy + 1, z), 1.2 + Math.random() * 0.8, { groundY: gy, shake: 0.5 }); sfx.boom(0.7); } this.firework(new THREE.Vector3(x, gy + 22 + Math.random() * 12, z)); });
     for (const it of this.items) if (it.zone === 'arena' && it.alive) g.later(0.4 + Math.random() * 2, () => this.damageItem(it, 99, null));

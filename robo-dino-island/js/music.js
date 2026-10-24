@@ -73,6 +73,38 @@ const TRACKS = {
     if (s === 3 || s === 11) I.stab(b, t, C.map(m => m + 24), 1);
     if (bar === 3 && s >= 12) I.tom(b, t, 0.9, 220 - (s - 12) * 30);
   } },
+  // ---- Dragon Peak (E phrygian: dark, ominous, epic) ----
+  // slow war drums, low brass, choir pad and a bell-like dragon motif
+  peak: { bpm: 92, fn(b, t, s, bar, d) {
+    const R = [40, 41, 40, 38][bar], C = [[52, 55, 59], [53, 57, 60], [52, 55, 59], [50, 53, 57]][bar];
+    const MEL = [[76, -1, -1, 77, 76, -1, 74, -1, 71, -1, -1, -1, 72, -1, 71, -1], [77, -1, -1, 79, 77, -1, 76, -1, 72, -1, -1, -1, 74, -1, 72, -1], [76, -1, 79, -1, 83, -1, 81, 79, 77, -1, 76, -1, 74, -1, 76, -1], [74, -1, -1, 72, 71, -1, -1, -1, 69, -1, 71, -1, 72, -1, 74, -1]];
+    if (s === 0) { I.taiko(b, t, 1, 52); I.pad(b, t, C, d * 16, 1.1); I.bass(b, t, R, d * 7, 0.9); if (bar === 0) I.crash(b, t, 0.6); }
+    if (s === 3 || s === 6) I.taiko(b, t, 0.6, 68); if (s === 8) { I.taiko(b, t, 0.95, 50); I.bass(b, t, R, d * 6, 0.8); I.brass(b, t, C.map(m => m - 12), d * 7, 0.9); }
+    if (s === 11 || s === 14) I.tom(b, t, 0.55, 130); if (s % 4 === 2) I.hat(b, t, 0.35, s === 14);
+    const m = MEL[bar][s]; if (m > 0) { I.pluck(b, t, m, 0.75); I.arp(b, t, m - 12, 0.4); }
+    if (bar === 3 && s >= 12) I.snare(b, t, 0.25 + (s - 12) * 0.15);
+  } },
+  // fast phrygian riff for battles on Dragon Peak
+  peakbattle: { bpm: 152, fn(b, t, s, bar, d) {
+    const R = [40, 41, 40, 43][bar], C = [[52, 55, 59], [53, 57, 60], [52, 55, 59], [55, 58, 62]][bar];
+    const RIFF = [0, 0, 12, 0, 1, 0, 0, 12, 0, 0, 3, 0, 1, 0, -2, 0];
+    if (s % 4 === 0 || s === 7 || s === 14) I.kick(b, t, 1); if (s === 4 || s === 12) I.snare(b, t, 1);
+    I.hat(b, t, s % 2 ? 0.45 : 0.85, s % 8 === 6);
+    I.bass(b, t, R + RIFF[s], d * 0.9, 0.95, s % 4 === 0);
+    if (s === 0) { I.brass(b, t, C.map(m => m + 12), d * 7, 1.1); if (bar === 0) { I.crash(b, t, 1); I.taiko(b, t, 0.9, 58); } }
+    if (s === 10) I.stab(b, t, C.map(m => m + 12), 0.9);
+    I.arp(b, t, C[(s * 2) % 3] + 24, 0.7);
+  } },
+  // the Dragon King: thundering double kick, distorted bass, huge brass and choir
+  dragonboss: { bpm: 172, fn(b, t, s, bar, d) {
+    const R = [40, 41, 38, 39][bar], C = [[52, 59, 64], [53, 60, 65], [50, 57, 62], [51, 58, 63]][bar];
+    if (s % 2 === 0 || s === 15 || s === 7) I.kick(b, t, 1.05); if (s === 4 || s === 12) { I.snare(b, t, 1.15); I.taiko(b, t, 0.7, 75); }
+    if (s === 0) { I.crash(b, t, 1.1); I.taiko(b, t, 1.1, 48); I.pad(b, t, C.map(m => m - 12), d * 16, 1.3); }
+    I.hat(b, t, 0.55, s % 4 === 2); I.bass(b, t, R + (s % 8 === 3 ? 1 : s % 8 === 7 ? 12 : 0), d * 0.85, 1.05, true);
+    if (s === 0 || s === 8) I.brass(b, t, C.map(m => m + 12), d * 7, 1.4); if (s === 6 || s === 14) I.brass(b, t, [C[0] + 13], d * 2, 1.1);
+    if (s === 3 || s === 11) I.stab(b, t, C.map(m => m + 24), 1.05);
+    if (bar === 3 && s >= 10) I.tom(b, t, 1, 240 - (s - 10) * 26);
+  } },
 };
 
 function startTrack(name, t) {

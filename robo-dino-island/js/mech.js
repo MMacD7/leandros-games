@@ -361,6 +361,59 @@ const SPECIES = {
     B.part('tail4', plateXY([[0, 0], [0.4, 0.5], [-0.4, 0.5]], 0.05), 'glow', 0, 0, -0.5, Math.PI / 2, 0, 0);
     return { s: 0.6, hipH: 1.6, flyer: true };
   },
+  // ---------------- v4 robots ----------------
+  gmech(B) {
+    const o = biped(B, { s: 1.15, w: 1.2, bh: 1.2, hipH: 3.25, headL: 2.15, headW: 1.12, arm: 0.75, leg: Object.assign([1.55, 1.4, 0.75], { w: 1.05 }), tailN: 8, tailL: 0.95, crest: true });
+    // giant piston fists for the QUAKE slam, shoulder armour and a spiked dorsal ridge
+    B.mirror((sd, P) => { B.part(P + 'el', shell(0.55, 0.55, 0.6, { e: 0.4 }), 'frame', 0, -o.arm * 1.05, 0.15); B.part(P + 'el', cyl(0.18, 0.18, 0.12, 12), 'glow', 0, -o.arm * 1.05, 0.47, Math.PI / 2, 0, 0);
+      B.part('chest', shell(0.9, 0.35, 1.1, { e: 0.4, tf: 0.8 }), 'frame', sd * 1.0, 0.4, 1.0, 0, 0, sd * -0.45);
+      for (let k = 0; k < 3; k++) B.part('chest', cone(0.12, 0.6, 7), 'joint', sd * 1.25, 0.55, 0.6 + k * 0.4, 0, 0, sd * -1.0); });
+    for (let i = 0; i < 5; i++) B.part('chest', cone(0.1, 0.5 + 0.2 * Math.sin(i), 7), 'glow', 0, 1.25 * 1.2 * 0.75 + 0.1, -0.5 + i * 0.45, -0.3, 0, 0);
+    return o;
+  },
+  dblast(B) {
+    const o = biped(B, { s: 0.85, w: 0.78, bh: 0.82, hipH: 2.9, headL: 1.5, headW: 0.72, arm: 0.85, leg: Object.assign([1.35, 1.4, 0.8], { w: 0.6 }), tailN: 8, tailL: 0.88, crest: false });
+    // twin head crests, a radial blaster frill around the neck and glowing goo tanks
+    B.mirror(sd => { B.part('head', plateXY([[-0.4, 0], [-0.1, 0.45], [0.6, 0.6], [1.1, 0.2], [1.2, 0]], 0.06, 0.02), 'frame', sd * 0.16, 0.55, 0.2, 0, -Math.PI / 2, sd * 0.12);
+      B.part('head', plateXY([[-0.2, 0.05], [0.5, 0.42], [0.95, 0.1]], 0.08, 0.01), 'glow', sd * 0.17, 0.57, 0.2, 0, -Math.PI / 2, sd * 0.12); });
+    for (let i = 0; i < 9; i++) { const a = -Math.PI * 0.55 + i / 8 * Math.PI * 1.1, sd = Math.sign(Math.cos(a)) || 1;
+      B.part('neck', plateXY([[0, -0.12], [1.05, -0.05], [1.15, 0.05], [0, 0.12]], 0.05, 0.02), i % 2 ? 'frame' : 'plate', Math.sin(a) * 0.25, 0.35 + Math.cos(a) * 0.25, 0.15, 0, 0, Math.PI / 2 - a);
+      B.part('neck', shell(0.05, 0.05, 0.05, { e: 0.3 }), 'glow', Math.sin(a) * 1.25, 0.35 + Math.cos(a) * 1.25, 0.15); }
+    B.mirror(sd => { B.part('chest', cyl(0.28, 0.28, 1.4, 14), 'frame', sd * 0.45, 1.0, 0.2, Math.PI / 2, 0, 0); B.part('chest', cyl(0.22, 0.22, 1.2, 14), 'glow', sd * 0.45, 1.0, 0.2, Math.PI / 2, 0, 0); });
+    return o;
+  },
+  rdragon(B) {
+    const o = quad(B, { s: 0.9, hipH: 2.2, bw: 1.7, bh: 1.45, bodyL: 2.0, legB: Object.assign([1.0, 0.9, 0.35], { w: 0.68 }), legF: Object.assign([0.9, 0.8, 0.3], { w: 0.6 }),
+      neckN: 4, neckL: 0.62, neckRise: 0.32, neckW: 0.72, headL: 1.5, headW: 0.82, headH: 0.85, tailN: 9, tailL: 0.8 });
+    teeth(B, 'head', 0.35, 1.35, -0.12, 0.28, true, 0.85); teeth(B, 'jaw', 0.4, 1.25, 0.02, 0.24, false, 0.8);
+    // horns, back blades, spade tail, flame-jet nozzles
+    B.mirror(sd => { B.part('head', cone(0.13, 1.3, 8), 'joint', sd * 0.28, 0.45, -0.2, -2.0, 0, sd * -0.35); B.part('head', cone(0.08, 0.7, 7), 'frame', sd * 0.38, 0.25, -0.15, -1.9, 0, sd * -0.8);
+      B.part('head', cyl(0.09, 0.12, 0.3, 10), 'frame', sd * 0.2, -0.05, 1.35, Math.PI / 2, 0, 0); B.part('head', cyl(0.07, 0.07, 0.04, 10), 'glow', sd * 0.2, -0.05, 1.51, Math.PI / 2, 0, 0); });
+    dorsal(B, 'chest', -2.4, 0.4, o.bh * 0.5, 6, 0.8, 'frame'); dorsal(B, 'pelvis', -1.0, 0.5, o.bh * 0.5, 3, 0.7, 'frame');
+    for (let i = 0; i < 4; i++) dorsal(B, 'neck' + i, -0.1, 0.3, 0.38, 1, 0.45, i % 2 ? 'glow' : 'frame');
+    B.part('tail8', plateXY([[0, 0.2], [0.6, -0.3], [0, -1.2], [-0.6, -0.3]], 0.06), 'frame', 0, 0, -0.6, Math.PI / 2, 0, 0);
+    B.part('tail8', plateXY([[0, 0.05], [0.3, -0.3], [0, -0.8], [-0.3, -0.3]], 0.08), 'glow', 0, 0, -0.6, Math.PI / 2, 0, 0);
+    B.socket('chest', 'jet', 0, -0.5, -1.8);
+    // big jet-wings (ptero-style), scaled up
+    const W = 1.35;
+    B.mirror((sd, P) => {
+      B.bone(P + 'wing', 'chest', sd * 0.7, 0.55, -0.6); B.bone(P + 'wing2', P + 'wing', sd * 2.6 * W, 0, 0);
+      B.part(P + 'wing', shell(2.8 * W, 0.24, 0.36, { e: 0.5 }), 'frame', sd * 1.3 * W, 0, 0.2);
+      B.part(P + 'wing', plateXY([[0, 0.4], [sd * 2.6 * W, 0.3], [sd * 2.6 * W, -1.1 * W], [sd * 2.0 * W, -1.35 * W], [sd * 1.3 * W, -1.25 * W], [sd * 0.6 * W, -1.7 * W], [0, -1.7 * W]], 0.06), 'plate', 0, 0, 0, Math.PI / 2, 0, 0);
+      for (let k = 0; k < 3; k++) B.part(P + 'wing', shell(0.1, 0.1, 1.5 * W - k * 0.2, { e: 0.4 }), 'frame', sd * (0.5 + k * 0.8) * W, 0.06, -0.6 * W, 0, sd * (0.25 - k * 0.12), 0);
+      B.part(P + 'wing', shell(2.3 * W, 0.05, 0.06, { e: 0.3 }), 'glow', sd * 1.3 * W, 0.06, -0.45 * W, 0, 0, 0);
+      B.part(P + 'wing', cone(0.1, 0.6, 7), 'joint', sd * 2.65 * W, 0.0, 0.45, -1.2, 0, 0);
+      B.part(P + 'wing', cone(0.1, 0.7, 7), 'joint', sd * 0.9, 0.12, 0.25, -0.3, 0, sd * -0.9);
+      B.part(P + 'wing', cyl(0.25, 0.32, 1.4, 12), 'frame', sd * 1.3 * W, -0.32, -0.2, Math.PI / 2, 0, 0);
+      B.part(P + 'wing', cyl(0.2, 0.2, 0.06, 12), 'glow', sd * 1.3 * W, -0.32, -0.92, Math.PI / 2, 0, 0);
+      B.socket(P + 'wing', 'jet' + P, sd * 1.3 * W, -0.32, -1.0);
+      B.part(P + 'wing2', shell(2.5 * W, 0.17, 0.28, { e: 0.5, tf: 0.5 }), 'frame', sd * 1.2 * W, 0, 0.25, 0, sd * 0.25, 0);
+      B.part(P + 'wing2', plateXY([[0, 0.3], [sd * 2.9 * W, -0.45 * W], [sd * 2.3 * W, -0.75 * W], [sd * 1.6 * W, -0.7 * W], [sd * 0.9 * W, -1.05 * W], [0, -1.1 * W]], 0.05), 'plate', 0, 0, 0, Math.PI / 2, 0, 0);
+      B.part(P + 'wing2', cone(0.07, 0.9, 7), 'frame', sd * 2.9 * W, 0.0, -0.45 * W, 0, 0, sd * -Math.PI / 2 + sd * 0.25);
+      B.part(P + 'wing2', shell(2.3 * W, 0.05, 0.06, { e: 0.3 }), 'glow', sd * 1.2 * W, 0.05, -0.55 * W, 0, sd * -0.32, 0);
+    });
+    return { ...o, flyer: true, height: 3.6 };
+  },
 };
 
 export class Mech {
@@ -393,7 +446,7 @@ export class Mech {
     this.haloMat = hm;
     this.obj.traverse(o => { if (o.isSkinnedMesh) o.frustumCulled = true; });
     { const bb = new THREE.Box3(); for (const m of this.meshes) { m.geometry.computeBoundingBox(); bb.union(m.geometry.boundingBox); } this.box = bb; this.fitR = bb.getSize(new THREE.Vector3()).length() * 0.5 * def.scale; }
-    this.height = (this.flyer ? 2.6 : (this.info.hipH + (this.quad ? 1.5 : 2.4))) * def.scale;
+    this.height = this.info.height ? this.info.height * def.scale : (this.flyer ? 2.6 : (this.info.hipH + (this.quad ? 1.5 : 2.4))) * def.scale;
   }
   socketPos(name, out) { const s = this.sockets[name] || this.sockets.mouth; return s.getWorldPosition(out); }
   dispose() { this.meshes.forEach(m => { m.geometry.dispose(); }); Object.values(this.mats).forEach(m => m.dispose && m.dispose()); this.haloMat.dispose(); }
@@ -411,7 +464,9 @@ export class Mech {
       R('Lwing2', 0, 0, flap * 0.6 * fl); R('Rwing2', 0, 0, -flap * 0.6 * fl);
       R('pelvis', -0.1 * k + (opts.climb || 0) * -0.3, 0, (opts.turn || 0) * -0.5);
       b.pelvis.position.y = this.info.hipH + Math.sin(this.t * 2.5) * 0.15;
-      for (const P of ['L', 'R']) R(P + 'hip', 0.2 * Math.sin(this.t * 3));
+      if (this.quad) for (const P of ['L', 'R']) { R(P + 'hip', 0.85 + 0.05 * Math.sin(this.t * 3)); R(P + 'knee', -0.2); R(P + 'Fhip', -0.4); R(P + 'Fknee', 0.9); }
+      else for (const P of ['L', 'R']) R(P + 'hip', 0.2 * Math.sin(this.t * 3));
+      if (this.quad) for (let i = 0; i < 6; i++) R('neck' + i, fl * 0.1);
     } else if (this.quad) {
       const legs = [['L', 0], ['RF', 0], ['R', Math.PI], ['LF', Math.PI]];
       for (const [P, o] of legs) { const s = Math.sin(ph + o), lift = Math.max(0, Math.cos(ph + o));
