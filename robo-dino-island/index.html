@@ -21,7 +21,7 @@
 <div id="touch-zone"></div>
 <div id="hud" class="hidden">
   <div id="hud-tl">
-    <button id="b-pause" class="icon-btn" aria-label="Menu">❚❚</button>
+    <button id="b-pause" class="icon-btn" aria-label="Menu">❚❚</button><button id="b-map" class="icon-btn" aria-label="Change level">🗺️</button>
     <div class="bars">
       <div class="bar hp"><i id="hp"></i><span id="hp-t">100</span></div>
       <div class="bar boost"><i id="boost"></i></div>
@@ -36,6 +36,7 @@
   <div id="toast"></div>
   <div id="hurt"></div>
   <div id="joy-base"><div id="joy-knob"></div></div>
+  <button id="b-rb" class="rb-btn" aria-label="Summon Ricky and Bobby"><i id="rb-cd"></i><span class="rb-ic">🐶</span><b>RICKY &amp;<br>BOBBY</b><em id="rb-t"></em></button>
   <div id="actions">
     <button id="a-laser" class="act big" data-btn="laser"><span>LASER</span></button>
     <button id="a-missile" class="act" data-btn="missile"><div id="mcd"></div><span>MISSILE</span></button>
@@ -50,20 +51,21 @@
 
 <div id="title" class="screen hidden">
   <div class="logo"><small>Leandro's</small><b>ROBO DINO</b><em>ISLAND</em><i>REAL&nbsp;&nbsp;VS&nbsp;&nbsp;ROBOT</i></div>
-  <div class="levels"><button id="lv-jungle" class="lv on">🌴 Jungle Island</button><button id="lv-peak" class="lv">🌋 Dragon Peak</button></div>
+  <div class="levels" role="group" aria-label="Choose a level"><button id="lv-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
   <div class="menu">
     <button id="b-roam" class="btn primary">▶ Explore the Island</button>
     <button id="b-battle" class="btn">⚔ Battle Arena</button>
     <button id="b-garage" class="btn">🦖 Dino Garage</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: 7 dinos + 4 dragons!</button><span id="ver" aria-label="Version">v4.1</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
   <div class="g-top"><button id="g-back" class="btn small">◀ Back</button><button id="g-ride" class="btn small ride">🧒 Leandro rides: ON</button><div class="g-bolts"><span class="nut">⬢</span> <b id="g-bolts">0</b></div></div>
   <div class="g-nav"><button id="g-prev" class="arrow">‹</button><button id="g-next" class="arrow">›</button></div>
   <div class="g-panel">
-    <div class="g-tabs"><button id="t-real" class="tab">🦖 Real</button><button id="t-robo" class="tab on">🤖 Robot</button><button id="t-dragon" class="tab">🐉 Dragons</button><button id="t-ups" class="tab">⚙️ Upgrades</button></div>
+    <div class="g-tabs"><button id="t-real" class="tab">🦖 Real<sup class="tnew">NEW</sup></button><button id="t-robo" class="tab on">🤖 Robots<sup class="tnew">NEW</sup></button><button id="t-dragon" class="tab">🐉 Dragons<sup class="tnew">NEW</sup></button><button id="t-ups" class="tab">⚙️ Upgrades</button></div>
     <div id="g-dino">
       <h2 id="g-name">Robo-Rex</h2><p id="g-desc"></p><p id="g-abil"></p>
       <div id="g-stats"></div>
@@ -77,6 +79,7 @@
 <div id="pause" class="screen dim hidden">
   <div class="panel"><h2>Paused</h2>
     <button id="p-resume" class="btn primary">▶ Keep playing</button>
+    <button id="p-map" class="btn">🗺️ Change level</button>
     <button id="p-garage" class="btn">🦖 Dino Garage</button>
     <button id="p-sound" class="btn">🔊 Sound on</button>
     <button id="p-music" class="btn">🎵 Music on</button>
@@ -84,6 +87,13 @@
     <button id="p-ride" class="btn small">🧒 Leandro rides: ON</button>
     <button id="p-quality" class="btn small">Graphics: Auto</button>
     <button id="p-home" class="btn small">⌂ Title screen</button>
+  </div>
+</div>
+
+<div id="levels" class="screen dim hidden">
+  <div class="panel lv-panel"><h2>🗺️ Choose a level</h2>
+    <div class="levels" role="group" aria-label="Choose a level"><button id="lvd-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button></div>
+    <button id="lvd-close" class="btn small">◀ Back to the game</button>
   </div>
 </div>
 

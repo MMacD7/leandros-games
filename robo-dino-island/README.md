@@ -12,7 +12,7 @@ You need HTTPS (or localhost) for the service worker and install.
 On iPhone/iPad: open it in Safari, tap **Share → Add to Home Screen**, then launch it from the icon. It opens fullscreen and keeps working offline.
 
 ## Levels
-Pick the level on the title screen: **🌴 Jungle Island** or **🌋 Dragon Peak**. The choice is saved, and the announcer welcomes you when you travel.
+Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND** or **🌋 DRAGON PEAK**. You can also tap 🗺️ in the game (top-left, or Pause → 🗺️ Change level) to switch at any time. The choice is saved, and the announcer welcomes you when you travel.
 * **Dragon Peak** has a taller, craggier volcano, a molten lava sea and glowing lava canyons and cracks (walking in lava hurts, flying over it is fine). It also has charred dead trees, glowing ember and storm crystals, obsidian spires, floating rock islands and dragon nests with glowing eggs. Lightning strikes the spires with thunder, embers drift in the air, and there's a dusk sky with stars and a moon.
 * Its wild creatures are dragons in the sky plus Giganotosaurus, Allosaurus, Dilophosaurus, Pachycephalosaurus, Parasaurolophus, Giga-Mech and Dilo-Blaster on the ground.
 * The Battle Arena on Dragon Peak is a ring of crumbling **castle ruins** with towers, a broken keep and burning braziers. Its boss wave is the giant **DRAGON KING**, with a health bar, fire rain, minions and its own boss music.
@@ -72,7 +72,8 @@ Pick the level on the title screen: **🌴 Jungle Island** or **🌋 Dragon Peak
 * They get a wrestling-announcer intro: "In this corner... weighing in at fifteen pounds of pure fluff... RICKYYYY! And his partner... BOBBYYYY!" It comes with crowd cheers, barks, spotlights, confetti and a big **RICKY & BOBBY!** banner.
 * Then they help. They either do a bark shockwave that stuns and pushes back nearby enemies, or fetch a power-up. After that they run off.
 * They're invincible, never targeted and not counted as enemies. They run away early if danger gets close.
-* They're rate-limited, so they show up at most about every two minutes. The intro follows the 🗣️ voice setting.
+* **🐶 Summon button:** tap the big RICKY & BOBBY button in the game (next to the attack buttons) to call them in any time. It has a 25-second cooldown ring. Tap it again while they're here for an extra bark blast.
+* Random visits are rate-limited, so they show up at most about every two minutes. The intro follows the 🗣️ voice setting.
 
 ### Leandro rides
 * A cartoony, low-poly kid rider (Leandro) sits on every dino: a leather saddle on the real ones and a cockpit seat on the robots. The seat is found automatically for each of the 27 bodies, and on dragons he rides a saddle on the back, just behind the neck.
@@ -165,7 +166,7 @@ The game picks one of four **quality tiers** automatically:
 
 ## Files
 `index.html`, `css/`, `js/` (game code plus `js/vendor/three.bundle.min.js`), `assets/` (textures and sky), `icons/`, `manifest.webmanifest`, `sw.js` (precache, cache-first).
-After editing any file, regenerate the service worker with `python3 tools/gen-sw.py`. That refreshes the precache list and the cache-version hash.
+Updates install automatically. The service worker loads pages and code network-first (with an offline fallback) and reloads the game once when a new version takes over. The title screen shows the version (bottom right). After editing any file, regenerate the service worker with `python3 tools/gen-sw.py`. That refreshes the precache list and the cache-version hash.
 
 ## Credits and licenses
 * **Three.js** © three.js authors, MIT License (`js/vendor/THREE-LICENSE.txt`).
