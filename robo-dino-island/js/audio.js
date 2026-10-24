@@ -40,13 +40,22 @@ function tone(t, type, f0, f1, dur, peak, a = 0.005) {
   return o;
 }
 let lastLaser = 0;
-// Ricky & Bobby: a yappy terrier bark (two quick 'ruff's) and a stadium crowd cheer
-function bark(t, p, v) { tone(t, 'sawtooth', 820 * p, 380 * p, 0.09, 0.22 * v, 0.004); tone(t, 'square', 560 * p, 260 * p, 0.1, 0.12 * v, 0.004); noise(t, 0.08, 'bandpass', 1500 * p, 700 * p, 0.25 * v, 2); }
+// Ricky & Bobby: a small-terrier "yip" (quick rise-then-fall pitch through a mouth-like band filter, soft and short) and a stadium crowd cheer
+function yip(t, p, v) {
+  const f0 = 640 * p, o = ctx.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(f0 * 0.82, t); o.frequency.linearRampToValueAtTime(f0 * 1.22, t + 0.025); o.frequency.exponentialRampToValueAtTime(f0 * 0.72, t + 0.11);
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.3; bp.frequency.setValueAtTime(1700 * p, t); bp.frequency.exponentialRampToValueAtTime(1200 * p, t + 0.11);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3600;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2 * v, t + 0.008); g.gain.exponentialRampToValueAtTime(0.06 * v, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o.connect(bp); bp.connect(lp); lp.connect(g); g.connect(master); o.start(t); o.stop(t + 0.15);
+  noise(t, 0.035, 'bandpass', 2400 * p, 1600 * p, 0.05 * v, 1.5); // a touch of breath at the start
+}
 function cheer(t, v) { noise(t, 2.6, 'bandpass', 900, 1400, 0.38 * v, 0.6); noise(t + 0.1, 2.4, 'bandpass', 2400, 1800, 0.18 * v, 0.8);
   for (let i = 0; i < 9; i++) { const s = t + 0.1 + Math.random() * 1.6, f = 380 + Math.random() * 420; const o = tone(s, 'triangle', f, f * (1.3 + Math.random() * 0.4), 0.45, 0.04 * v, 0.06); o.detune.value = (Math.random() - 0.5) * 40; }
   for (let i = 0; i < 14; i++) noise(t + 0.3 + Math.random() * 1.8, 0.03, 'highpass', 2500, 2400, 0.1 * v, 1); }
 export const sfx = {
-  bark(p = 1, v = 1) { if (!ctx) return; const t = now(); bark(t, p, v); bark(t + 0.17, p * 1.06, v * 0.85); },
+  // v4.4: n quick yips ('yip-yip'); p = pitch (Bobby is a bit higher), v = volume. Silent until the first tap unlocks audio.
+  bark(p = 1, v = 1, n = 2) { if (!ctx) return; const t = now(); for (let i = 0; i < n; i++) yip(t + i * 0.16, p * (1 + i * 0.06), v * (1 - i * 0.15)); },
   cheer(v = 1) { if (!ctx) return; cheer(now(), v); duck(0.35, 2.4); },
   laser(vol = 1) { if (!ctx) return; const t = now(); if (t - lastLaser < 0.05) return; lastLaser = t;
     tone(t, 'sawtooth', 1600 + Math.random() * 200, 220, 0.16, 0.12 * vol); tone(t, 'square', 900, 120, 0.12, 0.05 * vol); },
