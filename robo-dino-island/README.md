@@ -69,11 +69,12 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND** or *
   * every few minutes while roaming
   * at the start of some battles and boss waves
   * after victories
-* They get a wrestling-announcer intro: "In this corner... weighing in at fifteen pounds of pure fluff... RICKYYYY! And his partner... BOBBYYYY!" It comes with crowd cheers, barks, spotlights, confetti and a big **RICKY & BOBBY!** banner.
-* Then they help. They either do a bark shockwave that stuns and pushes back nearby enemies, or fetch a power-up. After that they run off.
-* They're invincible, never targeted and not counted as enemies. They run away early if danger gets close.
-* **🐶 Summon button:** tap the big RICKY & BOBBY button in the game (next to the attack buttons) to call them in any time. It has a 25-second cooldown ring. Tap it again while they're here for an extra bark blast.
-* Random visits are rate-limited, so they show up at most about every two minutes. The intro follows the 🗣️ voice setting.
+* They get a wrestling-announcer intro: "In this corner... weighing in at fifteen pounds of pure fluff... Ricky! And his partner... Bobby! It's Ricky and Bobby!" It comes with crowd cheers, spotlights, confetti and a big **RICKY & BOBBY!** banner.
+* Then they **dance** for about five seconds: alternating hops, a mirrored jump-spin, a side-to-side wiggle and tail wags, then paws in the air. After that, their little capes flap and they **fly away** into the sky with a sparkle trail. No fighting.
+* They're invincible and never targeted. If trouble gets close, they just take off early.
+* **🐶 Summon button:** tap the big RICKY & BOBBY button in the game (next to the attack buttons) to call them in. It has a 25-second cooldown ring. Tapping it while they're here throws more confetti.
+* Random visits are rate-limited. The intro follows the 🗣️ voice setting.
+* Spoken lines always use natural words (no ALL-CAPS or stretched words), so iPhone and iPad voices say the names instead of spelling them.
 
 ### Leandro rides
 * A cartoony, low-poly kid rider (Leandro) sits on every dino: a leather saddle on the real ones and a cockpit seat on the robots. The seat is found automatically for each of the 27 bodies, and on dragons he rides a saddle on the back, just behind the neck.
