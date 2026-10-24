@@ -1,5 +1,5 @@
 /* Offline cache for Leandro's Robo Dino Island. Only same-origin files; nothing is fetched from other sites. */
-const CACHE = 'robo-dino-island-00f9f7e53b';
+const CACHE = 'robo-dino-island-f4bf87b148';
 const FILES = ['./',
   './assets/hdri/sky_1k.hdr',
   './assets/hdri/sky_2k.jpg',
@@ -29,9 +29,12 @@ const FILES = ['./',
   './js/mech.js',
   './js/music.js',
   './js/noise.js',
+  './js/peak.js',
   './js/proctex.js',
   './js/rider.js',
   './js/vendor/three.bundle.min.js',
+  './js/voice.js',
+  './js/westies.js',
   './js/world.js',
   './manifest.webmanifest'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
