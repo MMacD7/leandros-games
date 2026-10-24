@@ -1,12 +1,12 @@
 // RICKY & BOBBY: two West Highland White Terriers who occasionally run in, get a wrestling-announcer
-// introduction (spotlights, confetti, crowd cheer, banner), help for a moment (bark shockwave / fetch a power-up)
-// and run off again. Built procedurally from simple shapes. They are invincible and never targeted by anything.
+// introduction (spotlights, confetti, crowd cheer, banner), DANCE for ~5 s (hops, spins, wiggles, tail wags),
+// then fly away into the sky with flapping capes and a sparkle trail. No fighting. Built procedurally from simple shapes. They are invincible and never targeted by anything.
 import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { sfx } from './audio.js';
 import { voice } from './voice.js';
 
-const V = () => new THREE.Vector3();
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 let furTex = null;
 function fur() { // soft white fur with fine strands (canvas texture)
   if (furTex) return furTex; const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
@@ -94,71 +94,71 @@ export class Westies {
     this.dogs.forEach((d, i) => { const s = i ? 1 : -1;
       d.goal = meet.clone().addScaledVector(side, s * 2.6); const far = reason === 'victory' ? 14 : 34; d.start = meet.clone().addScaledVector(side, s * far).addScaledVector(f, far * 0.3);
       d.pos.copy(d.start); d.root.visible = true; d.bark = 0; d.hop = 0; d.spin = 0; });
-    this.reason = reason; this.state = 'enter'; this.t = 0; this.count++; this.helped = false; this.introduced = false; this.log.push(reason);
-    sfx.bark && sfx.bark(1.0); return true;
+    this.reason = reason; this.state = 'enter'; this.t = 0; this.count++; this.introduced = false; this.danced = 0; this.flew = false; this.log.push(reason);
+    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(2.1); } return true;
   }
   ground(p) { const h = this.g.world.height(p.x, p.z); return Math.max(h, this.g.world.lava ? 0.2 : -0.3); }
-  danger() { const g = this.g; for (const e of g.enemies) { if (!e.alive || e.stunT > 0.3) continue; for (const d of this.dogs) if (e.pos.distanceTo(d.pos) < 6 + e.radius) return true; } return false; }
+  danger() { const g = this.g; for (const e of g.enemies) { if (!e.alive) continue; for (const d of this.dogs) if (e.pos.distanceTo(d.pos) < 6 + e.radius) return true; } return false; }
   intro() {
     const g = this.g; this.introduced = true;
-    g.hud.banner('🐶 RICKY & BOBBY! 🐶', 4, true); g.hud.toast('🐾 Here come RICKY & BOBBY!');
+    g.hud.banner('🐶 RICKY & BOBBY! 🐶', 4, true); g.hud.toast('🐾 Here come Ricky & Bobby! Dance party!');
     sfx.cheer && sfx.cheer(1);
-    voice.say('In this corner... weighing in at fifteen pounds of pure fluff... RICKYYYY!', { prio: 3, cd: 20000, pitch: 0.7, rate: 0.98 });
-    voice.say('And his partner... BOBBYYYY!', { prio: 3, cd: 20000, pitch: 0.7, rate: 0.98 });
+    // natural words for speech (iOS spells out ALL-CAPS / stretched words); the drama comes from pitch + rate
+    voice.say('In this corner... weighing in at fifteen pounds of pure fluff... Ricky!', { prio: 3, cd: 20000, pitch: 0.68, rate: 0.9 });
+    voice.say('And his partner... Bobby!', { prio: 3, cd: 20000, pitch: 0.68, rate: 0.9 });
+    voice.say("It's Ricky and Bobby!", { prio: 3, cd: 20000, pitch: 0.8, rate: 1.12 });
     if (g.rider && g.rider.mounted) g.rider.cheer();
     for (const s of this.spots) s.visible = true;
   }
   confetti(p, n) { const fx = this.g.fx; for (let i = 0; i < fx.n(n); i++) { const h = Math.random(), c = new THREE.Color().setHSL(h, 1, 0.6);
     fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 3, y: p.y + 7 + Math.random() * 3, z: p.z + (Math.random() - 0.5) * 3 }, vel: { x: (Math.random() - 0.5) * 9, y: 3 + Math.random() * 6, z: (Math.random() - 0.5) * 9 }, size: 0.32, size1: 0.22, life: 2.2 + Math.random(), r: c.r * 2, g: c.g * 2, b: c.b * 2, alpha: 1, grav: 5, drag: 1.2 }); } }
-  help() {
-    const g = this.g, P = g.player; this.helped = true; const mid = this.dogs[0].pos.clone().lerp(this.dogs[1].pos, 0.5);
-    sfx.bark && sfx.bark(1.25); g.fx.ring(V().set(mid.x, this.ground(mid) + 0.3, mid.z), 18, 0xfff2a0); g.fx.shake = Math.max(g.fx.shake, 0.35);
-    let n = 0; for (const e of g.enemies) if (e.alive && e.pos.distanceTo(mid) < 24) { g.stun(e, 2.5); e.knock.add(V().subVectors(e.pos, mid).setY(0).normalize().multiplyScalar(6)); n++; }
-    if (n) g.hud.toast(`🐾 BARK BLAST! ${n} stunned!`);
-    else if (g.battle && g.mh.powerups.length < 2) { g.mh.spawnPowerup(Math.random() < 0.5 ? 'meteor' : 'strike'); const U = g.mh.powerups[g.mh.powerups.length - 1]; if (U) { U.x = mid.x; U.z = mid.z; U.y = this.ground(mid); U.m.position.set(U.x, U.y + 1.8, U.z); } g.hud.toast('🐾 Ricky & Bobby fetched a power-up!'); }
-    else { g.dropBolts(mid, 12); P.hp = Math.min(P.maxHp, P.hp + P.maxHp * 0.25); g.hud.toast('🐾 Ricky & Bobby fetched bolts + a health snack!'); }
-  }
-  // v4.1: summon-button tap while they're already here -> an extra bark blast (stun + knockback around them)
-  barkBlast() {
-    const g = this.g; if (!this.active) return 0; const mid = this.dogs[0].pos.clone().lerp(this.dogs[1].pos, 0.5);
-    sfx.bark && sfx.bark(1.3); setTimeout(() => sfx.bark && sfx.bark(0.95), 160); g.fx.ring(V().set(mid.x, this.ground(mid) + 0.3, mid.z), 18, 0xfff2a0); g.fx.shake = Math.max(g.fx.shake, 0.3);
-    for (const d of this.dogs) d.hop = 1;
-    let n = 0; for (const e of g.enemies) if (e.alive && e.pos.distanceTo(mid) < 24) { g.stun(e, 2); e.knock.add(V().subVectors(e.pos, mid).setY(0).normalize().multiplyScalar(5)); n++; }
-    g.hud.toast(n ? `🐾 BARK BLAST! ${n} stunned!` : '🐾 WOOF WOOF!'); this.barks = (this.barks || 0) + 1; return n;
-  }
-  leave() { const g = this.g; this.state = 'exit'; this.t = 0; for (const s of this.spots) s.visible = false;
-    this.dogs.forEach((d, i) => { const f = V().subVectors(d.pos, g.player.pos).setY(0); if (f.lengthSq() < 1) f.set(i ? 1 : -1, 0, 0); f.normalize(); d.goal = d.pos.clone().addScaledVector(f, 45); }); }
-  end() { this.state = 'off'; this.lastEnd = this.clock; for (const d of this.dogs) d.root.visible = false; for (const s of this.spots) s.visible = false; }
+  // 🐶 button while they're already here: just a bigger confetti burst (no fighting)
+  moreConfetti() { if (!this.active) return; for (const d of this.dogs) this.confetti(d.pos, 22); sfx.cheer && sfx.cheer(0.6); this.extra = (this.extra || 0) + 1; }
+  sparkle(d) { const fx = this.g.fx, p = d.root.position; for (let i = 0; i < fx.n(3); i++) { const c = new THREE.Color().setHSL(0.12 + Math.random() * 0.1, 1, 0.75);
+    fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 1.2, y: p.y + 0.8 + Math.random(), z: p.z + (Math.random() - 0.5) * 1.2 }, vel: { x: (Math.random() - 0.5) * 2, y: -2 - Math.random() * 2, z: (Math.random() - 0.5) * 2 }, size: 0.3, size1: 0.05, life: 0.9 + Math.random() * 0.5, r: c.r * 2.4, g: c.g * 2.4, b: c.b * 2.4, alpha: 1, grav: 0, drag: 1 }); } }
+  // they don't run off any more: little capes flap and they rocket up into the sky with a sparkle trail
+  flyAway() { this.state = 'fly'; this.t = 0; this.flew = true; for (const s of this.spots) s.visible = false; sfx.cheer && sfx.cheer(0.7); this.g.hud.toast('🐾 Bye Ricky! Bye Bobby! ✨');
+    this.dogs.forEach((d, i) => { d.vy = 2 + i * 0.6; d.alt = 0; }); }
+  end() { this.state = 'off'; this.lastEnd = this.clock; for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; } for (const s of this.spots) s.visible = false; }
   update(dt) {
     this.clock += dt; const g = this.g;
     if (!this.active) { // occasional surprise visit while exploring
       if (g.mode === 'roam' && !g.battle && g.player && g.player.alive) { this.cool -= dt; if (this.cool <= 0) { this.cool = 150 + Math.random() * 150; this.trigger('roam'); } }
       return;
     }
-    this.t += dt; const T = this.t;
-    if ((this.state === 'intro' || this.state === 'enter') && this.danger()) { g.hud.toast('🐾 Ricky & Bobby zoom off to safety!'); this.leave(); }
+    this.t += dt; const T = this.t, DANCE = 5;
+    if ((this.state === 'dance' || this.state === 'enter') && T > 0.8 && this.danger()) this.flyAway(); // trouble nearby: up, up and away
     for (const [i, d] of this.dogs.entries()) {
-      let speed = 0;
-      if (this.state === 'enter' || this.state === 'exit') { const to = V().subVectors(d.goal, d.pos).setY(0), L = to.length(); const sp = this.state === 'exit' ? 17 : 14;
-        if (L > 0.4) { speed = Math.min(sp, L / dt); d.pos.addScaledVector(to.normalize(), Math.min(L, sp * dt)); d.yaw = Math.atan2(to.x, to.z); } }
-      else { const P = g.player.pos, want = Math.atan2(P.x - d.pos.x, P.z - d.pos.z); d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 6); }
-      d.pos.y = this.ground(d.pos);
-      // animation: gallop, hype hops + spin, bark head toss
+      let speed = 0, hopY = 0, spin = 0, rear = 0, wig = 0, sideX = 0, tailSp = 22, flap = 0;
+      if (this.state === 'enter') { const to = V().subVectors(d.goal, d.pos).setY(0), L = to.length();
+        if (L > 0.4) { speed = Math.min(14, L / dt); d.pos.addScaledVector(to.normalize(), Math.min(L, 14 * dt)); d.yaw = Math.atan2(to.x, to.z); } }
+      else if (this.state === 'dance') {
+        const P = g.player.pos, want = Math.atan2(P.x - d.pos.x, P.z - d.pos.z); d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 6);
+        tailSp = 34; const alt = i ? Math.PI : 0;
+        if (T < 1.6) { const k = T * 4 * Math.PI + alt; hopY = Math.max(0, Math.sin(k)) * 0.8; } // 1) alternating bunny hops
+        else if (T < 2.8) { const k = (T - 1.6) / 1.2; spin = k * Math.PI * 2 * (i ? -1 : 1); hopY = Math.sin(k * Math.PI) * 1.1; } // 2) mirrored jump-spin together
+        else if (T < 4.2) { const k = (T - 2.8) * 9; wig = Math.sin(k + alt) * 0.45; sideX = Math.sin(k * 0.5 + alt) * 0.35; hopY = Math.abs(Math.sin(k)) * 0.15; } // 3) side-to-side butt wiggle
+        else { const k = (T - 4.2) / (DANCE - 4.2); rear = Math.sin(Math.min(1, k * 1.3) * Math.PI) * 0.75; hopY = rear * 0.5; wig = Math.sin(T * 14) * 0.15; } // 4) rear up, paws in the air, ta-da!
+      } else if (this.state === 'fly') {
+        d.vy += dt * (14 + i * 3); d.alt += d.vy * dt; flap = 1; tailSp = 40; spin = Math.sin(T * 3 + i) * 0.4; rear = 0.5;
+        if (Math.random() < 0.9) this.sparkle(d);
+        const sc = 2.1 * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
+      }
+      const side = V(Math.cos(d.yaw), 0, -Math.sin(d.yaw));
       d.ph += dt * (speed > 1 ? 16 : 5); const run = Math.min(1, speed / 8), sw = Math.sin(d.ph);
-      d.legs[0].rotation.x = sw * 0.9 * run; d.legs[1].rotation.x = sw * 0.9 * run; d.legs[2].rotation.x = -sw * 0.9 * run; d.legs[3].rotation.x = -sw * 0.9 * run;
-      let hopY = Math.abs(Math.sin(d.ph * 0.5)) * 0.18 * run, spin = 0, rear = 0;
-      if (this.state === 'intro') { const k = (T + i * 0.35) % 1.6; hopY = k < 0.5 ? Math.sin(k / 0.5 * Math.PI) * 0.9 : 0; spin = k < 0.5 ? (k / 0.5) * Math.PI * 2 * (i ? -1 : 1) : 0; rear = Math.max(0, Math.sin(T * 2.2 + i)) * 0.5; }
-      d.bark = Math.max(0, d.bark - dt * 3);
-      if (this.state === 'intro' && Math.random() < dt * 1.6) { d.bark = 1; if (sfx.bark && Math.random() < 0.6) sfx.bark(0.75 + i * 0.2); }
-      d.root.position.copy(d.pos); d.root.rotation.y = d.yaw + spin;
-      d.body.position.y = 0.55 + hopY; d.body.rotation.x = -rear;
-      d.head.rotation.x = -d.bark * 0.45; d.jaw.position.y = -0.16 - d.bark * 0.06;
-      d.tail.rotation.z = Math.sin(this.clock * 22 + i) * 0.5; d.cape.rotation.x = 1.3 + run * 0.22 + Math.sin(this.clock * 9 + i) * 0.1;
+      const legSw = flap ? 0.6 : 0.9 * run + (this.state === 'dance' ? 0.35 * Math.abs(Math.sin(T * 9 + i)) : 0);
+      d.legs[0].rotation.x = sw * legSw; d.legs[1].rotation.x = sw * legSw; d.legs[2].rotation.x = -sw * legSw; d.legs[3].rotation.x = -sw * legSw;
+      d.pos.y = this.ground(d.pos);
+      d.root.position.copy(d.pos).addScaledVector(side, sideX); d.root.position.y += d.alt || 0; d.root.rotation.y = d.yaw + spin;
+      d.body.position.y = 0.55 + hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.18 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
+      d.head.rotation.x = 0; d.jaw.position.y = -0.16 - (this.state === 'dance' ? 0.05 : 0);
+      d.tail.rotation.z = Math.sin(this.clock * tailSp + i) * (this.state === 'dance' ? 0.75 : 0.5);
+      d.cape.rotation.x = flap ? 1.0 + Math.sin(this.clock * 30 + i) * 0.45 : 1.3 + run * 0.22 + Math.sin(this.clock * 9 + i) * 0.1;
       this.spots[i].position.set(d.pos.x, d.pos.y, d.pos.z);
     }
-    if (this.state === 'enter' && (T > 4 || this.dogs.every(d => d.pos.distanceTo(d.goal) < 0.6))) { this.state = 'intro'; this.t = 0; this.intro(); }
-    else if (this.state === 'intro') { if (Math.random() < dt * 6) this.confetti(this.dogs[(Math.random() * 2) | 0].pos, 6); if (T > 3.2 && !this.helped) this.help(); if (T > 5.2) this.leave(); }
-    else if (this.state === 'exit' && T > 3.2) this.end();
+    if (this.state === 'enter' && (T > 4 || this.dogs.every(d => d.pos.distanceTo(d.goal) < 0.6))) { this.state = 'dance'; this.t = 0; this.intro(); }
+    else if (this.state === 'dance') { this.danced = T; if (Math.random() < dt * 7) this.confetti(this.dogs[(Math.random() * 2) | 0].pos, 6); if (T > DANCE) this.flyAway(); }
+    else if (this.state === 'fly' && (T > 3.6 || this.dogs.every(d => d.alt > 55))) this.end();
   }
   // used when the level changes / the game resets
   reset() { if (this.active) this.end(); }

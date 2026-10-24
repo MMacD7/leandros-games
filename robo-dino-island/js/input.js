@@ -2,20 +2,23 @@
 export class Input {
   constructor(root) {
     this.move = { x: 0, y: 0 }; this.look = { dx: 0, dy: 0 }; this.btn = { laser: false, missile: false, melee: false, boost: false };
-    this.pressed = {}; this.lastLook = -1e9; this.enabled = false;
+    this.pressed = {}; this.taps = {}; this.lastLook = -1e9; this.enabled = false;
     this.joyBase = document.getElementById('joy-base'); this.joyKnob = document.getElementById('joy-knob'); this.zone = document.getElementById('touch-zone');
     this.joyId = null; this.lookId = null; this.joyC = { x: 0, y: 0 };
     const opt = { passive: false };
     this.zone.addEventListener('touchstart', e => this.ts(e), opt);
     window.addEventListener('touchmove', e => this.tm(e), opt);
     window.addEventListener('touchend', e => this.te(e), opt); window.addEventListener('touchcancel', e => this.te(e), opt);
-    // buttons (multi-touch friendly)
+    // buttons: pointer events per button, each tracking its own pointerIds, so several buttons can be held at once
+    // (and the joystick keeps working). Every press counts; holding auto-repeats in the game loop.
     document.querySelectorAll('[data-btn]').forEach(b => {
-      const k = b.dataset.btn;
-      const on = e => { e.preventDefault(); e.stopPropagation(); this.btn[k] = true; this.pressed[k] = true; b.classList.add('down'); };
-      const off = e => { e.preventDefault(); this.btn[k] = false; b.classList.remove('down'); };
-      b.addEventListener('touchstart', on, opt); b.addEventListener('touchend', off, opt); b.addEventListener('touchcancel', off, opt);
-      b.addEventListener('mousedown', on); b.addEventListener('mouseup', off); b.addEventListener('mouseleave', off);
+      const k = b.dataset.btn, ids = new Set(); b.style.touchAction = 'none';
+      const on = e => { e.preventDefault(); e.stopPropagation(); ids.add(e.pointerId); try { b.setPointerCapture(e.pointerId); } catch (err) { } this.btn[k] = true; this.pressed[k] = (this.pressed[k] || 0) + 1; this.taps[k] = (this.taps[k] || 0) + 1; b.classList.add('down'); };
+      const off = e => { ids.delete(e.pointerId); if (!ids.size) { this.btn[k] = false; b.classList.remove('down'); } };
+      b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off);
+      b.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); }, opt); // no emulated mouse/click/zoom
+      b.addEventListener('contextmenu', e => e.preventDefault());
+      this.btnIds = this.btnIds || {}; this.btnIds[k] = ids;
     });
     // keyboard
     this.keys = {};
@@ -61,5 +64,5 @@ export class Input {
     const pressed = this.pressed; this.pressed = {};
     return { x, y, look, pressed, btn: this.btn, looking: performance.now() - this.lastLook < 1500 };
   }
-  reset() { this.move.x = this.move.y = 0; for (const k in this.btn) this.btn[k] = false; this.joyId = this.lookId = null; document.querySelectorAll('[data-btn]').forEach(b => b.classList.remove('down')); }
+  reset() { this.move.x = this.move.y = 0; for (const k in this.btn) this.btn[k] = false; for (const k in (this.btnIds || {})) this.btnIds[k].clear(); this.joyId = this.lookId = null; document.querySelectorAll('[data-btn]').forEach(b => b.classList.remove('down')); }
 }

@@ -300,10 +300,10 @@ export class Mayhem {
     if (J.t > 3.2) { this.scene.remove(J.m); this.jets.splice(i, 1); } } }
 
   // ---------- combo + KO streak ----------
-  onHit(d, attacker, quiet) { const g = this.g; if (attacker !== g.player || d === g.player || quiet) return; const C = this.combo; C.n = C.t > 0 ? C.n + 1 : 1; C.t = 2.6; C.best = Math.max(C.best, C.n); g.hud.combo(C.n); if (C.n >= 5 && C.n % 5 === 0) g.hud.say?.('LEANDRO! ' + C.n + ' hit combo!', { prio: 1, cd: 3000 }); }
+  onHit(d, attacker, quiet) { const g = this.g; if (attacker !== g.player || d === g.player || quiet) return; const C = this.combo; C.n = C.t > 0 ? C.n + 1 : 1; C.t = 2.6; C.best = Math.max(C.best, C.n); g.hud.combo(C.n); if (C.n >= 5 && C.n % 5 === 0) g.hud.say?.('Leandro! ' + C.n + ' hit combo!', { prio: 1, cd: 3000 }); }
   onKO(d, attacker) {
     const g = this.g; if (attacker !== g.player || d === g.player) return; const S = this.streak; S.n = S.t > 0 ? S.n + 1 : 1; S.t = 5;
-    if (S.n >= 2) { const name = S.n === 2 ? 'DOUBLE KO!' : S.n === 3 ? 'TRIPLE KO!' : S.n === 4 ? 'MEGA KO!' : S.n === 5 ? 'RAMPAGE!' : 'UNSTOPPABLE!'; g.hud.banner(name, Math.min(4, S.n - 1)); sfx.banner(Math.min(4, S.n - 1)); g.hud.say?.(S.n >= 5 ? name + ' LEANDRO!' : name, { prio: 2, cd: 1200 }); g.addBolts(S.n * 2); this.fx.shake = Math.max(this.fx.shake, 0.6); }
+    if (S.n >= 2) { const name = S.n === 2 ? 'DOUBLE KO!' : S.n === 3 ? 'TRIPLE KO!' : S.n === 4 ? 'MEGA KO!' : S.n === 5 ? 'RAMPAGE!' : 'UNSTOPPABLE!'; g.hud.banner(name, Math.min(4, S.n - 1)); sfx.banner(Math.min(4, S.n - 1)); g.hud.say?.((['', '', 'Double knockout!', 'Triple knockout!', 'Mega knockout!', 'Rampage!'][S.n] || 'Unstoppable!') + (S.n >= 5 ? ' Leandro!' : ''), { prio: 2, cd: 1200 }); g.addBolts(S.n * 2); this.fx.shake = Math.max(this.fx.shake, 0.6); }
   }
   // ---------- end-of-battle celebration ----------
   celebrate() {

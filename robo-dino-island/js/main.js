@@ -194,7 +194,7 @@ const hud = {
   revived() { $('ko-msg').classList.add('hidden'); hud.toast('Back in action!'); },
   say(t, o) { return voice.say(t, o); },
   // the big one: every battle win, wave clear and boss KO
-  leandroWins(sub) { const n = performance.now(); if (n - (hud.winAt || -1e9) < 3500) return; hud.winAt = n; hud.banner('🏆 LEANDRO WINS! 🏆', 4, true); voice.say('LEANDRO WINS!', { prio: 3, cd: 2500 }); if (sub) hud.toast(sub); },
+  leandroWins(sub) { const n = performance.now(); if (n - (hud.winAt || -1e9) < 3500) return; hud.winAt = n; hud.banner('🏆 LEANDRO WINS! 🏆', 4, true); voice.say('Leandro wins!', { prio: 3, cd: 2500 }); if (sub) hud.toast(sub); },
   banner(t, lvl = 1, win = false) { const el = $('banner'); el.textContent = t; el.className = 'lv' + lvl + (win ? ' win' : ''); void el.offsetWidth; el.classList.add('show'); bannerT = 1.6 + lvl * 0.2; },
   combo(n) { const el = $('combo'); if (n >= 3) { el.innerHTML = `<b>${n}</b> HIT COMBO`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('show', 'pop'); } else el.classList.remove('show'); },
   victory() { music.victory(); },
@@ -204,8 +204,8 @@ const hud = {
 const ebarEls = [];
 function updateHUD(dt) {
   const p = game.player; if (!p) return;
-  { rbCd = Math.max(0, rbCd - dt); const b = $('b-rb'), W = game.westies, here = W && W.active && W.state !== 'exit';
-    $('rb-cd').style.setProperty('--p', (rbCd / RB_CD * 100).toFixed(1) + '%'); $('rb-t').textContent = here ? 'BARK!' : rbCd > 0 ? Math.ceil(rbCd) + 's' : '';
+  { rbCd = Math.max(0, rbCd - dt); const b = $('b-rb'), W = game.westies, here = W && W.active && W.state !== 'fly';
+    $('rb-cd').style.setProperty('--p', (rbCd / RB_CD * 100).toFixed(1) + '%'); $('rb-t').textContent = here ? '' : rbCd > 0 ? Math.ceil(rbCd) + 's' : '';
     b.classList.toggle('cool', rbCd > 0 && !here); b.classList.toggle('here', !!here); }
   $('hp').style.width = (p.hp / p.maxHp * 100) + '%'; $('hp-t').textContent = Math.ceil(p.hp);
   $('boost').style.width = (p.boostE / p.st.boost * 100) + '%';
@@ -287,11 +287,11 @@ tap('b-map', openLevels); tap('p-map', openLevels);
 tap('lvd-close', () => show(levelsFrom === 'pause' ? 'pause' : 'play'));
 for (const lv of ['jungle', 'peak']) tap('lvd-' + lv, () => { show('play'); if (lv !== level) travel(lv); });
 tap('b-pause', () => show('pause'));
-// v4.1: 🐶 summon button. Full entrance + help; tapping while they're here = bark blast. Short cooldown with a countdown ring.
+// 🐶 summon button: entrance + dance + fly away; tapping while they're here = more confetti. Short cooldown with a countdown ring.
 const RB_CD = 25; let rbCd = 0;
 function summonRB() {
   initAudio(); voice.prime(); const W = game.westies; if (!W || screen !== 'play' || !game.player || !game.player.alive) return;
-  if (W.active) { if (W.state !== 'exit') { W.barkBlast(); return; } }
+  if (W.active) { W.moreConfetti(); return; } // already here: just more confetti
   if (rbCd > 0) { sfx.deny(); hud.toast(`🐶 Ricky & Bobby are resting… ${Math.ceil(rbCd)}s`); return; }
   if (W.trigger('button', true)) { rbCd = RB_CD; sfx.ui(); }
 }
@@ -310,9 +310,9 @@ const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textCon
 const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (save.ride) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
-const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('LEANDRO!', { prio: 2, cd: 0 }); };
+const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
 tap('b-voice', toggleVoice); tap('p-voice', toggleVoice); voice.setEnabled(save.voice !== false); voiceLabel();
-function hypeStart() { voice.say('LEANDRO!', { prio: 2, cd: 8000 }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 2, cd: 8000 }); }
+function hypeStart() { voice.say('Leandro!', { prio: 2, cd: 8000 }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 2, cd: 8000 }); }
 tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); musicLabel();
 tap('p-quality', () => { if (autoQ) { autoQ = false; applyQuality(TIERS[0]); } else if (Q.tier < 3) applyQuality(TIERS[Q.tier + 1]); else { autoQ = true; applyQuality(TIERS[startTier]); } });
 document.addEventListener('gesturestart', e => e.preventDefault()); document.addEventListener('dblclick', e => e.preventDefault());
@@ -380,7 +380,7 @@ tap('t-dragon', () => { if (gList !== 'dragon') gIdx = 0; gTab = 'dragon'; refre
 tap('g-back', () => { if (garageFrom === 'pause') { if (game.player.def.id !== save.selected) { const hp = game.player.hp / game.player.maxHp; const pos = game.player.pos.clone(), yaw = game.player.yaw; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); } show('play'); } else { game.spawnPlayer(false); titleEnemies(); show('title'); } });
 $('g-action').addEventListener('click', () => {
   initAudio(); const def = gListOf()[gIdx];
-  voice.say(def.name.replace(/-/g, ' ').toUpperCase() + '!', { prio: 2, cd: 1500, replace: true }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 1, cd: 6000 });
+  voice.say(def.name + '!', { prio: 2, cd: 1500, replace: true }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 1, cd: 6000 });
   if (save.owned.includes(def.id)) { save.selected = def.id; sfx.ui(); gMech.roar = 1.6; sfx.bigRoar(def.real ? 1.1 - def.scale * 0.25 : 1.3 - def.scale * 0.3, def.real ? 1 : 0.6, !def.real); }
   else { save.owned.push(def.id); save.selected = def.id; sfx.unlock(); }
   persist(); refreshGarage();

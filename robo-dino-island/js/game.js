@@ -523,20 +523,26 @@ export class Game {
       const fwd = new THREE.Vector3(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
       const pf = p.forward(new THREE.Vector3());
       this.lock = this.findTarget(p.pos, mag > 0.1 ? pf : fwd.lerp(pf, 0.5).normalize(), p.real && !p.dragon ? 45 : 85, 0.45);
+      // v4.2: no cooldowns for the player. Every tap fires at once, and holding a button auto-repeats
+      // (laser at its fire rate, the others every REP s). Buttons are independent, so several can be held together.
+      const REP = 0.22;
+      const taps = k => Math.min(4, +inp.pressed[k] || 0) || (inp.btn[k] && p[k + 'T'] <= 0 ? 1 : 0); // every tap counts (even several between two frames)
+      const nL = taps('laser'), nM = taps('missile'), nB = taps('melee'), L = nL > 0, M = nM > 0, B = nB > 0;
+      if (L) p.laserT = p.st.rate; if (M) p.missileT = REP; if (B) p.meleeT = REP;
       if (p.real && p.dragon) {
-        if (inp.btn.laser && p.laserT <= 0) { p.laserT = p.st.rate; this.fireOrb(p, this.lock); }
-        if (inp.pressed.missile) { if (p.missileT <= 0 && !(p.breathT > 0)) { p.missileT = p.st.missileCD; this.dragonBreath(p); } else sfx.deny(); }
-        if (inp.pressed.melee) { if (p.meleeT <= 0) { p.meleeT = p.st.roarCD; this.roarAt(p); } else sfx.deny(); }
+        for (let i = 0; i < nL; i++) this.fireOrb(p, this.lock);
+        if (M) this.dragonBreath(p);
+        if (B) this.roarAt(p);
       } else if (p.real) {
-        if (inp.btn.laser && p.laserT <= 0 && !p.act) { p.laserT = p.st.rate; this.bite(p, this.lock); }
-        if (inp.pressed.missile) { if (p.missileT <= 0 && !p.act) { p.missileT = p.st.missileCD; this.special(p, this.lock); } else sfx.deny(); }
-        if (inp.pressed.melee) { if (p.meleeT <= 0) { p.meleeT = p.st.roarCD; this.roarAt(p); } else sfx.deny(); }
+        if (L) { if (p.act) p.act = null; this.bite(p, this.lock); }
+        if (M) { if (p.act) p.act = null; this.special(p, this.lock); }
+        if (B) this.roarAt(p);
       } else {
-      if (inp.btn.laser && p.laserT <= 0) { p.laserT = p.st.rate; this.fireLaser(p, this.lock, this.lock ? 0.02 : 0.03); if (p.def.kind === 'raptor') setTimeout(() => this.player === p && p.alive && this.fireLaser(p, this.lock, 0.05), 50); }
-      if (inp.pressed.missile) { if (p.missileT <= 0) { p.missileT = p.st.missileCD; this.fireMissiles(p, this.lock); } else sfx.deny(); }
-      if (inp.pressed.melee) { if (p.def.breath) { if (p.meleeT <= 0 && !(p.breathT > 0)) { p.meleeT = 3; this.mh.startBreath(p, 1.25 + 0.1 * (this.save.up.fire || 0)); } else sfx.deny(); }
-        else if (p.meleeT <= 0) { p.meleeT = 0.7; this.melee(p, this.enemies); } }
+        if (L) { this.fireLaser(p, this.lock, this.lock ? 0.02 : 0.03); if (p.def.kind === 'raptor') setTimeout(() => this.player === p && p.alive && this.fireLaser(p, this.lock, 0.05), 50); }
+        for (let i = 0; i < nM; i++) this.fireMissiles(p, this.lock);
+        if (B) { if (p.def.breath) this.mh.startBreath(p, 1.25 + 0.1 * (this.save.up.fire || 0)); else this.melee(p, this.enemies); }
       }
+      const S = this.shotLog || (this.shotLog = { L: 0, M: 0, B: 0 }); S.L += nL; S.M += nM; S.B += nB;
       // base repairs
       if (this.mode === 'roam' && Math.hypot(p.pos.x - this.world.baseGroup.position.x, p.pos.z - this.world.baseGroup.position.z) < 12 && p.hp < p.maxHp) { p.hp = Math.min(p.maxHp, p.hp + dt * 25); if (Math.random() < 0.3) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 4, p.pos.y + Math.random() * 3, p.pos.z + (Math.random() - 0.5) * 4), vel: { x: 0, y: 3, z: 0 }, size: 0.4, life: 0.8, r: 0.3, g: 2, b: 2.4, alpha: 1 }); }
     } else {

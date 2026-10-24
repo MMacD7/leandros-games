@@ -261,6 +261,7 @@ export class FX {
   }
   meteor(pos, size = 1) { this.trail(pos, size * 1.6, 1.2); }
   launchMissile(from, dirInit, target, owner, dmg, col) {
+    if (this.missiles.length >= 48) { const o = this.missiles.shift(); this.scene.remove(o.m); } // perf cap for button mashing (oldest fizzles)
     const m = new THREE.Mesh(this.mGeo, this.missileMat); m.position.copy(from); m.castShadow = false; this.scene.add(m);
     const vel = dirInit.clone().multiplyScalar(14); vel.y += 9;
     this.missiles.push({ m, vel, target, owner, dmg, t: 0, col });
