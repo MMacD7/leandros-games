@@ -150,11 +150,79 @@ body.breath #a-melee { background: radial-gradient(circle at 50% 40%, rgba(255,1
 }
 .g-top .ride { margin-left: 8px; background: linear-gradient(180deg, #2fd0c8, #138a8e); color: #fff; } .ride.off { filter: grayscale(.9); opacity: .75; }
 
-/* v4: level select + dragons tab */
-.levels { display: flex; gap: 10px; justify-content: center; margin-bottom: 1.2vh; }
-.lv { padding: 9px 16px; border-radius: 999px; font-weight: 900; font-size: 15px; color: #fff; background: rgba(10,14,22,.55); border: 2px solid rgba(255,255,255,.25); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-.lv.on { background: linear-gradient(180deg, #ffd24a, #ff8a1a); color: #2a1000; border-color: #fff3c0; box-shadow: 0 0 18px rgba(255,150,40,.6); }
-#lv-peak.on { background: linear-gradient(180deg, #ff6a3a, #b0142a); color: #fff; border-color: #ffb08a; box-shadow: 0 0 22px rgba(255,60,30,.7); }
+/* v4.1: big level cards (title + in-game 🗺️ chooser) */
+.levels { display: flex; gap: clamp(10px, 2vw, 18px); justify-content: center; margin: 0 0 1.4vh; width: min(96vw, 760px); }
+.lv.card { position: relative; flex: 1 1 0; min-width: 0; height: clamp(84px, 19vh, 170px); display: flex; align-items: center; gap: clamp(6px, 1.4vw, 14px); padding: 8px clamp(10px, 2vw, 18px); border-radius: 20px; color: #fff; text-align: left; border: 3px solid rgba(255,255,255,.45); box-shadow: 0 6px 18px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; transition: transform .12s, box-shadow .2s, filter .2s; filter: saturate(.9) brightness(.92); touch-action: manipulation; }
+.lv.card:active { transform: scale(.96); }
+.lv.card.jungle { background: linear-gradient(90deg, rgba(0,40,20,.45), transparent 75%), radial-gradient(circle at 80% 20%, rgba(255,240,150,.7), transparent 30%), linear-gradient(180deg, #4fc8ff 0%, #8fe0ff 38%, #2fae5a 62%, #146b2e 100%); }
+.lv.card.peak { background: radial-gradient(circle at 80% 18%, rgba(255,250,220,.9) 0 5%, transparent 6%), radial-gradient(ellipse at 50% 110%, rgba(255,120,20,.95), transparent 55%), linear-gradient(180deg, #2a0f4a 0%, #7a1f5a 40%, #e2522a 72%, #4a0c08 100%); }
+.lv.card .art { font-size: clamp(32px, 8.5vh, 74px); line-height: 1; flex: none; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); letter-spacing: -6px; }
+.lv.card .txt { display: flex; flex-direction: column; min-width: 0; }
+.lv.card b { font-size: clamp(17px, 4.4vh, 34px); font-weight: 900; font-style: italic; letter-spacing: 1px; line-height: 1.05; text-shadow: 0 2px 0 rgba(0,0,0,.55), 0 0 12px rgba(0,0,0,.5); }
+.lv.card small { font-size: clamp(11px, 2.2vh, 16px); font-weight: 800; opacity: .95; text-shadow: 0 1px 3px #000; margin-top: 2px; }
+.lv.card .tag { position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 999px; background: #fff3c0; color: #4a2000; display: none; }
+.lv.card.on { filter: none; border-color: #fff3c0; box-shadow: 0 0 0 3px rgba(255,210,80,.9), 0 0 26px rgba(255,170,40,.75); }
+.lv.card.peak.on { box-shadow: 0 0 0 3px rgba(255,120,60,.95), 0 0 30px rgba(255,70,30,.8); }
+.lv.card.on .tag { display: block; }
+.lv-panel { width: min(94vw, 780px); align-items: center; }
+.lv-panel .levels { width: 100%; margin: 4px 0 6px; }
+#levels .lv.card { height: clamp(96px, 30vh, 220px); }
+#b-map { margin-left: 8px; }
+@media (orientation: portrait) {
+  .levels { flex-direction: column; width: min(92vw, 520px); }
+  .lv.card { flex: none; height: clamp(76px, 11.5vh, 150px); }
+  .lv.card .art { font-size: clamp(34px, 6vh, 70px); }
+  .lv.card b { font-size: clamp(20px, 3.4vh, 34px); } .lv.card small { font-size: clamp(12px, 1.8vh, 17px); }
+  #levels .lv.card { height: clamp(90px, 16vh, 200px); }
+}
+@media (max-height: 430px) {
+  .levels { margin-bottom: 4px; }
+  .lv.card { height: 76px; border-radius: 16px; } .lv.card .art { font-size: 34px; } .lv.card b { font-size: 19px; } .lv.card small { font-size: 11px; }
+  #title .menu .btn { padding: 9px 16px; font-size: 16px; }
+  #levels .lv.card { height: 110px; }
+  #pause .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 18px; } #pause .panel h2 { grid-column: 1 / -1; font-size: 22px; } #pause .panel .btn { padding: 8px 12px; font-size: 15px; }
+}
 .g-tabs .tab { font-size: 13px; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
 body.peak .logo i { color: #ffb08a; }
-@media (max-height: 430px) { .levels { margin-bottom: 4px; } .lv { padding: 6px 12px; font-size: 13px; } }
+#ver { position: absolute; right: calc(var(--sar) + 10px); bottom: calc(var(--sab) + 6px); font-size: 12px; font-weight: 800; color: rgba(255,255,255,.75); text-shadow: 0 1px 2px #000; pointer-events: none; }
+/* v4.1b: DRAGON PEAK title card is the eye-catcher: lava glow, pulse, gentle bounce, NEW! badge */
+#title #lv-peak { filter: none; border: 4px solid #ffb35a; animation: lavaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; z-index: 1; }
+#title #lv-peak:active { animation: none; transform: scale(.96); }
+#title #lv-peak b { font-size: clamp(20px, 5vh, 38px); color: #fff3d0; }
+#title #lv-peak .art { font-size: clamp(38px, 10vh, 84px); }
+@keyframes lavaPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(255,90,20,.9), 0 0 18px 4px rgba(255,80,10,.7), inset 0 0 18px rgba(255,140,40,.5); border-color: #ff9a3a; } 50% { box-shadow: 0 0 0 5px rgba(255,200,60,1), 0 0 42px 12px rgba(255,60,0,.9), inset 0 0 28px rgba(255,180,60,.8); border-color: #ffe08a; } }
+@keyframes peakBounce { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.03); } }
+.lv.card .new { display: none; }
+#title #lv-peak .new { display: block; position: absolute; top: 6px; left: 8px; padding: 3px 10px; border-radius: 999px; font-size: clamp(12px, 2.4vh, 16px); font-weight: 900; font-style: italic; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 12px rgba(255,40,40,.9); transform: rotate(-8deg); animation: newBlink 1s steps(2, start) infinite; }
+@keyframes newBlink { 50% { filter: brightness(1.35); } }
+#title #lv-peak .txt { padding-top: 10px; }
+@media (orientation: landscape) { #title .levels .lv.card.jungle { flex: 0.8 1 0; } #title .levels #lv-peak { flex: 1.2 1 0; } }
+@media (orientation: portrait) { #title #lv-peak { height: clamp(96px, 14vh, 180px); order: -1; } }
+@media (max-height: 430px) { #title #lv-peak { height: 84px; } #title #lv-peak b { font-size: 22px; } #title #lv-peak .art { font-size: 40px; } }
+@media (prefers-reduced-motion: reduce) { #title #lv-peak, #title #lv-peak .new { animation: none; } }
+/* v4.1c: NEW badges in the garage + title callout */
+.newb { display: inline-block; vertical-align: middle; font-size: .55em; font-weight: 900; font-style: italic; padding: 2px 8px; border-radius: 999px; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 10px rgba(255,40,40,.8); transform: rotate(-6deg) translateY(-2px); }
+#g-dots i.new { background: #ff5a2a; box-shadow: 0 0 6px #ff7a3a; } #g-dots i.new.own { background: radial-gradient(circle, #fff 0 25%, #ff5a2a 30%); }
+.tab { position: relative; } .tnew { position: absolute; top: -7px; right: -2px; font-size: 9px; font-weight: 900; padding: 1px 4px; border-radius: 6px; color: #fff; background: #e0102a; border: 1px solid #fff; line-height: 1.2; }
+#ver-row { position: absolute; right: calc(var(--sar) + 10px); bottom: calc(var(--sab) + 6px); display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+#ver-row #ver { position: static; }
+.newcall { font-size: 13px; font-weight: 900; padding: 5px 10px; border-radius: 999px; color: #fff; background: linear-gradient(180deg, #ff5a2a, #c0180a); border: 2px solid #ffe08a; box-shadow: 0 0 12px rgba(255,90,30,.7); animation: newBlink 1.2s steps(2, start) infinite; }
+@media (orientation: portrait) { #ver-row { left: calc(var(--sal) + 10px); justify-content: space-between; } }
+@media (max-height: 430px) { .newcall { font-size: 11px; padding: 3px 8px; } }
+/* v4.1d: 🐶 RICKY & BOBBY summon button: left of the action cluster in landscape, above it in portrait */
+.rb-btn { position: absolute; z-index: 3; right: calc(var(--sar) + 278px); bottom: calc(var(--sab) + 16px); width: 96px; height: 96px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; overflow: hidden; pointer-events: auto; touch-action: none;
+  background: radial-gradient(circle at 35% 30%, #fff6e0, #f0b84a 45%, #9a4a10); border: 3px solid #fff3c0; box-shadow: 0 0 16px rgba(255,200,80,.7), 0 4px 10px rgba(0,0,0,.5); }
+.rb-btn .rb-ic { font-size: 34px; line-height: 1; position: relative; } .rb-btn b { font-size: 10.5px; font-weight: 900; line-height: 1.05; text-align: center; text-shadow: 0 1px 2px #000; position: relative; }
+.rb-btn em { position: absolute; bottom: 6px; font-style: normal; font-size: 11px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px #000; }
+#rb-cd { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(rgba(0,0,0,.62) var(--p, 0%), transparent 0); }
+.rb-btn.cool { filter: saturate(.5); } .rb-btn.here { animation: rbHere .5s ease-in-out infinite alternate; }
+@keyframes rbHere { to { box-shadow: 0 0 28px 8px rgba(255,230,120,.95), 0 4px 10px rgba(0,0,0,.5); } }
+.rb-btn:active { transform: scale(.94); }
+@media (orientation: portrait) { .rb-btn { right: calc(var(--sar) + 18px); bottom: calc(var(--sab) + 214px); width: 84px; height: 84px; } .rb-btn .rb-ic { font-size: 30px; } }
+@media (max-height: 430px) { .rb-btn { right: calc(var(--sar) + 236px); width: 84px; height: 84px; } .rb-btn .rb-ic { font-size: 30px; } }
+@media (min-width: 1000px) and (min-height: 700px) and (orientation: landscape) { .rb-btn { right: calc(var(--sar) + 370px); bottom: calc(var(--sab) + 22px); width: 120px; height: 120px; } .rb-btn .rb-ic { font-size: 44px; } .rb-btn b { font-size: 13px; } }
+@media (min-width: 700px) and (orientation: portrait) { .rb-btn { bottom: calc(var(--sab) + 260px); width: 110px; height: 110px; } }
+@media (max-height: 430px) { .g-tabs { margin-bottom: 6px; } .g-tabs .tab { padding-top: 8px; padding-bottom: 8px; font-size: 14px; } }
+.rb-btn.here #rb-cd { opacity: 0; }
+.lv.card .tag { top: auto; bottom: 6px; }
+@media (orientation: portrait) { #title #lv-peak .art { font-size: clamp(30px, 5.2vh, 60px); } #title #lv-peak b { font-size: clamp(22px, 3.5vh, 36px); } .lv.card .txt { flex: 1; } }
