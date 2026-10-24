@@ -7,6 +7,7 @@ import { sfx } from './audio.js';
 import { voice } from './voice.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const DOG_S = 4.4; // v4.3: big enough to read on an iPhone (was 2.1)
 let furTex = null;
 function fur() { // soft white fur with fine strands (canvas texture)
   if (furTex) return furTex; const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
@@ -72,36 +73,52 @@ export class Westies {
   constructor(game) {
     this.g = game; this.state = 'off'; this.t = 0; this.cool = 70 + Math.random() * 60; this.lastEnd = -1e9; this.count = 0; this.clock = 0;
     this.dogs = [{ name: 'RICKY', ...buildWestie('ricky', 0xd82a2a) }, { name: 'BOBBY', ...buildWestie('bobby', 0x2a6ad8) }];
-    for (const d of this.dogs) { d.root.scale.setScalar(2.1); d.root.visible = false; d.pos = V(); d.yaw = 0; d.ph = Math.random() * 6; d.bark = 0; d.hop = 0; game.scene.add(d.root); }
+    for (const d of this.dogs) { d.root.scale.setScalar(DOG_S); d.root.visible = false; d.pos = V(); d.yaw = 0; d.ph = Math.random() * 6; d.bark = 0; d.hop = 0; game.scene.add(d.root); }
     // spotlight beams + glowing floor discs (cheap additive meshes, no real lights)
-    const bm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.5, 1.2), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+    const bm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.5, 1.2), transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     const dm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.3, 1.0), transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
     this.spots = this.dogs.map(() => { const g = new THREE.Group(); const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 3.6, 30, 18, 1, true), bm); beam.position.y = 15; g.add(beam);
-      const disc = new THREE.Mesh(new THREE.CircleGeometry(3.6, 28).rotateX(-Math.PI / 2), dm); disc.position.y = 0.08; g.add(disc); g.visible = false; game.scene.add(g); return g; });
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(3.6, 28).rotateX(-Math.PI / 2), dm); disc.position.y = 0.08; g.add(disc); g.scale.setScalar(1.7); g.visible = false; game.scene.add(g); return g; });
     this.log = [];
+  }
+  // the player's oriented bounding box (dino + rider + wings) as 8 world-space offsets from its position
+  static footprint(P) {
+    const o = P.mech.obj, q = o.quaternion.clone(); o.quaternion.identity(); o.updateMatrixWorld(true);
+    const bx = new THREE.Box3().setFromObject(o); o.quaternion.copy(q); o.updateMatrixWorld(true);
+    const out = []; for (const x of [bx.min.x, bx.max.x]) for (const y of [bx.min.y, bx.max.y]) for (const z of [bx.min.z, bx.max.z]) out.push(V(x - o.position.x, y - o.position.y, z - o.position.z).applyQuaternion(q).add(V().subVectors(o.position, P.pos)));
+    return out;
   }
   get active() { return this.state !== 'off'; }
   // reason: 'roam' | 'battle' | 'boss' | 'victory' | 'test'. Returns true if the show starts.
   trigger(reason = 'roam', force = false) {
     const g = this.g, P = g.player; if (!P || this.active) return false;
     if (!force && this.clock - this.lastEnd < (reason === 'victory' ? 60 : 110)) return false;
-    // pick a spot ~26 m in front-ish of the camera direction, on land
-    const W = g.world, f = new THREE.Vector3(-Math.sin(g.cam.yaw), 0, -Math.cos(g.cam.yaw));
+    // v4.3: a dance stage the gameplay camera can see. One dog on each side, a little ahead of the player, far enough
+    // sideways that (in perspective, from the camera) they clear the player's silhouette (tail, wings, rider), and the
+    // camera eases back until both fit on screen (Game.updateCamera reads this.stage; it restores after the fly-away).
+    const yaw = g.cam.yaw, f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), side = new THREE.Vector3(-f.z, 0, f.x);
+    const corners = Westies.footprint(P).map(o => ({ lat: Math.abs(o.dot(side)), fw: o.dot(f) }));
+    const pitch = g.cam.pitch || 0.3, cp = Math.max(0.5, Math.cos(pitch)), aspect = (g.camera && g.camera.aspect) || 1.6;
+    const tanLim = Math.tan((g.camera ? g.camera.fov : 58) * Math.PI / 360) * aspect * 0.55, dogHalf = DOG_S * 0.8;
+    const aheads = [4, 4]; let D = Math.max(6, (g.cam.dist || 12) * cp), Ls = [0, 0];
+    for (let k = 0; k < 40; k++, D += 1.5) { let need = 0; for (const c of corners) if (D + c.fw > 1) need = Math.max(need, (c.lat + 1.5) * 1.15 / (D + c.fw));
+      Ls = aheads.map(a => need * (D + a) + dogHalf); if (Ls.every((L, i) => L / (D + aheads[i]) <= tanLim)) break; }
     const base = V().set(P.pos.x, 0, P.pos.z);
-    const meet = base.clone().addScaledVector(f, 9 + P.def.scale * 2);
-    if (W.height(meet.x, meet.z) < 0.3) meet.copy(base);
-    const side = new THREE.Vector3(f.z, 0, -f.x);
+    // they dance on two glowing floating dance floors at about the player's eye height: the middle band of the screen,
+    // clear of the HUD corners and of ground clutter (trees/rocks) that hid them before
+    const eyeY = P.pos.y + P.mech.height * 0.82;
+    this.stage = { yaw, lat: Math.max(...Ls), lats: Ls, aheads, need: D / cp, half: Math.max(...corners.map(c => c.lat)) };
     this.dogs.forEach((d, i) => { const s = i ? 1 : -1;
-      d.goal = meet.clone().addScaledVector(side, s * 2.6); const far = reason === 'victory' ? 14 : 34; d.start = meet.clone().addScaledVector(side, s * far).addScaledVector(f, far * 0.3);
+      d.goal = base.clone().addScaledVector(f, aheads[i]).addScaledVector(side, s * Ls[i]); d.stageY = Math.max(eyeY - DOG_S * 0.5, this.ground(d.goal) + 0.6); const far = reason === 'victory' ? 16 : 30; d.start = d.goal.clone().addScaledVector(side, s * far).addScaledVector(f, far * 0.4);
       d.pos.copy(d.start); d.root.visible = true; d.bark = 0; d.hop = 0; d.spin = 0; });
     this.reason = reason; this.state = 'enter'; this.t = 0; this.count++; this.introduced = false; this.danced = 0; this.flew = false; this.log.push(reason);
-    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(2.1); } return true;
+    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(DOG_S); } return true;
   }
   ground(p) { const h = this.g.world.height(p.x, p.z); return Math.max(h, this.g.world.lava ? 0.2 : -0.3); }
   danger() { const g = this.g; for (const e of g.enemies) { if (!e.alive) continue; for (const d of this.dogs) if (e.pos.distanceTo(d.pos) < 6 + e.radius) return true; } return false; }
   intro() {
     const g = this.g; this.introduced = true;
-    g.hud.banner('🐶 RICKY & BOBBY! 🐶', 4, true); g.hud.toast('🐾 Here come Ricky & Bobby! Dance party!');
+    g.hud.banner('🐶 RICKY & BOBBY! 🐶', 4, true); document.getElementById('banner').classList.add('rb'); // banner sits high so it doesn't cover the dogs
     sfx.cheer && sfx.cheer(1);
     // natural words for speech (iOS spells out ALL-CAPS / stretched words); the drama comes from pitch + rate
     voice.say('In this corner... weighing in at fifteen pounds of pure fluff... Ricky!', { prio: 3, cd: 20000, pitch: 0.68, rate: 0.9 });
@@ -130,10 +147,10 @@ export class Westies {
     if ((this.state === 'dance' || this.state === 'enter') && T > 0.8 && this.danger()) this.flyAway(); // trouble nearby: up, up and away
     for (const [i, d] of this.dogs.entries()) {
       let speed = 0, hopY = 0, spin = 0, rear = 0, wig = 0, sideX = 0, tailSp = 22, flap = 0;
-      if (this.state === 'enter') { const to = V().subVectors(d.goal, d.pos).setY(0), L = to.length();
-        if (L > 0.4) { speed = Math.min(14, L / dt); d.pos.addScaledVector(to.normalize(), Math.min(L, 14 * dt)); d.yaw = Math.atan2(to.x, to.z); } }
+      if (this.state === 'enter') { flap = 1; if (Math.random() < 0.6) this.sparkle(d); const to = V().subVectors(d.goal, d.pos).setY(0), L = to.length(); // capes out: they fly in
+        if (L > 0.4) { speed = Math.min(20, L / dt); d.pos.addScaledVector(to.normalize(), Math.min(L, 20 * dt)); d.yaw = Math.atan2(to.x, to.z); } }
       else if (this.state === 'dance') {
-        const P = g.player.pos, want = Math.atan2(P.x - d.pos.x, P.z - d.pos.z); d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 6);
+        const P = g.cam.pos, want = Math.atan2(P.x - d.pos.x, P.z - d.pos.z); // face the camera (the audience) d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 6);
         tailSp = 34; const alt = i ? Math.PI : 0;
         if (T < 1.6) { const k = T * 4 * Math.PI + alt; hopY = Math.max(0, Math.sin(k)) * 0.8; } // 1) alternating bunny hops
         else if (T < 2.8) { const k = (T - 1.6) / 1.2; spin = k * Math.PI * 2 * (i ? -1 : 1); hopY = Math.sin(k * Math.PI) * 1.1; } // 2) mirrored jump-spin together
@@ -142,13 +159,13 @@ export class Westies {
       } else if (this.state === 'fly') {
         d.vy += dt * (14 + i * 3); d.alt += d.vy * dt; flap = 1; tailSp = 40; spin = Math.sin(T * 3 + i) * 0.4; rear = 0.5;
         if (Math.random() < 0.9) this.sparkle(d);
-        const sc = 2.1 * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
+        const sc = DOG_S * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
       }
       const side = V(Math.cos(d.yaw), 0, -Math.sin(d.yaw));
       d.ph += dt * (speed > 1 ? 16 : 5); const run = Math.min(1, speed / 8), sw = Math.sin(d.ph);
       const legSw = flap ? 0.6 : 0.9 * run + (this.state === 'dance' ? 0.35 * Math.abs(Math.sin(T * 9 + i)) : 0);
       d.legs[0].rotation.x = sw * legSw; d.legs[1].rotation.x = sw * legSw; d.legs[2].rotation.x = -sw * legSw; d.legs[3].rotation.x = -sw * legSw;
-      d.pos.y = this.ground(d.pos);
+      d.pos.y = Math.max(this.ground(d.pos), d.stageY ?? -1e9);
       d.root.position.copy(d.pos).addScaledVector(side, sideX); d.root.position.y += d.alt || 0; d.root.rotation.y = d.yaw + spin;
       d.body.position.y = 0.55 + hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.18 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
       d.head.rotation.x = 0; d.jaw.position.y = -0.16 - (this.state === 'dance' ? 0.05 : 0);

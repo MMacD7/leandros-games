@@ -723,7 +723,11 @@ export class Game {
     const p = this.player, c = this.cam, h = p.mech.height;
     // auto-follow behind the dino while moving (unless the player is steering the camera)
     if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI; c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
-    const dist = 4 + h * 1.55 + (p.fly ? 4 : 0) + (p.boosting ? 1.5 : 0);
+    let dist = 4 + h * 1.55 + (p.fly ? 4 : 0) + (p.boosting ? 1.5 : 0);
+    // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
+    const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
+    const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
+    if (sk) { dist = lerp(dist, Math.max(dist, W.stage.need), sk); if (!inp.looking) c.yaw += angDiff(c.yaw, W.stage.yaw) * Math.min(1, dt * 3) * sk; }
     c.dist = lerp(c.dist, dist, Math.min(1, dt * 3));
     const tgt = tmp.set(p.pos.x, p.pos.y + h * 0.82, p.pos.z);
     const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, tgt.y + Math.sin(c.pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
