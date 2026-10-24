@@ -364,7 +364,19 @@
   window.addEventListener('pagehide', () => { if (screen === 'island') G.island.stop(); G.persist(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { G.persist(); resetInput(); } });
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    // auto-update: register without the HTTP cache, re-check on launch/return, reload once when a new version takes over
+    var SW = navigator.serviceWorker, hadCtl = !!SW.controller, reloading = false;
+    SW.addEventListener('controllerchange', function () {
+      if (reloading || !hadCtl) return;
+      var last = +(sessionStorage.getItem('ldw-sw-reload') || 0); if (Date.now() - last < 15000) return;
+      reloading = true; sessionStorage.setItem('ldw-sw-reload', String(Date.now())); location.reload();
+    });
+    window.addEventListener('load', function () {
+      SW.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+        var check = function () { reg.update().catch(function () {}); };
+        check(); document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+      }).catch(function () {});
+    });
   }
   G._screen = () => screen;
   G._show = show;
