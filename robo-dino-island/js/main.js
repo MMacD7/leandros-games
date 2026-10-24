@@ -140,7 +140,7 @@ function applyEnv(lv) {
 }
 function levelUI() {
   document.body.classList.toggle('peak', level === 'peak');
-  $('lv-jungle').classList.toggle('on', level === 'jungle'); $('lv-peak').classList.toggle('on', level === 'peak');
+  document.querySelectorAll('.lv[data-lv]').forEach(b => { const on = b.dataset.lv === level; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : 'ISLAND';
   $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : '▶ Explore the Island';
 }
@@ -204,6 +204,9 @@ const hud = {
 const ebarEls = [];
 function updateHUD(dt) {
   const p = game.player; if (!p) return;
+  { rbCd = Math.max(0, rbCd - dt); const b = $('b-rb'), W = game.westies, here = W && W.active && W.state !== 'exit';
+    $('rb-cd').style.setProperty('--p', (rbCd / RB_CD * 100).toFixed(1) + '%'); $('rb-t').textContent = here ? 'BARK!' : rbCd > 0 ? Math.ceil(rbCd) + 's' : '';
+    b.classList.toggle('cool', rbCd > 0 && !here); b.classList.toggle('here', !!here); }
   $('hp').style.width = (p.hp / p.maxHp * 100) + '%'; $('hp-t').textContent = Math.ceil(p.hp);
   $('boost').style.width = (p.boostE / p.st.boost * 100) + '%';
   $('mcd').style.setProperty('--p', Math.max(0, p.missileT / p.st.missileCD * 100) + '%');
@@ -243,13 +246,14 @@ let screen = 'loading', paused = false;
 let prevScreen = 'loading';
 function show(s) {
   prevScreen = screen; screen = s;
-  for (const id of ['title', 'garage', 'pause', 'results']) $(id).classList.toggle('hidden', id !== s);
+  for (const id of ['title', 'garage', 'pause', 'results', 'levels']) $(id).classList.toggle('hidden', id !== s);
   const playing = s === 'play';
-  $('hud').classList.toggle('hidden', !(playing || s === 'pause' || s === 'results'));
+  $('hud').classList.toggle('hidden', !(playing || s === 'pause' || s === 'results' || s === 'levels'));
   document.body.classList.toggle('playing', playing);
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${save.owned.length}/${DINOS.length} dinos`; }
-  if (s === 'garage') { if (prevScreen !== 'garage') syncGarageToSelected(); refreshGarage(); }
+  if (s === 'garage') { if (prevScreen !== 'garage') { syncGarageToSelected(); let first = false; try { first = !localStorage.getItem(NEW_GARAGE_KEY); if (first) localStorage.setItem(NEW_GARAGE_KEY, '1'); } catch (e) { }
+      if (first) { gList = gTab = 'real'; gIdx = 0; hud.toast('🆕 NEW dinos first! Tap ‹ › to see them all'); } } refreshGarage(); }
   if (s === 'title' && game) game.mh.titleEnter();
   hud.bolts(); checkRotate(); fpsReset(); syncMusic();
 }
@@ -264,12 +268,35 @@ function checkRotate() { const portrait = window.innerHeight > window.innerWidth
 $('rot-ok').addEventListener('click', () => { rotateDismissed = true; checkRotate(); });
 const tap = (id, fn) => $(id).addEventListener('click', e => { initAudio(); voice.prime(); sfx.ui(); fn(e); });
 // iOS Safari: speechSynthesis must be unlocked inside the first user gesture
-for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => voice.prime(), { once: true, capture: true });
+// v4.1: one-time "new level" shout on the first tap after the update (needs a tap for iOS speech; respects the 🗣️ toggle)
+const NEW_LV_KEY = 'robo-dino-island.announced.peak';
+function announceNewLevel() {
+  try { if (localStorage.getItem(NEW_LV_KEY) || !save.voice) return; } catch (e) { return; }
+  if (voice.say('New level unlocked, Leandro! Dragon Peak!', { prio: 3, cd: 0 }) !== false) { try { localStorage.setItem(NEW_LV_KEY, '1'); } catch (e) { } if (screen === 'title') hud.toast('🌋 NEW LEVEL: DRAGON PEAK! 🐉'); }
+}
+for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { voice.prime(); announceNewLevel(); }, { once: true, capture: true });
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast('Find energy cores ⚡ and wild dinos!'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
+tap('newcall', () => { garageFrom = 'title'; show('garage'); });
 tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak'));
+// v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
+let levelsFrom = 'play';
+const openLevels = () => { levelsFrom = screen === 'pause' ? 'pause' : 'play'; show('levels'); };
+tap('b-map', openLevels); tap('p-map', openLevels);
+tap('lvd-close', () => show(levelsFrom === 'pause' ? 'pause' : 'play'));
+for (const lv of ['jungle', 'peak']) tap('lvd-' + lv, () => { show('play'); if (lv !== level) travel(lv); });
 tap('b-pause', () => show('pause'));
+// v4.1: 🐶 summon button. Full entrance + help; tapping while they're here = bark blast. Short cooldown with a countdown ring.
+const RB_CD = 25; let rbCd = 0;
+function summonRB() {
+  initAudio(); voice.prime(); const W = game.westies; if (!W || screen !== 'play' || !game.player || !game.player.alive) return;
+  if (W.active) { if (W.state !== 'exit') { W.barkBlast(); return; } }
+  if (rbCd > 0) { sfx.deny(); hud.toast(`🐶 Ricky & Bobby are resting… ${Math.ceil(rbCd)}s`); return; }
+  if (W.trigger('button', true)) { rbCd = RB_CD; sfx.ui(); }
+}
+$('b-rb').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); summonRB(); });
+$('b-rb').addEventListener('click', e => e.preventDefault());
 tap('p-resume', () => show('play'));
 tap('p-garage', () => { garageFrom = 'pause'; show('garage'); });
 tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.startRoam(); titleEnemies(); show('title'); });
@@ -296,7 +323,12 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && scr
 const gScene = new THREE.Scene(), gCam = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
 const GARAGE_YAW = 1.5; // ~3/4 front view (camera sits at yaw 0.67)
 let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo';
-const gListOf = () => gList === 'real' ? REALS : gList === 'dragon' ? DRAGONS : ROBOS;
+// v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
+const NEW_IDS = new Set(['giga', 'allo', 'dilo', 'pachy', 'para', 'gmech', 'dblast', 'dfire', 'dice', 'dstorm', 'rdragon']);
+const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
+const G_REALS = newFirst(REALS), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS);
+const gListOf = () => gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : G_ROBOS;
+const NEW_GARAGE_KEY = 'robo-dino-island.seen.newgarage';
 const gMechs = {}, gRider = new Rider();
 function buildGarage() {
   gScene.background = new THREE.Color(0x0b1520); gScene.environment = scene.environment; gScene.environmentIntensity = 0.7;
@@ -322,7 +354,7 @@ function refreshGarage() {
   if (gTab !== 'ups') gList = gTab;
   const list = gListOf(); gIdx = Math.min(gIdx, list.length - 1); const def = list[gIdx]; setGarageMech();
   const owned = save.owned.includes(def.id), st = statsFor(def, save.up);
-  $('g-name').textContent = def.name; $('g-desc').textContent = def.desc + (def.fly ? ' ✈' : '') + (def.swim ? ' 🌊' : '');
+  $('g-name').textContent = def.name; if (NEW_IDS.has(def.id)) $('g-name').insertAdjacentHTML('afterbegin', '<span class="newb">NEW!</span> '); $('g-desc').textContent = def.desc + (def.fly ? ' ✈' : '') + (def.swim ? ' 🌊' : '');
   const EL = { fire: 'Fireballs', ice: 'Ice shards', storm: 'Lightning bolts' };
   $('g-abil').innerHTML = def.dragon && def.real ? `<b>${EL[def.element]}</b> · <b>${def.specialName.replace('<br>', ' ')}</b> · <b>Roar</b> · <b>Fly</b> (Climb)`
     : def.real ? `<b>Bite</b> · <b>${def.specialName.replace('<br>', ' ')}</b> · <b>Roar</b> (stuns) · <b>Run</b>`
@@ -332,7 +364,7 @@ function refreshGarage() {
   $('g-stats').innerHTML = bars.map(([n, v]) => `<div class="stat"><span>${n}</span><div class="sb"><i style="width:${Math.min(100, v * 100)}%"></i></div></div>`).join('');
   const a = $('g-action');
   a.textContent = save.selected === def.id ? '✓ Your dino' : 'Play as ' + def.name; a.disabled = save.selected === def.id; a.className = 'btn primary';
-  $('g-dots').innerHTML = list.map((d, i) => `<i class="${save.owned.includes(d.id) ? 'own' : ''} ${i === gIdx ? 'cur' : ''}"></i>`).join('');
+  $('g-dots').innerHTML = list.map((d, i) => `<i class="${save.owned.includes(d.id) ? 'own' : ''} ${i === gIdx ? 'cur' : ''} ${NEW_IDS.has(d.id) ? 'new' : ''}"></i>`).join('');
   $('g-ups').innerHTML = UPGRADES.map(u => { const l = save.up[u.id]; return `<div class="up"><span class="ic">${u.icon}</span><div><h4>${u.name}</h4><p>${u.desc}</p><span class="pips">${'●'.repeat(l)}${'○'.repeat(MAX_UP - l)}</span> <small class="lvl">Level ${l}/${MAX_UP}</small></div>
     <span class="upb"><button data-up="${u.id}" data-d="-1" ${l <= 0 ? 'disabled' : ''} aria-label="less">−</button><button data-up="${u.id}" data-d="1" ${l >= MAX_UP ? 'disabled' : ''} aria-label="more">+</button></span></div>`; }).join('');
   $('g-dino').classList.toggle('hidden', gTab === 'ups'); $('g-ups').classList.toggle('hidden', gTab !== 'ups');
@@ -439,7 +471,19 @@ function emitSmoke(dt) {
   }
 }
 // ---------------- offline ----------------
-if ('serviceWorker' in navigator && location.protocol !== 'file:') { window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { })); }
+// Offline service worker + auto-update: a new version activates (skipWaiting/clients.claim) and the page reloads once onto it.
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const SW = navigator.serviceWorker, hadController = !!SW.controller; let swReloading = false;
+  SW.addEventListener('controllerchange', () => {
+    if (swReloading || !hadController) return; // first install: nothing to refresh
+    const last = +(sessionStorage.getItem('rdi-sw-reload') || 0); if (Date.now() - last < 15000) return; // loop guard
+    swReloading = true; sessionStorage.setItem('rdi-sw-reload', String(Date.now())); location.reload();
+  });
+  window.addEventListener('load', () => SW.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    const check = () => reg.update().catch(() => { });
+    check(); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+  }).catch(() => { }));
+}
 
 // test / debug hooks (no network, local only)
 function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }

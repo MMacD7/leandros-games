@@ -118,6 +118,14 @@ export class Westies {
     else if (g.battle && g.mh.powerups.length < 2) { g.mh.spawnPowerup(Math.random() < 0.5 ? 'meteor' : 'strike'); const U = g.mh.powerups[g.mh.powerups.length - 1]; if (U) { U.x = mid.x; U.z = mid.z; U.y = this.ground(mid); U.m.position.set(U.x, U.y + 1.8, U.z); } g.hud.toast('🐾 Ricky & Bobby fetched a power-up!'); }
     else { g.dropBolts(mid, 12); P.hp = Math.min(P.maxHp, P.hp + P.maxHp * 0.25); g.hud.toast('🐾 Ricky & Bobby fetched bolts + a health snack!'); }
   }
+  // v4.1: summon-button tap while they're already here -> an extra bark blast (stun + knockback around them)
+  barkBlast() {
+    const g = this.g; if (!this.active) return 0; const mid = this.dogs[0].pos.clone().lerp(this.dogs[1].pos, 0.5);
+    sfx.bark && sfx.bark(1.3); setTimeout(() => sfx.bark && sfx.bark(0.95), 160); g.fx.ring(V().set(mid.x, this.ground(mid) + 0.3, mid.z), 18, 0xfff2a0); g.fx.shake = Math.max(g.fx.shake, 0.3);
+    for (const d of this.dogs) d.hop = 1;
+    let n = 0; for (const e of g.enemies) if (e.alive && e.pos.distanceTo(mid) < 24) { g.stun(e, 2); e.knock.add(V().subVectors(e.pos, mid).setY(0).normalize().multiplyScalar(5)); n++; }
+    g.hud.toast(n ? `🐾 BARK BLAST! ${n} stunned!` : '🐾 WOOF WOOF!'); this.barks = (this.barks || 0) + 1; return n;
+  }
   leave() { const g = this.g; this.state = 'exit'; this.t = 0; for (const s of this.spots) s.visible = false;
     this.dogs.forEach((d, i) => { const f = V().subVectors(d.pos, g.player.pos).setY(0); if (f.lengthSq() < 1) f.set(i ? 1 : -1, 0, 0); f.normalize(); d.goal = d.pos.clone().addScaledVector(f, 45); }); }
   end() { this.state = 'off'; this.lastEnd = this.clock; for (const d of this.dogs) d.root.visible = false; for (const s of this.spots) s.visible = false; }
