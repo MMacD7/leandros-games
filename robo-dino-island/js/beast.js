@@ -17,7 +17,7 @@ const UP = V(0, 1, 0);
 function palette(def, wild) {
   const p = { back: C(def.back), belly: C(def.belly), stripe: C(def.stripe ?? def.back), accent: C(def.accent), eye: C(def.eye),
     horn: C(0xd9cdb2), hornDark: C(0x2e2620), mouth: C(0x4a1a1e), tongue: C(0x7a3036), claw: C(0x1a1612), scar: C(0xc4ae98) };
-  if (wild) { p.back.multiplyScalar(0.5); p.belly.multiplyScalar(0.62); p.stripe.multiplyScalar(0.45); p.eye = C(0xff2a0a); p.accent.lerp(C(0xff2a0a), 0.45).multiplyScalar(0.8); }
+  if (wild && !def.persona) { p.back.multiplyScalar(0.5); p.belly.multiplyScalar(0.62); p.stripe.multiplyScalar(0.45); p.eye = C(0xff2a0a); p.accent.lerp(C(0xff2a0a), 0.45).multiplyScalar(0.8); }
   return p;
 }
 
@@ -500,6 +500,70 @@ const SPECIES = {
     B.tube([{ b: 'head', p: [0, 0.18, 0.5], r: [0.1, 0.12] }, { b: 'head', p: [0, 0.42, 0.05], r: [0.12, 0.15] }, { b: 'head', p: [0, 0.72, -0.55], r: [0.11, 0.14] }, { b: 'head', p: [0, 0.95, -1.25], r: [0.08, 0.09] }],
       { seg: 12, per: 4, ts: 0.5, color: (up, arc) => P.accent.clone().lerp(P.stripe, sstep(0.6, 0.9, Math.sin(arc * 7)) * 0.6) });
     scutes(B, 3, 15, 0.7);
+    return o;
+  },
+  // ---------------- v5.6: ORIGINAL personality dinos (wild only) ----------------
+  // GRUMBLETOP (grumpy): a low, wide armour-back with a huge scowling brow, two stubby underbite tusks and a ridge of blunt knobs
+  grumble(B) {
+    const P = B.pal;
+    const o = quadruped(B, { hipH: 1.9, hipW: 0.95, shW: 0.95, body: 2.2, spineY: 0.12, chestY: -0.05, neckN: 1, neckL: 0.35, neckRise: -0.08, headZ: 0.42, headY: -0.02, tailN: 6, tailL: 0.62, tailR: 0.6, tailDrop: 0.05,
+      hipR: [1.35, 1.1], bellyR: [1.55, 1.2], chestR: [1.45, 1.15], neckR: [0.85, 0.72], neckTaper: 0.12, top: 0.9, belly: 0.8, ridge: 0.05,
+      legB: [0.8, 0.7, 0.32], legF: [0.78, 0.66, 0.3], legW: 1.4, legWF: 1.3,
+      jawY: -0.3, jawZ: 0.2, eyeP: [0.4, 0.22, 0.45], eyeR: 0.07, browTilt: 0.55, sf: 1.2,
+      headPts: [[-0.3, 0.06, 0.66, 0.55], [0.15, 0.05, 0.7, 0.55], [0.55, -0.04, 0.6, 0.46], [0.85, -0.12, 0.42, 0.34], [0.98, -0.16, 0.2, 0.18]],
+      jawPts: [[0.0, 0.0, 0.62, 0.3], [0.5, -0.04, 0.58, 0.28], [0.85, -0.04, 0.4, 0.2], [0.98, -0.02, 0.2, 0.1]] });
+    // the big grumpy unibrow: one heavy ridge right across the forehead, sloping down in the middle
+    for (const sd of [1, -1]) B.blob('head', [sd * 0.24, 0.5, 0.5], [0.38, 0.13, 0.26], [0.2, 0, sd * -0.35], P.stripe.clone().lerp(P.back, 0.3));
+    for (const sd of [1, -1]) B.horn('jaw', [sd * 0.3, 0.05, 0.75], [-0.5, 0, sd * 0.15], 0.28, 0.08, 0.1, P.horn, P.horn.clone().lerp(P.belly, 0.4), 'horn', 6, 3); // underbite tusks
+    B.blob('head', [0, 0.05, 0.98], [0.3, 0.2, 0.18], [0, 0, 0], P.back.clone().multiplyScalar(0.9)); // big grumpy nose
+    for (let i = 2; i < B.bodyPts.length - 1; i += 2) { const q = B.bodyPts[i]; B.blob(q.b, [0, q.p[1] + q.r[1] * 0.9, q.p[2]], [0.26, 0.2, 0.26], [0, 0, 0], P.accent.clone().lerp(P.stripe, 0.35), 'horn', 10); }
+    return o;
+  },
+  // SNOOZADON (sleepy): a chubby, round, short-necked plant-eater with droopy half-shut eyelids and a soft floppy crest flopped to one side
+  snooze(B) {
+    const P = B.pal;
+    const o = quadruped(B, { hipH: 2.1, hipW: 0.85, shW: 0.75, body: 2.2, spineY: 0.22, chestY: 0.0, neckN: 3, neckL: 0.5, neckRise: 0.18, headZ: 0.38, headY: 0.0, tailN: 7, tailL: 0.7, tailR: 0.7, tailDrop: 0.08,
+      hipR: [1.25, 1.35], bellyR: [1.5, 1.55], chestR: [1.3, 1.35], neckR: [0.6, 0.62], neckTaper: 0.3, ridge: 0.0,
+      legB: [1.0, 0.9, 0.36], legF: [0.95, 0.85, 0.34], legW: 1.35, legWF: 1.3,
+      jawY: -0.14, jawZ: 0.08, eyeP: [0.26, 0.16, 0.32], eyeR: 0.085, browTilt: 0.0, sf: 1.0,
+      headPts: [[-0.25, 0.02, 0.4, 0.4], [0.12, 0.05, 0.44, 0.42], [0.45, 0.0, 0.38, 0.34], [0.72, -0.05, 0.26, 0.22], [0.82, -0.07, 0.12, 0.1]],
+      jawPts: [[0.0, 0.0, 0.3, 0.14], [0.45, -0.02, 0.26, 0.12], [0.72, -0.03, 0.12, 0.07]] });
+    for (const sd of [1, -1]) B.blob('head', [sd * 0.33, 0.27, 0.36], [0.17, 0.09, 0.2], [0.35, 0, sd * 0.2], P.back.clone().lerp(P.stripe, 0.3)); // heavy droopy eyelids
+    B.blob('head', [0.18, 0.5, -0.05], [0.16, 0.42, 0.34], [0.2, 0, -0.9], P.accent.clone().lerp(P.belly, 0.3)); // the floppy crest, flopped over
+    B.blob('head', [0.48, 0.28, -0.05], [0.13, 0.13, 0.13], [0, 0, 0], P.accent); // its fluffy tip
+    for (let i = 1; i < B.bodyPts.length - 2; i++) { const q = B.bodyPts[i]; for (const sd of [1, -1]) if ((i + (sd > 0 ? 0 : 1)) % 2) B.blob(q.b, [sd * q.r[0] * 0.6, q.p[1] + q.r[1] * 0.6, q.p[2]], [0.16, 0.06, 0.16], [0, 0, sd * -0.8], P.accent, 'skin', 8); } // sleepy star spots
+    return o;
+  },
+  // STRUTASAURUS (show-off): a slim strutting runner with a huge rainbow fan crest and a fanned, feather-tipped tail
+  strut(B) {
+    const P = B.pal;
+    const o = theropod(B, { hipH: 2.7, hipW: 0.4, body: 1.45, w: 0.7, hs: 0.8, neck: [1.0, 1.0], tailN: 8, tailL: 0.62, tailR: 0.42,
+      hipR: [0.58, 0.7], bellyR: [0.62, 0.76], chestR: [0.66, 0.8], neckR: [0.34, 0.38], leg: [1.3, 1.4, 0.8], legW: 0.72, foot: 0.62, toeSpread: 0.16,
+      shW: 0.38, shY: 0.36, arm: [0.42, 0.38], armW: 0.75, fingers: 3, handClaw: 0.4, jawY: -0.14, jawZ: 0.02,
+      headPts: [[-0.2, 0.06, 0.3, 0.32], [0.15, 0.08, 0.32, 0.33], [0.5, 0.03, 0.25, 0.25], [0.85, -0.03, 0.16, 0.16], [1.0, -0.05, 0.08, 0.08]],
+      jawPts: [[-0.12, 0, 0.23, 0.14], [0.4, -0.02, 0.21, 0.12], [0.85, 0.0, 0.12, 0.07], [0.96, 0.01, 0.05, 0.04]],
+      teeth: [0.3, 0.9, 6, 0.06], eyeP: [0.26, 0.2, 0.45], eyeR: 0.09, browTilt: -0.2, sf: 3 });
+    const RB = [0xff3a3a, 0xff9a1a, 0xffe23a, 0x4ae84a, 0x3ab8ff, 0xb84aff].map(c => C(c));
+    const fan = []; for (let i = 0; i <= 12; i++) { const a = -0.15 + i / 12 * (Math.PI + 0.3); fan.push([Math.cos(a) * 1.25, Math.sin(a) * 1.15]); } fan.push([0.35, -0.1], [-0.35, -0.1]);
+    const fanC = v => RB[Math.min(5, Math.max(0, Math.floor((Math.atan2(v.y, v.x) + 0.15) / (Math.PI + 0.3) * 6)))].clone().lerp(C(0xffffff), 0.25 * sstep(1.0, 1.2, Math.hypot(v.x, v.y)));
+    B.plate('head', fan, 0.05, M([0, 0.42, -0.1], [-0.25, Math.PI / 2, 0]), fanC, 'skin', 0.02); // the rainbow crest (side-on, like a big fan)
+    const last = 'tail' + (o.tailN ? o.tailN - 1 : 7);
+    for (let i = 0; i < 7; i++) { const a = (i - 3) * 0.32; B.horn(B.bones[last] ? last : 'tail7', [0, 0.05, -0.2], [Math.PI / 2 + 0.5, 0, a], 1.0, 0.07, 0.15, P.accent, RB[i % 6], 'horn', 6, 4); } // tail fan
+    for (const sd of [1, -1]) B.blob('chest', [sd * 0.3, 0.1, 0.35], [0.22, 0.3, 0.12], [0, 0, 0], P.accent); // puffed-out chest patches
+    return o;
+  },
+  // QUIVERFOOT (scaredy): a small, skinny, long-legged runner with HUGE worried eyes, tiny arms and knobbly knees
+  quiver(B) {
+    const P = B.pal;
+    const o = theropod(B, { hipH: 2.5, hipW: 0.36, body: 1.25, w: 0.62, hs: 0.95, neck: [0.9, 0.95], tailN: 9, tailL: 0.6, tailR: 0.36,
+      hipR: [0.5, 0.6], bellyR: [0.55, 0.66], chestR: [0.52, 0.62], neckR: [0.3, 0.34], leg: [1.25, 1.4, 0.8], legW: 0.62, foot: 0.55, toeSpread: 0.15,
+      shW: 0.34, shY: 0.32, arm: [0.2, 0.16], armW: 0.6, fingers: 2, jawY: -0.12, jawZ: 0.02,
+      headPts: [[-0.25, 0.08, 0.38, 0.42], [0.1, 0.1, 0.42, 0.45], [0.42, 0.03, 0.3, 0.3], [0.68, -0.04, 0.18, 0.18], [0.78, -0.06, 0.08, 0.08]],
+      jawPts: [[-0.1, 0, 0.26, 0.14], [0.35, -0.02, 0.22, 0.12], [0.66, 0.0, 0.1, 0.06]],
+      teeth: [0.3, 0.7, 4, 0.05], eyeP: [0.33, 0.24, 0.3], eyeR: 0.12, browTilt: -0.45, sf: 2 });
+    for (const sd of [1, -1]) { B.blob('head', [sd * 0.4, 0.28, 0.32], [0.2, 0.22, 0.2], [0, 0, 0], C(0xffffff), 'horn', 12); B.blob('head', [sd * 0.52, 0.28, 0.38], [0.1, 0.12, 0.1], [0, 0, 0], C(0x1a1410), 'horn', 10); } // the huge worried eyes
+    for (const S of ['L', 'R']) if (B.bones[S + 'knee']) B.blob(S + 'knee', [0, 0, 0], [0.22, 0.22, 0.22], [0, 0, 0], P.belly.clone().lerp(P.back, 0.4)); // knobbly knees
+    for (let i = 0; i < 4; i++) B.horn('head', [0, 0.38, 0.1 - i * 0.18], [-0.5, 0, 0], 0.18 - i * 0.03, 0.04, 0, P.accent, P.accent.clone().lerp(C(0xffffff), 0.4), 'horn', 5, 2); // a wispy head tuft
     return o;
   },
   // ---------------- v4: DRAGONS (fire / ice / storm / the Dragon King) ----------------

@@ -161,7 +161,22 @@ SEA.forEach(d => { d.real = true; d.sea = true; d.melee = d.bite; if (!d.walker)
 export const KRAKEN = { id: 'kraken', name: 'THE KRAKEN', price: 0, kind: 'kraken', real: true, sea: true, fly: true, swim: true, boss: true, hp: 900, speed: 11, bite: 30, biteRate: 0.8, special: 'kraken', specialName: 'KRAKEN', specialCD: 5, roar: 2.6,
   scale: 3.0, radius: 7, back: 0x4a1030, belly: 0xc86a8a, accent: 0xff2a6a };
 export const MONSTER_MEG = { ...SEA[1], id: 'monstermeg', name: 'MONSTER MEGALODON', scale: 4.0, radius: 8.5, boss: true, back: 0x22262c, belly: 0x8a8e8a, accent: 0xff1a0a };
-export const DINOS = [...ROBOS, ...REALS, ...DRAGONS, ...WESTIES, ...SEA];
+// v5.6 original wild dinos with PERSONALITIES (not in the garage; they roam the land levels, and more show up with Robo Dinos OFF)
+export const PERSONAS = [
+  { id: 'grumbletop', name: 'Grumbletop', price: 0, kind: 'grumble', persona: 'grumpy', real: true, wildOnly: true, desc: 'A grumpy old armour-back. Get too close and it huffs, stamps and charges. HMPH!',
+    hp: 150, speed: 9, bite: 10, biteRate: 0.6, special: 'charge', specialName: 'GRUMP<br>CHARGE', specialCD: 6, roar: 1.6, scale: 0.95, radius: 2.4,
+    back: 0x55606e, belly: 0xb8a68c, stripe: 0x2a3038, accent: 0xff8a2a, eye: 0xffc040 },
+  { id: 'snoozadon', name: 'Snoozadon', price: 0, kind: 'snooze', persona: 'sleepy', real: true, wildOnly: true, desc: 'Always sleepy. Snores in the sun, yawns when you wake it, then nods off again. Zzz…',
+    hp: 170, speed: 6, bite: 6, biteRate: 0.8, special: 'none', specialName: 'YAWN', specialCD: 8, roar: 1.2, scale: 1.0, radius: 2.6,
+    back: 0x8a7ab8, belly: 0xece0f4, stripe: 0x5a4a8a, accent: 0xffe07a, eye: 0x7ad0ff },
+  { id: 'strutasaurus', name: 'Strutasaurus', price: 0, kind: 'strut', persona: 'showoff', real: true, wildOnly: true, desc: 'A total show-off with a rainbow crest and a tail fan. It struts, spins and shouts TA-DA!',
+    hp: 110, speed: 12, bite: 8, biteRate: 0.5, special: 'none', specialName: 'TA-DA', specialCD: 6, roar: 1.4, scale: 0.8, radius: 1.9,
+    back: 0x1a8a8a, belly: 0xf4e4b4, stripe: 0x0a4a5a, accent: 0xff3ab8, eye: 0xffe23a },
+  { id: 'quiverfoot', name: 'Quiverfoot', price: 0, kind: 'quiver', persona: 'scaredy', real: true, wildOnly: true, desc: 'A big-eyed scaredy-dino. It squeaks EEP! and runs away, and trembles when it is cornered.',
+    hp: 70, speed: 16, bite: 4, biteRate: 0.6, special: 'none', specialName: 'EEP', specialCD: 5, roar: 1.0, scale: 0.6, radius: 1.3,
+    back: 0xa8c86a, belly: 0xf6f2d6, stripe: 0x6a8a3a, accent: 0x6ab0ff, eye: 0x3a2a1a },
+];
+export const DINOS = [...ROBOS, ...REALS, ...DRAGONS, ...WESTIES, ...SEA, ...PERSONAS];
 
 export const UPGRADES = [
   { id: 'armor', name: 'Armor & Tough Hide', desc: '+15% health for every dino', icon: '🛡️' },

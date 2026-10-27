@@ -7,7 +7,7 @@ import { citySky } from './city.js';
 import { oceanSky } from './ocean.js';
 import { FX } from './fx.js';
 import { Game } from './game.js';
-import { makeDino } from './game.js';
+import { makeDino, UNROBO } from './game.js';
 import { Input } from './input.js';
 import { music } from './music.js';
 import { Rider } from './rider.js';
@@ -37,6 +37,8 @@ const targetFps = isIPad ? 40 : 52;
 let Q = { ...TIERS[forced ?? startTier] };
 
 const save = loadSave(); setMuted(save.muted);
+// v5.6 Robo Dinos ON/OFF (default ON), kept in its own localStorage key
+const ROBO_KEY = 'robo-dino-island.robodinos'; let robosOn = (() => { try { return localStorage.getItem(ROBO_KEY) !== '0'; } catch (e) { return true; } })();
 const persist = () => writeSave(save);
 
 // ---------------- renderer ----------------
@@ -109,7 +111,7 @@ function boot() {
   fx = new FX(scene, assets, sfx);
   world = makeWorld(level); applyEnv(level);
   input = new Input(document.body);
-  game = new Game({ renderer, scene, camera, world, fx, assets, save, input, hud, persist: () => persist(), quality: Q });
+  game = new Game({ renderer, scene, camera, world, fx, assets, save, input, hud, persist: () => persist(), quality: Q }); game.robos = robosOn; // v5.6 Robo Dinos ON/OFF
   game.level = level; levelUI();
   game.startRoam();
   titleEnemies();
@@ -302,7 +304,7 @@ for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { vo
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : 'Find energy cores ⚡ and wild dinos!'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
-tap('newcall', () => { garageFrom = 'title'; show('garage'); const ti = G_SEA.findIndex(d => d.id === 'turtle'); if (ti >= 0) { gTab = gList = 'sea'; gIdx = ti; refreshGarage(); } }); // v5.5: jump straight to the new Sea Turtle
+tap('newcall', () => { const r = $('b-robo'); r.classList.remove('pulse'); void r.offsetWidth; r.classList.add('pulse'); setTimeout(() => r.classList.remove('pulse'), 2600); if (level !== 'city') travel('city'); }); // v5.6: off to Mega City, and point at the new Robo Dinos switch
 tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean')); tap('lv-farm', () => travel('farm'));
 // v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
 let levelsFrom = 'play';
@@ -331,8 +333,23 @@ $('b-stink').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPr
 $('b-stink').addEventListener('click', e => e.preventDefault());
 tap('fw-ok', () => $('farmwin').classList.add('hidden'));
 tap('p-resume', () => show('play'));
+// v5.6 Restart level: same level and mode, fresh start (the city's buildings stand up again, the farm resets, battles start over at wave 1)
+function restartLevel() { const wasBattle = !!(game.battle && !game.battle.over); game.battle = null; game.collapseCam = null; game.swoop = null; game.koCam = null; game.slowmo = 0;
+  if (world.city && world.city.reset) world.city.reset(); game.clearEnemies(); game.fx.shake = 0; if (wasBattle) game.startBattle(); else game.startRoam(); game.restarts = (game.restarts || 0) + 1;
+  show('play'); hud.toast(wasBattle ? '🔄 Battle restarted! Wave 1' : '🔄 Level restarted!'); }
+tap('p-restart', restartLevel);
+window.addEventListener('keydown', e => { if (e.code !== 'Escape' && e.code !== 'KeyP') return; if (screen === 'play') show('pause'); else if (screen === 'pause') show('play'); }); // keyboard pause
+const roboLabel = () => { for (const id of ['b-robo', 'p-robo']) { const el = $(id); if (!el) continue; el.textContent = '🤖 Robo Dinos: ' + (robosOn ? 'ON' : 'OFF'); el.classList.toggle('off', !robosOn); el.setAttribute('aria-pressed', robosOn ? 'true' : 'false'); }
+  document.body.classList.toggle('robos-off', !robosOn); };
+function toggleRobos() { robosOn = !robosOn; try { localStorage.setItem(ROBO_KEY, robosOn ? '1' : '0'); } catch (e) { } game.robos = robosOn; roboLabel();
+  // swap what is on screen right now: the player (if it is a robot) and any robot enemies become regular dinos
+  if (!robosOn) { const P = game.player; if (P && game.isRobot(P.def)) { const pos = P.pos.clone(), yaw = P.yaw, hp = P.hp / P.maxHp; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); game.player.hp = Math.max(1, game.player.maxHp * hp); }
+    for (const e of game.enemies.slice()) if (e.alive && !e.boss && game.isRobot(e.def)) { const x = e.pos.x, z = e.pos.z, st = e.ai.state, yaw = e.yaw, i = game.enemies.indexOf(e); e.remove(); game.enemies.splice(i, 1); const n = game.spawnEnemy(x, z, e.level, UNROBO[e.def.id] || 'trex'); n.yaw = yaw; n.ai.state = st; } }
+  else if (screen === 'title' || screen === 'garage') { game.spawnPlayer(false); if (screen === 'title') titleEnemies(); }
+  hud.toast(robosOn ? '🤖 Robo Dinos ON' : '🦖 Robo Dinos OFF: regular dinos only!'); voice.say(robosOn ? 'Robo dinos on!' : 'Real dinos only!', { prio: 1, cd: 1500, replace: true }); if (screen === 'garage') refreshGarage(); }
+tap('b-robo', toggleRobos); tap('p-robo', toggleRobos); roboLabel();
 tap('p-garage', () => { garageFrom = 'pause'; show('garage'); });
-tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.startRoam(); titleEnemies(); show('title'); });
+tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.collapseCam = null; game.swoop = null; game.koCam = null; game.startRoam(); titleEnemies(); show('title'); });
 tap('r-ok', () => { game.startRoam(); show('play'); });
 const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '🔊'; $('p-sound').textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on'; };
 const toggleSound = () => { save.muted = !save.muted; setMuted(save.muted); persist(); soundLabel(); };
@@ -384,6 +401,7 @@ function setGarageMech() {
   if (save.ride !== false && !def.westie && !def.sea) gRider.mount(gMech); else gRider.unmount();
 }
 function refreshGarage() {
+  if (!robosOn && (gTab === 'robo' || gList === 'robo')) { gTab = gList = 'real'; gIdx = 0; } // v5.6: robots are hidden while Robo Dinos is OFF
   if (gTab !== 'ups') gList = gTab;
   const list = gListOf(); gIdx = Math.min(gIdx, list.length - 1); const def = list[gIdx]; setGarageMech();
   const owned = save.owned.includes(def.id), st = statsFor(def, save.up);

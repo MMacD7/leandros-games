@@ -19,7 +19,7 @@ export class JungleHype {
   reset() { this.combo = 0; this.comboT = 0; this.entT = 0; this.hitSndT = 0; this.ringT = 0; this.surpriseT = 50; this.musicT = 0; this.sparkT = 0; this.playT = 0; this.peakInt = 0;
     const g = this.g; g.swoop = null; g.koCam = null; }
   // ---- dramatic entrances: a ground-shaking roar + dust burst as a wild dino arrives near Leandro
-  onSpawn(e) { if (!this.on || e.boss) return; const g = this.g, p = g.player, d = e.pos.distanceTo(p.pos); if (this.entT > 0 || d > 150) return;
+  onSpawn(e) { if (!this.on || e.boss || e.def.persona) return; const g = this.g, p = g.player, d = e.pos.distanceTo(p.pos); if (this.entT > 0 || d > 150) return;
     this.entT = 3.2; this.n.entrances++; const k = Math.max(0.25, 1 - d / 160), S = e.def.scale || 1;
     e.roar = 1.6; e.entrance = 1; sfx.bigRoar(Math.max(0.55, 1.1 - S * 0.12), 0.55 + 0.45 * k, !e.real); this.n.roars++;
     if (sfx.rumble) sfx.rumble(1.2, 0.5 * k); g.fx.shake = Math.max(g.fx.shake, 0.9 * k);

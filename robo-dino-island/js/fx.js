@@ -153,7 +153,8 @@ export class FX {
     const w = { m, f, t: 0, dur }; this.warns.push(w); return w;
   }
   // fiery debris chunk with a smoke + flame trail
-  chunk(pos, vel, size = 1) { if (this.debris.length >= this.maxDebris) return; this.debris.push({ p: pos.clone(), v: new THREE.Vector3(vel.x, vel.y, vel.z), t: 0, life: 1.4 + Math.random() * 0.8, s: size }); }
+  // v5.6: big events (building collapses) pass force to recycle the oldest chip instead of being dropped
+  chunk(pos, vel, size = 1, force = false) { if (this.debris.length >= this.maxDebris) { if (!force) return; this.debris.shift(); } this.debris.push({ p: pos.clone(), v: new THREE.Vector3(vel.x, vel.y, vel.z), t: 0, life: 1.4 + Math.random() * 0.8, s: size }); }
   // flamethrower / fire-breath puff (call every frame while breathing)
   flame(pos, dir, len = 1, power = 1) {
     const n = this.n(5 * power);

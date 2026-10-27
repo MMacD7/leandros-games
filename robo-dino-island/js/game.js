@@ -2,7 +2,7 @@
 import * as THREE from './vendor/three.bundle.min.js';
 import { Mech } from './mech.js';
 import { Beast } from './beast.js';
-import { DINOS, DRAGON_KING, MEGA_REX, KRAKEN, MONSTER_MEG, statsFor } from './data.js';
+import { DINOS, DRAGON_KING, MEGA_REX, KRAKEN, MONSTER_MEG, PERSONAS, statsFor } from './data.js';
 import { SeaBeast } from './sea.js';
 import { SURF } from './ocean.js';
 import { Westies, Pup, setScuba } from './westies.js';
@@ -14,6 +14,9 @@ import { Mayhem } from './mayhem.js';
 import { Rider } from './rider.js';
 import { FarmLife, KidMech, KID } from './farm.js';
 import { JungleHype } from './hype.js';
+import { Personas } from './persona.js';
+// v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
+export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
 
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -136,7 +139,7 @@ export class Game {
     this.lockRing = new THREE.Mesh(lockGeo, new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.lockRing.visible = false; this.scene.add(this.lockRing);
     this.dummy = { pos: new THREE.Vector3(), alive: true, mech: { height: 0 }, radius: 1.5 };
-    this.shots = []; this.orbs = []; this.timers = []; this.slowmo = 0; this.level = 'jungle'; this.hype = new JungleHype(this); this.swoop = null; this.koCam = null;
+    this.shots = []; this.orbs = []; this.timers = []; this.slowmo = 0; this.level = 'jungle'; this.hype = new JungleHype(this); this.swoop = null; this.koCam = null; this.collapseCam = null; this.collapseShots = 0; this.personas = new Personas(this); this.robos = true;
     this.mh = new Mayhem(this);
     this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
     this.westies = new Westies(this);
@@ -153,6 +156,7 @@ export class Game {
     if (this.player) this.player.remove();
     let def = DINOS.find(d => d.id === this.save.selected) || DINOS[0]; const oc = this.world && this.world.ocean, by = id => DINOS.find(d => d.id === id);
     if (oc && !def.sea && !def.westie) def = by(this.save.seaSel) || by('shark'); else if (!oc && def.sea) def = by(this.save.landSel) || by('rex'); // v5: sea creatures swim in the Deep Sea, land dinos stomp on land
+    def = this.unrobo(def); // v5.6: Robo Dinos OFF → a regular dino
     if (this.world && this.world.farm) { def = KID; if (this.farm) { this.farm.riding = false; this.farm.kidSpeed = null; } } // v5.1: on the farm you ARE Leandro
     const p = new Dino(this, def, false); this.player = p; if (def.farmKid) { p.mech.setRide(false); p.mech.mud = 0; } if (def.westie) setScuba(p.mech.w, oc); // Ricky / Bobby dive in scuba gear this.mountRider();
     if (atArena) p.place(ARENA.x - 30, ARENA.z, Math.PI / 2); else p.place(BASE.x, BASE.z - 6, Math.PI);
@@ -160,10 +164,12 @@ export class Game {
     if (this.hud.actions) this.hud.actions(def);
     return p;
   }
-  clearEnemies() { this.enemies.forEach(e => e.remove()); this.enemies = []; }
+  clearEnemies() { this.enemies.forEach(e => e.remove()); this.enemies = []; if (this.personas) this.personas.clear(); }
+  isRobot(def) { return !!def && !def.real && !def.westie && !def.sea && !def.farmKid && !def.dragon && !def.boss; }
+  unrobo(def) { if (this.robos !== false || !this.isRobot(def)) return def; return DINOS.find(d => d.id === UNROBO[def.id]) || DINOS.find(d => d.id === 'trex'); }
   spawnEnemy(x, z, level, defId) {
     // wild island life is a mix of real dinos and robots (alternating-ish so both always show up)
-    this.mixN = (this.mixN || 0) + 1; const wantReal = this.r() < 0.35 ? this.r() < 0.5 : this.mixN % 2 === 0;
+    this.mixN = (this.mixN || 0) + 1; const wantReal = this.robos === false ? true : this.r() < 0.35 ? this.r() < 0.5 : this.mixN % 2 === 0;
     let pickFrom;
     const roidNow = this.r() < 0.3 && this.level !== 'ocean'; // v5: the supercharged dinos show up everywhere (on land)
     if (roidNow) pickFrom = DINOS.filter(d => ROID.includes(d.id) && !(d.fly && this.mode === 'battle' && this.level !== 'peak'));
@@ -176,11 +182,13 @@ export class Game {
     else if (this.level === 'ocean') { // v5 Deep Sea: sharks, rays, octopuses, jellyfish, anglers, serpents, crabs (+ a rare megalodon)
       const OCEAN = ['shark', 'stingray', 'octopus', 'jellyfish', 'angler', 'serpent', 'crab', 'shark']; if (this.r() < 0.12) OCEAN.push('megalodon'); pickFrom = DINOS.filter(d => OCEAN.includes(d.id)); }
     else { const PEAK_ONLY = ['giga', 'allo', 'dilo', 'gmech', 'dblast']; // Jungle Island keeps its classic cast (+ Pachy and Para); the big new hunters live on Dragon Peak
-      pickFrom = DINOS.filter(d => d.real === wantReal && !d.dragon && !d.westie && !ROID.includes(d.id) && !PEAK_ONLY.includes(d.id) && !(d.fly && this.mode === 'battle')); }
-    const oc = this.level === 'ocean'; pickFrom = pickFrom.filter(d => !d.westie && (oc ? d.sea : !d.sea)); if (!pickFrom.length) pickFrom = DINOS.filter(d => d.real && !d.westie && !d.dragon && (oc ? d.sea : !d.sea));
-    const def = defId ? DINOS.find(d => d.id === defId) : pickFrom[(this.r() * pickFrom.length) | 0];
+      pickFrom = DINOS.filter(d => d.real === wantReal && !d.persona && !d.dragon && !d.westie && !ROID.includes(d.id) && !PEAK_ONLY.includes(d.id) && !(d.fly && this.mode === 'battle')); }
+    const oc = this.level === 'ocean'; pickFrom = pickFrom.filter(d => !d.westie && (oc ? d.sea : !d.sea)); if (!pickFrom.length) pickFrom = DINOS.filter(d => d.real && !d.persona && !d.westie && !d.dragon && (oc ? d.sea : !d.sea));
+    // v5.6 personality dinos wander the land levels while exploring (a lot more of them with Robo Dinos OFF)
+    if (!defId && this.mode === 'roam' && !oc && !(this.world && (this.world.farm || this.world.ocean)) && this.r() < (this.robos === false ? 0.35 : 0.12)) pickFrom = PERSONAS;
+    const def = this.unrobo(defId ? DINOS.find(d => d.id === defId) : pickFrom[(this.r() * pickFrom.length) | 0]);
     const e = new Dino(this, def, true, level); e.place(x, z, this.r() * 6.28); e.ai.home.set(x, 0, z); e.laserT = 1 + this.r(); e.missileT = 2 + this.r() * 3; e.meleeT = 2;
-    this.enemies.push(e); if (this.hype) this.hype.onSpawn(e); return e;
+    this.enemies.push(e); if (def.persona) { e.persona = def.persona; this.personas.n.spawned++; } if (this.hype) this.hype.onSpawn(e); return e;
   }
   roamSpawnPoint() {
     for (let t = 0; t < 40; t++) {
@@ -233,7 +241,7 @@ export class Game {
     if (this.level === 'peak') return this.dragonKing();
     if (this.level === 'city') return this.megaRex();
     if (this.level === 'ocean') return this.krakenBoss();
-    const b = this.battle, k = (b.wave / 3) | 0, real = k % 2 === 0, base = DINOS.find(d => d.id === (real ? 'trex' : 'rex')), S = 2.1;
+    const b = this.battle, k = (b.wave / 3) | 0, real = k % 2 === 0 || this.robos === false, base = DINOS.find(d => d.id === (real ? 'trex' : 'rex')), S = 2.1;
     const def = { ...base, id: 'boss-' + base.id, name: real ? 'TITAN T-REX' : 'MEGA ROBO-REX', scale: base.scale * S, radius: (base.radius ?? 2.4 * base.scale) * S, boss: true };
     const e = new Dino(this, def, true, 4); e.boss = true; e.place(ARENA.x + 20, ARENA.z, -Math.PI / 2); e.ai.home.copy(ARENA); e.ai.state = 'chase';
     const hp = 520 + 180 * (k - 1); e.st = { ...e.st, hp, speed: e.st.speed * 0.9, laser: e.st.laser * 1.8, melee: e.st.melee * 1.5, bite: e.st.bite * 1.3, missiles: real ? 0 : 3, missileCD: 6, rate: real ? e.st.rate : 0.2 };
@@ -821,6 +829,7 @@ export class Game {
       if (this.battle.t <= 0) this.endBattle();
     }
     if (this.hype) this.hype.update(dt);
+    if (this.personas) this.personas.update(dt);
     this.mh.update(dt);
     this.updateShots(dt);
     this.updateOrbs(dt);
@@ -867,6 +876,7 @@ export class Game {
     const battle = this.mode === 'battle';
     const pSafe = !battle && Math.hypot(p.pos.x - this.world.baseGroup.position.x, p.pos.z - this.world.baseGroup.position.z) < 12; // repair pad is a safe zone
     const pAlive = p.alive && !pSafe;
+    if (e.def.persona && this.personas) { this.personas.think(e, dt, p, dist, toP, pAlive); return; } // v5.6 personality dinos
     if (ai.state === 'patrol') {
       if (!ai.wp || ai.t <= 0 || Math.hypot(ai.wp.x - e.pos.x, ai.wp.z - e.pos.z) < 4) { const a = this.r() * 6.28; ai.wp = new THREE.Vector3(ai.home.x + Math.cos(a) * 30, 0, ai.home.z + Math.sin(a) * 30); ai.t = 8; }
       const d = new THREE.Vector3(ai.wp.x - e.pos.x, 0, ai.wp.z - e.pos.z).normalize(); e.move(dt, d, 0.4, false);
@@ -977,6 +987,18 @@ export class Game {
     this.mh.celebrate(); this.later(2.9, () => { if (this.battle === b) this.hud.results(b, bonus); });
   }
 
+  // v5.6 ROOT CAUSE of "collapses are hard to see": the chase camera sat ~13 m behind the dino at a low pitch, so a 40-70 m tower
+  // was mostly out of frame (top and middle never on screen), and pulling straight back just put the next building in the way.
+  // So: a raised crane shot whose yaw is chosen (once, when the tower starts to go) for a clear line of sight to the tower and to
+  // where it lands, checked against the standing buildings; it prefers the angle closest to behind the player.
+  pickCollapseShot(CC, p, c) { const b = CC.b, C = this.world.city, gy = this.world.height(b.x, b.z), f = b.fdir || new THREE.Vector3(0, 0, 1);
+    CC.dist = Math.min(95, b.h * 1.1 + 20); CC.pitch = 0.38; CC.yaw = Math.atan2(p.pos.x - b.x, p.pos.z - b.z); if (!C || !C.losBlocked) return;
+    const tg = new THREE.Vector3((b.x + p.pos.x) / 2, gy + b.h * 0.45, (b.z + p.pos.z) / 2), looks = [new THREE.Vector3(b.x, gy + b.h * 0.5, b.z), new THREE.Vector3(b.x, gy + b.h * 0.9, b.z), new THREE.Vector3(b.x + f.x * b.h * 0.6, gy + 3, b.z + f.z * b.h * 0.6), new THREE.Vector3(p.pos.x, p.pos.y + 2, p.pos.z)];
+    let best = null; const base = CC.yaw;
+    for (const off of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.6, -1.6, 2.1, -2.1, Math.PI]) for (const pk of [0.38, 0.62]) { const y = base + off;
+      const cp = new THREE.Vector3(tg.x + Math.sin(y) * Math.cos(pk) * CC.dist, tg.y + Math.sin(pk) * CC.dist, tg.z + Math.cos(y) * Math.cos(pk) * CC.dist);
+      const bl = looks.reduce((n, L) => n + C.losBlocked(cp, L, b), 0), score = bl * 10 + Math.abs(off) + (pk > 0.5 ? 0.5 : 0); if (!best || score < best.score) best = { score, y, pk, bl }; if (bl === 0 && off === 0 && pk === 0.38) break; }
+    CC.yaw = best.y; CC.pitch = best.pk; CC.blocked = best.bl; this.collapseClear = (this.collapseClear || 0) + (best.bl === 0 ? 1 : 0); }
   updateCamera(dt, inp) {
     const p = this.player, c = this.cam, h = p.mech.height;
     // auto-follow behind the dino while moving (unless the player is steering the camera)
@@ -986,10 +1008,17 @@ export class Game {
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
     if (sk) { dist = lerp(dist, Math.max(dist, W.stage.need), sk); if (!inp.looking) c.yaw += angDiff(c.yaw, W.stage.yaw) * Math.min(1, dt * 3) * sk; }
+    // v5.6 collapse camera: when Leandro brings a building down, ease back + up and turn so the whole tower is in frame
+    const CC = this.collapseCam; let ck = 0;
+    if (CC) { CC.t += dt; const b = CC.b; ck = Math.min(1, CC.t / 0.45) * Math.min(1, Math.max(0, (CC.dur - CC.t) / 0.9)); if (CC.t >= CC.dur || !this.world.city) this.collapseCam = null;
+      else { this.collapseShots++; if (CC.yaw === undefined) this.pickCollapseShot(CC, p, c);
+        dist = lerp(dist, Math.max(dist, CC.dist), ck); if (!inp.looking) c.yaw += angDiff(c.yaw, CC.yaw) * Math.min(1, dt * 3) * ck; } }
     const tgt = tmp.set(p.pos.x, p.pos.y + h * 0.82, p.pos.z);
+    if (CC && ck > 0) { const b = CC.b, gy = this.world.height(b.x, b.z); tgt.lerp(new THREE.Vector3((b.x + p.pos.x) / 2, gy + b.h * 0.45, (b.z + p.pos.z) / 2), ck); } // same aim point pickCollapseShot checked
     if (this.hype && (this.swoop || this.koCam)) dist = this.hype.camera(dt, dist, tgt, c, p, inp); // v5.4 KO punch-in + surprise / boss swoop
-    c.dist = lerp(c.dist, dist, Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : 3)));
-    const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, tgt.y + Math.sin(c.pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
+    c.dist = lerp(c.dist, dist, Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : CC ? 4 : 3)));
+    const pitch = CC && ck > 0 && CC.pitch !== undefined ? lerp(c.pitch, CC.pitch, ck) : c.pitch; // v5.6: the collapse shot rises above the rooftops
+    const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(pitch) * c.dist, tgt.y + Math.sin(pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(pitch) * c.dist);
     const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
     if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
     c.pos.lerp(cp, Math.min(1, dt * 8)); c.look.lerp(tgt, Math.min(1, dt * 12));
