@@ -61,6 +61,12 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
     * Ricky and Bobby's farm arrival line is "Look it's Ricky and Bobby, they are going to POOOOPY!", big, bouncy and spoken.
     * Bad David arrives shouting "NOOO DAVIDD!" then "THATS NOT FUNNY DAVID!!", and runs 2 or 3 quick goofy laps around Leandro (or the horse or tractor he's on) before every prank.
     * Leandro now wears a green-and-white hooped football kit with white shorts and hooped socks, with no crest or logo. The backpack is gone everywhere.
+* **v5.4: Jungle Island goes WILD (level one only; the core gameplay is unchanged).**
+  * Dinos make dramatic entrances, stomping in with a ground-shaking roar and a dust burst.
+  * Every hit you land is meatier: a hit flash, flying stars, a burst ring, a punchy thump and a little camera shake. Keep hitting to build combos, and big comic callouts pop up: **SMASH!**, **MEGA!** and **DINO-MITE!**
+  * Finishing a dino off brings a slow-motion KO with a camera punch-in and a star burst.
+  * Mid-level surprise: the volcano rumbles and smokes, then a **STAMPEDE** thunders through while the camera swoops out to show the herd. In battles, the boss reveal gets a camera swoop too.
+  * There are shorter lulls between new arrivals, the music builds as the action heats up, and pickups sparkle.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 
 ## Modes

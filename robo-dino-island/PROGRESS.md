@@ -146,5 +146,18 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Big walk-in chicken coop with 6 nest boxes. Collecting eggs increases the egg counter, with a golden egg about 15% of the time. Entering the coop makes the chickens panic (feathers and clucks).
 - [x] SUPER STINKY button with a ~4 s cooldown: wind-up wobble and rumble, a layered long wet blast, a camera shake, a big brown cloud, stink lines and 2 buzzing flies. Nearby animals faint and pop back up, then 2 to 4 generic cartoon visitors walk up, shout "EEEEWWW!" (bubble plus voice), hold their nose and run off.
 - [x] Version v5.3, and sw.js regenerated.
-- [ ] Next: v5.4 Jungle Island excitement, v5.5 sea turtle, v5.6 city collapses, pause/home, Robo Dinos toggle and new dinos (work in progress, kept out of this build).
+- [x] (v5.4 Jungle Island excitement shipped next; see below.)
+
+## v5.4 (Oct 27, 2026 ET): Jungle Island excitement (level one only)
+- [x] New js/hype.js (JungleHype). It's active only on Jungle Island, and the other 4 levels are untouched.
+  - Dramatic entrances: a roar, ground shake, dust and rings, throttled to one every ~3 s.
+  - Hit FX: flash, stars, burst ring, a punch thump and shake.
+  - Combo callouts (SMASH! at 3, MEGA! at 6, DINO-MITE! at 10, then every 8 more), shown in `#callout` and spoken.
+  - Slow-mo finishing KO with a camera punch-in.
+  - Volcano rumble + STAMPEDE surprise roughly every 2.5-3.5 minutes, with a camera swoop, plus a swoop on the battle boss reveal.
+  - Music intensity builds with nearby fighting, the combo and time spent playing.
+  - Sparkling pickups.
+- [x] game.js: small hooks (spawn, hit, KO, boss reveal, camera). Roam spawns arrive every 1.6 s, or 0.9 s when fewer than 4 dinos are left (was 2.5 s), on Jungle Island only.
+- [x] Version v5.4, and sw.js regenerated.
+- [ ] Next: v5.5 sea turtle, then v5.6 city collapses, pause/home, Robo Dinos toggle and new dinos.
 
