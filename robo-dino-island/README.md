@@ -53,6 +53,14 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
     * The horse does a goofy neigh-laugh, a buck-dance and a mane flip. A gallop fart gives a **fart-boost TURBO** with a puffy cloud trail.
     * Ricky & Bobby get the zoomies, slip in the mud, play tug-of-war with a sock until it rips, and do a tiny poop. One of them does a toot that scares them both, and then they fart-rocket away.
     * Bad David has bigger slapstick (somersaults, spins, the odd pratfall) and 2 new pranks, for 10 in all: a **fart-powered pogo stick**, and a **rope swing** into the duck pond (or into the nearest mud puddle when the pond is far away).
+  * **v5.3: more farm fun.**
+    * **Drive the tractor!** Walk up to it and tap **DRIVE**. It goes putt-putt, puffs exhaust smoke, bounces on its springs, squishes poop piles and pushes hay bales. It's slower than a galloping horse. **HONK** plays a silly moo-horn, and **HOP OFF** gets down. Ricky and Bobby chase the tractor.
+    * **A big bouncy castle**, colorful and inflatable, with wobbly turrets. Walk onto it and Leandro bounces high with a boing and a squeak. **JUMP** gives bigger bounces with flips. Animals, Ricky and Bobby and Bad David hop on too, with the odd fart-bounce.
+    * **A bigger chicken coop** that Leandro can walk into to collect eggs, with a golden egg now and then. The chickens flap out in a panic with feathers and clucks.
+    * **SUPER STINKY** button (🤢): a wind-up wobble and rumble, then a long, wet blast with a camera shake and a big brown cloud with stink lines and buzzing flies. Nearby animals faint and pop back up. Then 2 to 4 cartoon visitors (a farmer, a lady in a big hat, a kid, a mail carrier, a gardener) walk up, shout "EEEEWWW!", hold their nose and run away. There's a short cooldown of about 4 seconds.
+    * Ricky and Bobby's farm arrival line is "Look it's Ricky and Bobby, they are going to POOOOPY!", big, bouncy and spoken.
+    * Bad David arrives shouting "NOOO DAVIDD!" then "THATS NOT FUNNY DAVID!!", and runs 2 or 3 quick goofy laps around Leandro (or the horse or tractor he's on) before every prank.
+    * Leandro now wears a green-and-white hooped football kit with white shorts and hooped socks, with no crest or logo. The backpack is gone everywhere.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 
 ## Modes

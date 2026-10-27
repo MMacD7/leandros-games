@@ -137,3 +137,14 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] westies.js (farm only): zoomies, mud slip, sock tug-of-war, a tiny dog poop, a toot that scares them, and a fart-rocket exit.
 - [x] Version v5.2, and sw.js regenerated.
 
+## v5.3 (Oct 27, 2026 ET): farm-only release
+- [x] Ricky and Bobby's farm intro is exactly "Look it's Ricky and Bobby, they are going to POOOOPY!": a big bouncy on-screen shout (`#shout`), also spoken by voice.js, with no other intro line on the farm.
+- [x] Bad David's entrance shouts "NOOO DAVIDD!" then "THATS NOT FUNNY DAVID!!" (big bubbles plus voice), followed by 2 or 3 fast goofy laps (1.5 to 2 s) around Leandro, the horse or the tractor before every one of the 10 pranks, with giggles, dust puffs and his tongue out.
+- [x] Drivable tractor: DRIVE / HOP OFF, a putt-putt engine, exhaust puffs, bouncy suspension, a moo-horn HONK, poop squishing and hay-bale pushing. It's slower than the horse.
+- [x] Leandro's Celtic-style hooped kit (#018749 and white), white shorts and hooped socks. No crest, sponsor or logo, and no backpack anywhere (rider.js).
+- [x] Bouncy castle: wobbly turrets and a squishy floor. Auto-bounce with a boing and a squeak, and JUMP for big bounces with flips. Guest animals, the dogs and Bad David bounce on it too, with fart-bounces.
+- [x] Big walk-in chicken coop with 6 nest boxes. Collecting eggs increases the egg counter, with a golden egg about 15% of the time. Entering the coop makes the chickens panic (feathers and clucks).
+- [x] SUPER STINKY button with a ~4 s cooldown: wind-up wobble and rumble, a layered long wet blast, a camera shake, a big brown cloud, stink lines and 2 buzzing flies. Nearby animals faint and pop back up, then 2 to 4 generic cartoon visitors walk up, shout "EEEEWWW!" (bubble plus voice), hold their nose and run off.
+- [x] Version v5.3, and sw.js regenerated.
+- [ ] Next: v5.4 Jungle Island excitement, v5.5 sea turtle, v5.6 city collapses, pause/home, Robo Dinos toggle and new dinos (work in progress, kept out of this build).
+
