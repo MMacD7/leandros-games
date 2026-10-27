@@ -245,12 +245,12 @@ export function updateFarmWorld(W, dt) {
 
 // ---------------- animals (each = body + head + legs + tail meshes, vertex coloured) ----------------
 export const KINDS = {
-  cow: { name: 'cow', food: 'hay', snd: 'moo', farts: ['rumbly', 'long', 'wet'], poop: 1, speed: 1.4, r: 1.3, emoji: '🐮', pen: 'cow', n: 3 },
-  pig: { name: 'piggy', food: 'slop', snd: 'oink', farts: ['wet', 'squeaky', 'short'], poop: 0.8, speed: 1.8, r: 0.9, emoji: '🐷', pen: 'pig', n: 3 },
-  chicken: { name: 'chicken', food: 'corn', snd: 'cluck', farts: ['squeaky', 'tiny'], poop: 0.45, speed: 2.2, r: 0.45, emoji: '🐔', pen: 'chick', n: 6 },
-  sheep: { name: 'sheep', food: 'hay', snd: 'baa', farts: ['short', 'trumpet'], poop: 0.6, speed: 1.3, r: 0.9, emoji: '🐑', pen: 'sheep', n: 3 },
-  goat: { name: 'goat', food: 'carrot', snd: 'maa', farts: ['trumpet', 'squeaky'], poop: 0.6, speed: 1.7, r: 0.8, emoji: '🐐', pen: 'sheep', n: 2 },
-  horse: { name: 'horse', food: 'apple', snd: 'neigh', farts: ['long', 'trumpet'], poop: 0.9, speed: 1.5, r: 1.3, emoji: '🐴', pen: 'horse', n: 1 },
+  cow: { name: 'cow', food: 'hay', snd: 'moo', farts: ['rumbly', 'long', 'wet', 'bubbly', 'trombone'], poop: 1, speed: 1.4, r: 1.3, emoji: '🐮', pen: 'cow', n: 3 },
+  pig: { name: 'piggy', food: 'slop', snd: 'oink', farts: ['wet', 'squeaky', 'bubbly', 'stutter', 'squeakup'], poop: 0.8, speed: 1.8, r: 0.9, emoji: '🐷', pen: 'pig', n: 3 },
+  chicken: { name: 'chicken', food: 'corn', snd: 'cluck', farts: ['squeaky', 'tiny', 'squeakup'], poop: 0.45, speed: 2.2, r: 0.45, emoji: '🐔', pen: 'chick', n: 6 },
+  sheep: { name: 'sheep', food: 'hay', snd: 'baa', farts: ['short', 'trumpet', 'encore', 'raspberry'], poop: 0.6, speed: 1.3, r: 0.9, emoji: '🐑', pen: 'sheep', n: 3 },
+  goat: { name: 'goat', food: 'carrot', snd: 'maa', farts: ['trumpet', 'squeaky', 'stutter', 'raspberry'], poop: 0.6, speed: 1.7, r: 0.8, emoji: '🐐', pen: 'sheep', n: 2 },
+  horse: { name: 'horse', food: 'apple', snd: 'neigh', farts: ['long', 'trumpet', 'trombone', 'encore'], poop: 0.9, speed: 1.5, r: 1.3, emoji: '🐴', pen: 'horse', n: 1 },
 };
 function part(parent, list, x = 0, y = 0, z = 0) { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); if (list && list.length) { const m = new THREE.Mesh(mergeGeometries(list), mats().vc); m.castShadow = true; g.add(m); g.userData.mesh = m; } return g; }
 function eyes(L, x, y, z, r = 0.06, white = true) { for (const s of [-1, 1]) { if (white) L.push(C(SPH(r, 8, 6), 0xffffff, s * x, y, z)); L.push(C(SPH(r * 0.6, 6, 5), 0x111111, s * (x + r * 0.15), y + r * 0.05, z + r * (white ? 0.55 : 0))); L.push(C(SPH(r * 0.18, 4, 3), 0xffffff, s * x + r * 0.2, y + r * 0.35, z + r * (white ? 0.95 : 0.5))); } }
@@ -324,6 +324,8 @@ function icon(kind) {
     else if (kind === 'star') { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 22 : 54; g.lineTo(64 + Math.cos(a) * r, 66 + Math.sin(a) * r); } g.closePath(); out('#ffd23a', '#8a5a00'); }
     else if (kind === 'stink') { g.lineCap = 'round'; for (let k = 0; k < 3; k++) { g.beginPath(); for (let y = 0; y <= 100; y += 4) g.lineTo(30 + k * 34 + Math.sin(y * 0.12 + k) * 9, 114 - y); g.lineWidth = 14; g.strokeStyle = '#3a6a10'; g.stroke(); g.lineWidth = 8; g.strokeStyle = '#9be04a'; g.stroke(); } }
     else if (kind === 'bang') { g.beginPath(); g.arc(64, 64, 52, 0, TAU); out('#ffd23a', '#7a4a00'); g.font = 'bold 92px Arial, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#e0302a'; g.fillText('!', 64, 98); }
+    else if (kind === 'eyes') { for (const x of [36, 92]) { g.beginPath(); g.arc(x, 64, 30, 0, TAU); out('#ffffff', '#222222', 5); g.beginPath(); g.arc(x + 8, 70, 13, 0, TAU); g.fillStyle = '#111'; g.fill(); } }
+    else if (kind === 'feather') { g.beginPath(); g.ellipse(64, 60, 18, 50, 0.5, 0, TAU); out('#ffffff', '#b0b0b0', 4); g.beginPath(); g.moveTo(40, 104); g.lineTo(88, 18); g.lineWidth = 4; g.strokeStyle = '#c0c0c0'; g.stroke(); }
     else if (kind === 'sparkle') { g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, r = i % 2 ? 14 : 58; g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); } g.closePath(); out('#fff6b0', '#c89a00', 4); }
     else { bubble(); // food wish bubbles
       if (kind === 'hay') { g.beginPath(); g.rect(30, 40, 68, 40); out('#e8c65a', '#8a6a1a', 5); g.strokeStyle = '#a8862c'; g.lineWidth = 3; for (let x = 36; x < 96; x += 8) { g.beginPath(); g.moveTo(x, 42); g.lineTo(x + 4, 78); g.stroke(); } g.fillStyle = '#c0392b'; g.fillRect(48, 40, 6, 40); g.fillRect(74, 40, 6, 40); }
@@ -356,7 +358,7 @@ class Animal {
   constructor(F, kind, i) {
     this.F = F; this.kind = kind; this.K = KINDS[kind]; this.idx = i; this.id = kind + i; Object.assign(this, buildAnimal(kind, i)); this.name = this.K.name;
     this.pen = FARM.pens[this.K.pen]; this.pos = V(); this.yaw = Math.random() * TAU; this.speed = 0; this.ph = Math.random() * 6; this.state = 'idle'; this.t = Math.random() * 3; this.dur = 2;
-    this.goal = null; this.path = null; this.fullT = 0; this.headP = 0; this.hop = 0; this.tailUp = 0; this.wig = 0; this.free = null; this.sndT = 4 + Math.random() * 14; this.cream = null; this.muddy = kind === 'pig' && i === 1;
+    this.goal = null; this.path = null; this.fullT = 0; this.headP = 0; this.hop = 0; this.tailUp = 0; this.wig = 0; this.free = null; this.sndT = 4 + Math.random() * 14; this.cream = null; this.muddy = kind === 'pig' && i === 1; this.sq = 0; this.bug = 0; this.fluff = 0; this.buck = 0; this.flip = 0; this.fwd = 0; this.body0 = this.body.scale.clone(); this.head0 = this.head.scale.clone();
     this.bub = new THREE.Sprite(new THREE.SpriteMaterial({ map: icon(this.K.food), transparent: true, depthWrite: false })); this.bub.scale.setScalar(0); this.bub.renderOrder = 5; F.root.add(this.bub);
     F.root.add(this.root);
   }
@@ -389,13 +391,21 @@ class Animal {
         if (Math.random() < 0.5) this.say(0.8); if (this.scatterN > 4) this.goHome(1.6); } break; }
       case 'wait': this.speed = lerp(this.speed, 0, Math.min(1, dt * 8)); if (F.kidPos) this.face(F.kidPos.x, F.kidPos.z, dt); if (T > 1.5) this.set('idle'); break;
       case 'eat': this.speed = 0; if (F.kidPos) this.face(F.kidPos.x, F.kidPos.z, dt, 3); headW = 0.35 + Math.abs(Math.sin(T * 9)) * 0.25; if (T > 1.3) { this.set('happy'); F.onFed(this); } break;
-      case 'happy': this.speed = 0; hopW = Math.abs(Math.sin(T * 11)) * (this.kind === 'chicken' ? 0.35 : 0.3); wigW = 0.6; flap = 1; if (T > 0.95) { this.set('fart'); F.fartFrom(this); } break;
-      case 'fart': this.speed = 0; tailW = 1; wigW = T < 0.5 ? 1 : 0; hopW = T < 0.25 ? Math.sin(T / 0.25 * Math.PI) * 0.2 : 0; if (T > 0.85) { if (Math.random() < K.poop) this.set('poop'); else { this.set('idle'); this.dur = 2; } } break;
+      case 'happy': this.speed = 0; hopW = Math.abs(Math.sin(T * 11)) * (this.kind === 'chicken' ? 0.35 : 0.3); wigW = 0.6; flap = 1;
+        if (!this.reacted) { this.reacted = true; F.silly(this); } // v5.2: each kind has its own over-the-top happy reaction
+        if (this.kind === 'pig') { wigW = 1.8; hopW = Math.abs(Math.sin(T * 14)) * 0.45; } // happy piggy wiggle
+        if (this.kind === 'horse') { this.buck = 1; hopW = Math.abs(Math.sin(T * 8)) * 0.5; } // buck-dance
+        if (T > 0.95) { this.reacted = false; this.set('fart'); F.fartFrom(this); } break;
+      case 'fart': this.speed = 0; tailW = 1; wigW = T < 0.5 ? 1.3 : 0; hopW = T < 0.4 ? Math.sin(T / 0.4 * Math.PI) * (this.kind === 'pig' ? 0.9 : 0.45) : 0; // comedic little fart-jump
+        if (this.kind === 'pig' && T < 0.4) { const k = dt * 3.5; this.pos.x += Math.sin(this.yaw) * k; this.pos.z += Math.cos(this.yaw) * k; } // fart-propelled piggy hop
+        if (T > 0.85) { if (this.kind === 'goat' && F.goatButt(this)) break; if (Math.random() < K.poop) this.set('poop'); else { this.set('idle'); this.dur = 2; } } break;
+      case 'butt': { const b = this.butt; flap = 0; if (!b) { this.set('idle'); break; } const L = this.steer(b.x, b.z, K.speed * 3, dt, 6); headW = 0.5;
+        if (L < 2.2 || T > 3.5) { F.knockBale(b, this.pos, 2.5); F.hayBurst(this.mouthPt(V())); sfx.boing(clamp(1.2 - F.camDist(this.pos) / 45, 0.05, 1), 0.8); F.emote('star', this, 2); this.butt = null; this.sq = 1; F.n.butts++; this.set('idle'); this.dur = 2; } break; }
       case 'poop': this.speed = 0; tailW = 1; if (T > 0.3 && !this.pooped) { this.pooped = true; F.poopFrom(this); } if (T > 0.9) { this.pooped = false; this.set('idle'); this.dur = 2; } break;
       case 'tickled': this.speed = 0; wigW = 1.4; hopW = Math.abs(Math.sin(T * 14)) * 0.12; headW = -0.3; if (T > 0.4 && !this.giggled) { this.giggled = true; this.say(1); } if (T > 2.4) { this.giggled = false; this.set('fart'); F.fartFrom(this, 1.2); } break;
       case 'rodeo': { const c = this.rodeoC, a = (this.rodeoA += dt * 0.9), gx = c.x + Math.cos(a) * 6, gz = c.z + Math.sin(a) * 6; this.steer(gx, gz, 6, dt, 6); hopW = Math.abs(Math.sin(T * 12)) * 0.12; if (Math.random() < dt * 1.6) this.say(1); break; }
       case 'ridden': break;
-      case 'title': this.speed = 0; headW = Math.sin(T * 1.3) > 0.7 ? -0.35 : 0; if (Math.random() < dt * 0.15) this.say(0.6); break;
+      case 'title': this.speed = 0; headW = Math.sin(T * 1.3) > 0.7 ? -0.35 : 0; if (this.kind === 'horse' && Math.random() < dt * 0.25) this.flip = 1; if (Math.random() < dt * 0.15) this.say(0.6); break;
     }
     // move + stay out of fences/buildings
     if (this.state !== 'ridden') { this.pos.x += Math.sin(this.yaw) * this.speed * dt; this.pos.z += Math.cos(this.yaw) * this.speed * dt; F.W.collide(this.pos, K.r * 0.7, false);
@@ -417,7 +427,12 @@ class Animal {
     this.head.rotation.x = this.headP + (sp > 0.5 ? Math.sin(this.ph * 2) * 0.05 : 0);
     if (this.tail) { this.tail.rotation.x = this.tailUp * (this.kind === 'pig' ? 0.3 : 1.3); this.tail.rotation.z = Math.sin(F.t * (this.tailUp > 0.5 ? 18 : 4) + this.idx) * (this.kind === 'pig' ? 0.6 : 0.25); }
     const bob = sp > 0.5 ? Math.abs(Math.cos(this.ph)) * 0.05 * L : 0;
-    R.position.set(this.pos.x, this.pos.y + this.hop + bob + (this.state === 'ridden' ? 0 : 0), this.pos.z); R.rotation.set(gal ? Math.sin(this.ph) * 0.06 : 0, this.yaw, Math.sin(F.t * 30) * 0.1 * this.wig);
+    // v5.2 cartoon squash & stretch / bug-eyes / fluff-up / buck / mane flip
+    this.sq = Math.max(0, this.sq - dt * 1.4); const q = this.sq > 0 ? Math.sin((1 - this.sq) * Math.PI * 4) * this.sq : 0; R.scale.set(1 - 0.2 * q, 1 + 0.32 * q, 1 - 0.2 * q);
+    this.bug = Math.max(0, this.bug - dt * 0.9); this.head.scale.copy(this.head0).multiplyScalar(1 + 0.45 * Math.sin(Math.min(1, this.bug * 3) * Math.PI / 2) * (this.bug > 0 ? 1 : 0));
+    this.fluff = Math.max(0, this.fluff - dt * 0.5); const fk = Math.min(1, this.fluff * 2.5) * (1 + 0.06 * Math.sin(F.t * 18)); this.body.scale.set(this.body0.x * (1 + 0.38 * fk), this.body0.y * (1 + 0.22 * fk), this.body0.z * (1 + 0.25 * fk));
+    this.buck = Math.max(0, this.buck - dt * 1.2); this.flip = Math.max(0, this.flip - dt * 1.5); if (this.flip > 0) { this.head.rotation.x -= Math.sin(this.flip * Math.PI) * 0.9; this.head.rotation.z = Math.sin(this.flip * Math.PI * 2) * 0.4; } else this.head.rotation.z = 0;
+    R.position.set(this.pos.x, this.pos.y + this.hop + bob, this.pos.z); R.rotation.set((gal ? Math.sin(this.ph) * 0.06 : 0) + (this.buck > 0 ? Math.sin(F.t * 12) * 0.3 * this.buck : 0), this.yaw, Math.sin(F.t * 30) * 0.1 * this.wig);
     // "I'm hungry for…" bubble
     const want = !F.fed.has(this) && !this.busy && this.state !== 'ridden' && F.active && F.kidPos && Math.hypot(this.pos.x - F.kidPos.x, this.pos.z - F.kidPos.z) < 26 && this.fullT <= 0;
     const s0 = this.bub.scale.x, s1 = want ? 0.95 + (this.kind === 'chicken' ? -0.25 : 0) : 0; const ns = lerp(s0, s1, Math.min(1, dt * 8)); this.bub.scale.setScalar(ns); this.bub.visible = ns > 0.02;
@@ -445,7 +460,9 @@ export class FarmLife {
     this.poops = []; this.prints = []; this.prMesh = new THREE.InstancedMesh(mergeGeometries([C(SPH(1, 10, 4), 0, 0, 0, 0, 0.1, 0.02, 0.16), ...[-0.07, -0.025, 0.02, 0.06].map((x, i) => C(SPH(0.03, 5, 3), 0, x, 0, 0.2 - Math.abs(i - 1.5) * 0.015, 1, 0.5, 1))]), M.print, 140);
     this.prMesh.count = 0; this.prMesh.frustumCulled = false; this.root.add(this.prMesh);
     this.sprites = []; for (let i = 0; i < 36; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: icon('heart'), transparent: true, depthWrite: false })); s.visible = false; s.renderOrder = 6; this.root.add(s); this.sprites.push({ s, life: 0 }); }
-    this.foods = []; this.fed = new Set(); this.goal = 12; this.round = 1; this.n = { feeds: 0, fed: 0, farts: 0, poops: 0, squish: 0, gold: 0, toots: 0, rides: 0, gallopFarts: 0, herds: 0, wins: 0, mud: 0 };
+    this.foods = []; this.fed = new Set(); this.goal = 12; this.round = 1; this.n = { feeds: 0, fed: 0, farts: 0, poops: 0, squish: 0, gold: 0, toots: 0, rides: 0, gallopFarts: 0, herds: 0, wins: 0, mud: 0, butts: 0, eggs: 0, fluffs: 0, bugeyes: 0, feathers: 0, slips: 0, noses: 0, dances: 0, turbos: 0, laughs: 0, flips: 0, boings: 0, starSplats: 0 };
+    this.flyMesh = new THREE.InstancedMesh(mergeGeometries([C(SPH(0.045, 6, 4), 0x111111), C(SPH(1, 6, 4), 0xd8eeff, 0.04, 0.03, 0, 0.05, 0.012, 0.03), C(SPH(1, 6, 4), 0xd8eeff, -0.04, 0.03, 0, 0.05, 0.012, 0.03)]), mats().vc, 48); this.flyMesh.count = 0; this.flyMesh.frustumCulled = false; this.root.add(this.flyMesh);
+    this.eggs = []; this.eggGeo = SPH(0.12, 10, 8); this.eggGeo.scale(1, 1.3, 1);
     this.riding = false; this.sinceGold = 0; this.hintT = 0; this.gfT = 3; this.mudT = 0; this.toastT = 0;
     this.david = new BadDavid(this); this.reset();
   }
@@ -456,7 +473,7 @@ export class FarmLife {
   reset() {
     if (this.riding) this.dismount(true);
     for (const a of this.animals) { a.free = null; a.path = null; a.cream && (a.cream.visible = false); const p = a.homePoint(); a.place(p.x, p.z); a.set('idle', Math.random() * 2); a.fullT = 0; }
-    this.poops.length = 0; this.prints.length = 0; this.fed.clear(); this.round = 1; this.david.stop(); this.syncPoop(); this.bar();
+    this.poops.length = 0; this.prints.length = 0; for (const e of this.eggs || []) this.root.remove(e.m); if (this.eggs) this.eggs.length = 0; this.turboT = 0; this.fed.clear(); this.round = 1; this.david.stop(); this.syncPoop(); this.bar();
     for (const b of this.W.farmData.bales) { b.fallen = false; b.roll = null; b.x = b.x0 ?? b.x; b.z = b.z0 ?? b.z; b.x0 = b.x; b.z0 = b.z; b.m.position.set(b.x, b.y, b.z); b.m.rotation.order = 'XYZ'; b.m.rotation.set(0, b.yaw, 0); b.col.x = b.x; b.col.z = b.z; }
   }
   titlePose(tx, tz) { const H = this.horse; H.free = null; H.place(tx + 3.4, tz - 1, -Math.PI / 2 + 0.35); H.set('title'); }
@@ -480,7 +497,9 @@ export class FarmLife {
     // don't walk through the animals
     for (const a of this.animals) { if (a.state === 'ridden') continue; const dx = p.pos.x - a.pos.x, dz = p.pos.z - a.pos.z, d = Math.hypot(dx, dz), mm = a.K.r + (this.riding ? 1.0 : 0.45); if (d < mm && d > 1e-3) { p.pos.x = a.pos.x + dx / d * mm; p.pos.z = a.pos.z + dz / d * mm; } }
     // galloping farts
-    if (this.riding && p.boosting && p.speedNow > 13) { this.gfT -= dt; if (this.gfT <= 0) { this.gfT = 3 + Math.random() * 3.5; this.n.gallopFarts++; this.fartFrom(this.horse, 1.1, true); this.toast(pick(['💨 The horse tooted while galloping! 😂', '💨 PRRRRT! Giddy-up, stinky!', '💨 Horse power! 😂']), 6); } }
+    if (this.riding && p.boosting && p.speedNow > 13) { this.gfT -= dt; if (this.gfT <= 0) { this.gfT = 3 + Math.random() * 3.5; this.n.gallopFarts++; this.fartFrom(this.horse, 1.1, true); this.turboT = 1.4; this.n.turbos++; p.speedNow = Math.max(p.speedNow, p.st.speed * 1.9); if (Math.random() < 0.5) this.horseLaugh(); this.toast(pick(['💨 The horse tooted while galloping! 😂', '💨 PRRRRT! Giddy-up, stinky!', '💨 Horse power! 😂']), 6); } }
+    // v5.2 fart-boost turbo: a burst of speed with a puffy cloud trail
+    if (this.turboT > 0) { this.turboT -= dt; if (this.riding) { p.speedNow = Math.max(p.speedNow, p.st.speed * 1.6); this.turboPuffT = (this.turboPuffT || 0) - dt; if (this.turboPuffT <= 0) { this.turboPuffT = 0.09; const b = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); this.cloud(V(p.pos.x + b.x * 1.4, p.pos.y + 1.6, p.pos.z + b.z * 1.4), b, 3, 0.8); } } }
     // button labels
     const near = this.nearFood(p), fl = near ? FOOD_EMOJI[near.K.food] : '🌽'; if (fl !== this._fl) { this._fl = fl; const b = document.querySelector('#a-laser span'); if (b) b.innerHTML = fl + '<br>FEED'; }
     const ride = this.riding ? 'off' : this.horseNear(p) ? 'near' : 'far'; if (ride !== this._rl) { this._rl = ride; const b = document.querySelector('#a-missile span'), el = $('a-missile');
@@ -517,7 +536,7 @@ export class FarmLife {
     else this.toast(`${a.K.emoji} More snacks for the ${a.name}! Yum!`, 1.5);
   }
   win() {
-    this.n.wins++; const n = this.fed.size; this.bar(); sfx.tada(1); sfx.cheer && sfx.cheer(0.8); music.victory();
+    this.n.wins++; if (this.kid && !this.riding) { this.kid.mech.danceT = 5; this.n.dances++; } const n = this.fed.size; this.bar(); sfx.tada(1); sfx.cheer && sfx.cheer(0.8); music.victory();
     voice.say('Farm Hero! You fed all the animals, Leandro!', { prio: 3, cd: 0, replace: true });
     const el = $('farmwin'); if (el) { const s = $('fw-sub'); if (s) s.textContent = `You fed ${n} hungry animals! 🐮🐷🐔🐑🐐🐴`; el.classList.remove('hidden'); clearTimeout(this._winTO); this._winTO = setTimeout(() => el.classList.add('hidden'), 9000); }
     if (this.g.mh && this.g.mh.firework) { const p = this.kid ? this.kid.pos : FARM.yard; for (let i = 0; i < 5; i++) this.g.later(0.3 + i * 0.45, () => this.g.mh.firework(V(p.x + (Math.random() - 0.5) * 30, (p.y || 4) + 18 + Math.random() * 10, p.z + (Math.random() - 0.5) * 30))); }
@@ -529,38 +548,66 @@ export class FarmLife {
   bar() { const f = $('fb-fed'); if (f) f.textContent = `${Math.min(this.fed.size, this.goal)}/${this.goal}`; const s = $('fb-stars'); if (s) { const k = this.fed.size; s.textContent = [4, 8, 12].map(x => k >= x ? '★' : '☆').join(''); }
     const q = $('fb-poop'); if (q) q.textContent = this.n.poops; const g = $('fb-gold'); if (g) g.textContent = this.n.gold; }
   // ---------- farts + poop ----------
-  cloud(p, dir, n = 8, big = 1) { const fx = this.fx; for (let i = 0; i < fx.n(n); i++) fx.smoke.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.3 * big, y: p.y + (Math.random() - 0.5) * 0.3 * big, z: p.z + (Math.random() - 0.5) * 0.3 * big },
-      vel: { x: dir.x * (1.5 + Math.random() * 2) * big + (Math.random() - 0.5) * big, y: 0.4 + Math.random() * 0.8, z: dir.z * (1.5 + Math.random() * 2) * big + (Math.random() - 0.5) * big }, size: 0.45 * big, size1: 2.2 * big, life: 1.4 + Math.random() * 0.6, r: 0.62, g: 0.78, b: 0.26, alpha: 0.7, drag: 1.6, rv: (Math.random() - 0.5) * 2, fadeIn: 0.05 }); }
+  // v5.2: a BIG bouncy cartoon green fart cloud (puffy balls that pop out fast then billow) + little rising bubbles
+  cloud(p, dir, n = 8, big = 1) { const fx = this.fx; this.n.clouds = (this.n.clouds || 0) + 1;
+    for (let i = 0; i < fx.n(n * 1.3); i++) { const g = Math.random(); fx.smoke.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.4 * big, y: p.y + (Math.random() - 0.5) * 0.4 * big, z: p.z + (Math.random() - 0.5) * 0.4 * big },
+      vel: { x: dir.x * (2 + Math.random() * 3) * big + (Math.random() - 0.5) * 2 * big, y: 0.6 + Math.random() * 1.4, z: dir.z * (2 + Math.random() * 3) * big + (Math.random() - 0.5) * 2 * big }, size: 0.7 * big, size1: 3.4 * big, life: 1.6 + Math.random() * 0.8, r: 0.5 + g * 0.25, g: 0.85 + g * 0.1, b: 0.2 + g * 0.1, alpha: 0.8, drag: 2.4, rv: (Math.random() - 0.5) * 3, fadeIn: 0.03 }); }
+    for (let i = 0; i < fx.n(6 * big); i++) fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.6 * big, y: p.y, z: p.z + (Math.random() - 0.5) * 0.6 * big }, vel: { x: dir.x * 1.5 + (Math.random() - 0.5) * 1.2, y: 1.2 + Math.random() * 1.6, z: dir.z * 1.5 + (Math.random() - 0.5) * 1.2 }, size: 0.12 + Math.random() * 0.12, size1: 0.2, life: 1.2 + Math.random() * 0.6, r: 0.75, g: 1.2, b: 0.4, alpha: 0.75, drag: 1, grav: -0.5 }); // little bubbles
+    fx.ring(p, 1.2 * big, 0x9be04a); }
   fartFrom(a, v = 1, trail = false) {
     this.n.farts++; const near = clamp(1.25 - this.camDist(a.pos) / 50, 0, 1); sfx.fart(pick(a.K.farts), v * near * (a.kind === 'chicken' ? 0.7 : 1));
     const p = a.worldPt(a.rear), back = V(-Math.sin(a.yaw), 0, -Math.cos(a.yaw)); this.cloud(p, back, trail ? 14 : 9, a.kind === 'chicken' ? 0.5 : a.kind === 'cow' || a.kind === 'horse' ? 1.2 : 0.85); this.emote('stink', a, 1, p);
     if (trail) for (let i = 1; i < 5; i++) this.g.later(i * 0.12, () => this.cloud(a.worldPt(a.rear), back, 4, 0.9));
     for (const b of this.animals) if (b !== a && !b.busy && b.kind === 'chicken' && b.pos.distanceTo(a.pos) < 4) this.startle(b, a.pos, 1.2);
+    a.sq = 1; this.phew(a.pos);
   }
+  // v5.2: Leandro holds his nose and fans the air when a fart goes off near him
+  phew(at) { const k = this.kid; if (!k || this.riding || !this.active) return; if (Math.hypot(k.pos.x - at.x, k.pos.z - at.z) > 7.5) return; k.mech.noseT = 1.8; this.n.noses++; if (Math.random() < 0.35) this.toast(pick(['👃 PEE-YOO! Leandro holds his nose! 😂', '👃 Phew! What a stinker!', '👃 Leandro: "Ewww, stinky!" 😂']), 4); }
+  // v5.2: every kind does its own silly happy dance
+  silly(a) { const F = this; const near = clamp(1.2 - this.camDist(a.pos) / 50, 0, 1);
+    if (a.kind === 'cow') { a.bug = 1; this.n.bugeyes++; this.emote('eyes', null, 1, a.mouthPt(V()).add(V(0, 0.6, 0))); sfx.boing(near * 0.7, 0.7); }
+    else if (a.kind === 'chicken') { this.n.feathers++; for (let i = 0; i < this.fx.n(14); i++) this.fx.glow.spawn({ pos: V(a.pos.x, a.pos.y + 0.6, a.pos.z), vel: { x: (Math.random() - 0.5) * 4, y: 2 + Math.random() * 2, z: (Math.random() - 0.5) * 4 }, size: 0.14, size1: 0.1, life: 1.6, r: 1.5, g: 1.5, b: 1.45, alpha: 0.95, grav: 1.2, drag: 2, rv: 6 });
+      this.emote('feather', a, 2); a.sq = 1; if (Math.random() < 0.6 || !this.n.eggs) this.g.later(0.9, () => this.layEgg(a)); }
+    else if (a.kind === 'sheep') { a.fluff = 1.6; this.n.fluffs++; sfx.boing(near * 0.6, 1.3); }
+    else if (a.kind === 'horse') { this.horseLaugh(a); a.flip = 1; }
+    else a.sq = 1; }
+  layEgg(a) { if (this.eggs.length >= 8) { const o = this.eggs.shift(); this.root.remove(o.m); } const m = new THREE.Mesh(this.eggGeo, new THREE.MeshStandardMaterial({ color: Math.random() < 0.15 ? 0x8ad0ff : 0xfff6e8, roughness: 0.5 }));
+    const p = a.worldPt(a.rear); m.position.set(p.x, this.W.height(p.x, p.z) + 0.15, p.z); m.castShadow = true; this.root.add(m); this.eggs.push({ m, t: 0 }); this.n.eggs++; sfx.plop(0.5); sfx.boing(0.4, 1.6);
+    this.emote('sparkle', null, 2, m.position.clone().setY(m.position.y + 0.4)); this.toast('🥚 SURPRISE! The chicken laid an egg! 😂', 5); }
+  horseLaugh(H = this.horse) { this.n.laughs++; sfx.laughNeigh(clamp(1.2 - this.camDist(H.pos) / 50, 0.1, 1)); H.flip = 1; this.n.flips++; }
+  goatButt(a) { const b = this.nearestBale(a.pos, 16); if (!b || Math.random() < 0.3) return false; a.butt = b; a.set('butt'); return true; }
+  hayBurst(p) { for (let i = 0; i < this.fx.n(16); i++) this.fx.glow.spawn({ pos: p, vel: { x: (Math.random() - 0.5) * 6, y: 2 + Math.random() * 4, z: (Math.random() - 0.5) * 6 }, size: 0.12, size1: 0.08, life: 1, r: 1.4, g: 1.15, b: 0.45, alpha: 1, grav: 7, rv: 8 }); }
   poopFrom(a) { const p = a.worldPt(a.rear), back = V(-Math.sin(a.yaw), 0, -Math.cos(a.yaw)), x = p.x + back.x * 0.35, z = p.z + back.z * 0.35; this.dropPoop(x, z, { cow: 1.3, horse: 1.2, pig: 0.85, sheep: 0.6, goat: 0.6, chicken: 0.38 }[a.kind] || 1, p.y); }
   dropPoop(x, z, s = 1, fromY = null) {
     this.sinceGold++; const gold = this.poops.filter(q => q.gold).length < GOLD_MAX && (Math.random() < 0.1 || this.sinceGold >= 7); if (gold) this.sinceGold = 0;
     if (!gold && this.poops.filter(q => !q.gold).length >= POOP_MAX) { const i = this.poops.findIndex(q => !q.gold); if (i >= 0) this.poops.splice(i, 1); }
-    const y = this.W.height(x, z); this.poops.push({ x, z, y, y0: fromY ?? y + 1, s, gold, squish: 0, t: 0, yaw: Math.random() * 0.8 - 0.4 + Math.atan2(this.g.camera.position.x - x, this.g.camera.position.z - z), ph: Math.random() * 6 });
+    const y = this.W.height(x, z); this.poops.push({ x, z, y, y0: fromY ?? y + 1, s, gold, squish: 0, t: 0, landed: false, yaw: Math.random() * 0.8 - 0.4 + Math.atan2(this.g.camera.position.x - x, this.g.camera.position.z - z), ph: Math.random() * 6 });
     this.n.poops++; this.bar(); sfx.plop(clamp(1.3 - this.camDist({ x, z }) / 45, 0.05, 1)); if (gold) { const g = $('fb-gold'); this.toast('✨ A GOLDEN POOP! Go grab it! ✨', 3); }
   }
-  squish(q, p) { q.squish = 1; this.n.squish++; sfx.squish(1); this.splat(V(q.x, q.y, q.z), 10, q.s); if (p) { p.mech.mud = Math.min(1, (p.mech.mud || 0) + 0.15); p.mech.squishT = 0.6; }
+  squish(q, p) { q.squish = 1; this.n.squish++; sfx.squish(1); sfx.stars(0.7); this.n.starSplats++; const at = V(q.x, q.y, q.z); this.splat(at, 16, q.s * 1.3); this.emote('star', null, 3, at.clone().setY(at.y + 0.5)); this.fx.ring(at, 1.6 * q.s, 0x6a4020);
+    if (p) { p.mech.mud = Math.min(1, (p.mech.mud || 0) + 0.15); p.mech.squishT = 0.6;
+      if (!this.riding && (this.n.squish % 3 === 1)) { p.mech.slipT = 1.4; this.n.slips++; sfx.slip(1); p.speedNow = 0; this.emote('star', null, 4, V(p.pos.x, p.pos.y + 1.2, p.pos.z)); this.toast('🍌 WHOOPS! Leandro slipped on the poop! 😂', 0); return; } }
     this.toast(pick(['💩 SQUISH! Ewww! 😂', '💩 SPLAT! Stinky shoes!', '💩 Oops! Stepped in poop!', '💩 SQUELCH! Gross! 😂']), 2.5); }
-  collectGold(q) { const i = this.poops.indexOf(q); if (i >= 0) this.poops.splice(i, 1); this.n.gold++; this.bar(); sfx.tada(1); sfx.coin && sfx.coin(); this.emote('sparkle', null, 4, V(q.x, q.y + 0.6, q.z));
+  collectGold(q) { const i = this.poops.indexOf(q); if (i >= 0) this.poops.splice(i, 1); this.n.gold++; this.bar(); sfx.tada(1); sfx.sparkle(1); sfx.coin && sfx.coin(); this.emote('sparkle', null, 4, V(q.x, q.y + 0.6, q.z));
     for (let k = 0; k < this.fx.n(24); k++) this.fx.glow.spawn({ pos: V(q.x, q.y + 0.4, q.z), vel: { x: (Math.random() - 0.5) * 7, y: 3 + Math.random() * 5, z: (Math.random() - 0.5) * 7 }, size: 0.25, size1: 0.05, life: 0.9, r: 3, g: 2.4, b: 0.6, alpha: 1, grav: 8 });
     this.toast(`✨ GOLDEN POOP! ✨ You have ${this.n.gold}!`); try { this.g.save.farmGold = (this.g.save.farmGold || 0) + 1; this.g.persist && this.g.persist(); } catch (e) { } }
   splat(p, n, s = 1) { for (let i = 0; i < this.fx.n(n); i++) this.fx.smoke.spawn({ pos: { x: p.x, y: p.y + 0.2, z: p.z }, vel: { x: (Math.random() - 0.5) * 5 * s, y: 2 + Math.random() * 3, z: (Math.random() - 0.5) * 5 * s }, size: 0.25 * s, size1: 0.5 * s, life: 0.6, r: 0.32, g: 0.2, b: 0.09, alpha: 0.95, grav: 14, rv: 2 }); }
   updatePoops(dt) {
-    for (const q of this.poops) q.t += dt;
+    for (const q of this.poops) { q.t += dt; if (!q.landed && q.t >= 0.3) { q.landed = true; this.n.boings++; const v = clamp(1.2 - this.camDist(q) / 40, 0, 0.7); if (v > 0.02) sfx.boing(v, q.gold ? 1.4 : 0.9 + Math.random() * 0.3); }
+      if (q.gold && Math.random() < dt * 6 && this.camDist(q) < 60) this.fx.glow.spawn({ pos: { x: q.x + (Math.random() - 0.5) * 0.7, y: q.y + 0.2 + Math.random() * 0.7, z: q.z + (Math.random() - 0.5) * 0.7 }, vel: { x: 0, y: 0.8, z: 0 }, size: 0.3, size1: 0.02, life: 0.7, r: 3, g: 2.6, b: 0.8, alpha: 1 }); }
+    for (const e of this.eggs) { e.t += dt; e.m.rotation.z = Math.sin(e.t * 6) * 0.15 * Math.max(0, 1 - e.t / 3); }
     if (Math.random() < dt * 2.5 && this.poops.length) { const q = pick(this.poops); if (!q.squish && this.camDist(q) < 40) this.fx.glow.spawn({ pos: { x: q.x + (Math.random() - 0.5) * 0.4, y: q.y + 0.5 * q.s, z: q.z + (Math.random() - 0.5) * 0.4 }, vel: { x: Math.sin(this.t * 3) * 0.3, y: 1.0, z: 0 }, size: 0.16, size1: 0.35, life: 1.2, r: 0.5, g: 1.1, b: 0.2, alpha: 0.6 }); }
     this.syncPoop();
   }
   syncPoop() {
     const o = this._o || (this._o = new THREE.Object3D()); let np = 0, ng = 0, ne = 0;
-    for (const q of this.poops) { const drop = q.t < 0.3 ? 1 - q.t / 0.3 : 0, bounce = q.t < 0.6 ? Math.sin(Math.min(1, q.t / 0.6) * Math.PI) * 0.25 : 0;
+    for (const q of this.poops) { const drop = q.t < 0.3 ? 1 - q.t / 0.3 : 0, bounce = q.t > 0.3 && q.t < 1.1 ? Math.sin((q.t - 0.3) / 0.8 * Math.PI * 3) * 0.5 * (1 - (q.t - 0.3) / 0.8) : 0;
       const sx = q.squish ? 1.45 : 1 + bounce * 0.5, sy = q.squish ? 0.28 : (1 - bounce * 0.6) * (1 + Math.sin(this.t * 3 + q.ph) * 0.03) * (q.gold ? 1.15 : 1);
       o.position.set(q.x, lerp(q.y, q.y0, drop * drop), q.z); o.rotation.set(0, q.yaw + (q.gold ? this.t * 1.5 : 0), 0); o.scale.set(sx * q.s, sy * q.s, sx * q.s); if (q.gold) o.position.y += 0.15 + Math.sin(this.t * 4 + q.ph) * 0.1; o.updateMatrix();
       if (q.gold) this.gMesh.setMatrixAt(ng++, o.matrix); else this.pMesh.setMatrixAt(np++, o.matrix); if (!q.squish) this.eMesh.setMatrixAt(ne++, o.matrix); }
+    let nf2 = 0; const cam = this.g.camera.position; for (const q of this.poops) { if (q.gold || q.squish || nf2 >= 46) continue; if (Math.hypot(q.x - cam.x, q.z - cam.z) > 60) continue;
+      for (let k = 0; k < 2; k++) { const a = this.t * (5 + k * 2) + q.ph * 3 + k * 3; o.position.set(q.x + Math.cos(a) * 0.45 * q.s, q.y + (0.55 + 0.15 * Math.sin(this.t * 7 + k)) * q.s, q.z + Math.sin(a * 1.3) * 0.45 * q.s); o.rotation.set(0, -a, 0); o.scale.setScalar(1); o.updateMatrix(); this.flyMesh.setMatrixAt(nf2++, o.matrix); } }
+    this.flyMesh.count = nf2; this.flyMesh.instanceMatrix.needsUpdate = true;
     this.pMesh.count = np; this.gMesh.count = ng; this.eMesh.count = ne; for (const m of [this.pMesh, this.gMesh, this.eMesh]) m.instanceMatrix.needsUpdate = true;
     let nf = 0; for (const f of this.prints) { o.position.set(f.x, f.y + 0.03, f.z); o.rotation.set(0, f.yaw, 0); o.scale.setScalar(1.4); o.updateMatrix(); this.prMesh.setMatrixAt(nf++, o.matrix); } this.prMesh.count = nf; this.prMesh.instanceMatrix.needsUpdate = true;
   }
@@ -573,8 +620,8 @@ export class FarmLife {
   startle(a, from, dur = 1.6) { if (a.state === 'ridden' || a.state === 'rodeo' || a.busy) return; const away = V(a.pos.x - from.x, 0, a.pos.z - from.z); if (away.lengthSq() < 0.01) away.set(1, 0, 0); away.normalize();
     a.goal = V(a.pos.x + away.x * 8, 0, a.pos.z + away.z * 8); a.set('flee'); a.dur = dur; a.hop = 0.5; this.emote('bang', a); if (Math.random() < 0.6) a.say(0.9); }
   toot(p = this.kid) {
-    if (!p || this.t - (this._tootAt || -9) < 0.35) return; this._tootAt = this.t; this.n.toots++; p.mech.tootT = 0.8; const k = sfx.fart('random', 1);
-    const back = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)), at = V(p.pos.x + back.x * 0.3, p.pos.y + (this.riding ? 2.3 : 0.7), p.pos.z + back.z * 0.3); this.cloud(at, back, 10, 1); this.emote('stink', null, 1, at.clone().setY(at.y + 0.6));
+    if (!p || this.t - (this._tootAt || -9) < 0.35) return; this._tootAt = this.t; this.n.toots++; p.mech.tootT = 0.8; p.mech.jumpT = 0.55; const k = sfx.fart('random', 1);
+    const back = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)), at = V(p.pos.x + back.x * 0.3, p.pos.y + (this.riding ? 2.3 : 0.7), p.pos.z + back.z * 0.3); this.cloud(at, back, 12, 1.1); this.emote('stink', null, 1, at.clone().setY(at.y + 0.6)); if (this.riding) this.horseLaugh();
     let n = 0; for (const a of this.animals) if (a.state !== 'ridden' && a.pos.distanceTo(p.pos) < 8) { n++; if (a.kind === 'chicken' || Math.random() < 0.5) this.startle(a, p.pos, 1.2); else { a.say(0.9); this.emote('bang', a); } }
     this.toast(pick(['💨 Leandro tooted! 😂', '💨 PFFFT! Excuse me!', '💨 BRAAAP! Who did that?! 😂', '💨 Toot toot! 😂']), 2); return k;
   }
@@ -583,7 +630,7 @@ export class FarmLife {
   mount(p = this.kid) {
     const H = this.horse; this.riding = true; this.n.rides++; this.kidSpeed = this.kidSpeed || p.st.speed; p.st.speed = 12.5; p.radius = 1.25;
     p.pos.set(H.pos.x, p.pos.y, H.pos.z); p.yaw = H.yaw; p.speedNow = 0; p.groundY(); H.set('ridden'); H.free = null; p.mech.setRide(true); this.gfT = 2.5;
-    H.say(1.2); this.toast('🐴 Giddy-up! Hold RUN to GALLOP! Tap HOP OFF to get down.'); voice.say('Giddy up!', { prio: 2, cd: 2000 }); this.fx.dust(p.pos, 8, 1.5, 4); this._rl = null;
+    H.say(1.2); this.g.later(0.9, () => this.horseLaugh()); this.toast('🐴 Giddy-up! Hold RUN to GALLOP! Tap HOP OFF to get down.'); voice.say('Giddy up!', { prio: 2, cd: 2000 }); this.fx.dust(p.pos, 8, 1.5, 4); this._rl = null;
   }
   dismount(quiet = false) {
     const p = this.kid, H = this.horse; this.riding = false; if (!p) return; const side = V(Math.cos(p.yaw), 0, -Math.sin(p.yaw)); p.st.speed = this.kidSpeed || 6.5; p.radius = 0.7; p.mech.setRide(false);
@@ -613,7 +660,7 @@ export class FarmLife {
     for (const m of this.W.farmData.mud) { const d = Math.hypot(m.x - p.x, m.z - p.z) - 4; if (d < bd) { bd = d; best = { x: m.x, z: m.z, poop: false }; } } return best; }
   // ---------- hay bales (Bad David's mega toot knocks them over) ----------
   nearestBale(p, R = 30) { let best = null, bd = R; for (const b of this.W.farmData.bales) { if (b.fallen) continue; const d = Math.hypot(b.x - p.x, b.z - p.z); if (d < bd) { bd = d; best = b; } } return best; }
-  knockBale(b, from) { const dir = V(b.x - from.x, 0, b.z - from.z).normalize(); b.fallen = true; b.roll = { dir, v: 7, t: 0, spin: 0 }; }
+  knockBale(b, from, v = 7) { const dir = V(b.x - from.x, 0, b.z - from.z).normalize(); b.fallen = true; b.roll = { dir, v, t: 0, spin: 0 }; }
   updateBales(dt) { for (const b of this.W.farmData.bales) { const r = b.roll; if (!r) continue; r.t += dt; r.v = Math.max(0, r.v - dt * 3.2); b.x += r.dir.x * r.v * dt; b.z += r.dir.z * r.v * dt;
       const tmp = V(b.x, 0, b.z); this.W.collide(tmp, 0.9, false); b.x = tmp.x; b.z = tmp.z; b.col.x = b.x; b.col.z = b.z; r.spin += r.v * dt / 0.85;
       b.m.position.set(b.x, this.W.height(b.x, b.z) + 0.85 + (r.t < 0.4 ? Math.sin(r.t / 0.4 * Math.PI) * 1.2 : 0), b.z); b.m.rotation.order = 'YXZ'; b.m.rotation.set(r.spin, Math.atan2(r.dir.x, r.dir.z), 0);
@@ -638,17 +685,18 @@ export class KidMech {
     const spots = [[R.legs[0].knee, 0.04, -0.12, 0.05], [R.legs[1].knee, -0.04, -0.2, 0.05], [R.legs[0].foot, 0, 0.02, 0.12], [R.legs[1].foot, 0, 0.02, 0.12], [R.hips, 0.12, 0.02, 0.14], [R.torso, -0.1, 0.12, 0.13], [R.legs[1].knee, 0.05, -0.05, 0.05], [R.torso, 0.12, 0.3, 0.13], [R.head, 0.12, 0.13, 0.17]];
     for (const [g, x, y, z] of spots) { const o = new THREE.Mesh(SPH(0.06, 7, 5), mm); o.position.set(x, y, z); o.scale.set(1, 0.8, 0.5); o.visible = false; g.add(o); this.splotch.push(o); }
     this.meshes = []; this.obj.traverse(o => { if (o.isMesh) this.meshes.push(o); });
-    this.mats = { plate: new THREE.MeshStandardMaterial(), glowColor: new THREE.Color(0xffd23a) }; this.riding = false; this.mud = 0; this.throwT = 0; this.tootT = 0; this.squishT = 0;
+    this.mats = { plate: new THREE.MeshStandardMaterial(), glowColor: new THREE.Color(0xffd23a) }; this.riding = false; this.mud = 0; this.throwT = 0; this.tootT = 0; this.squishT = 0; this.noseT = 0; this.slipT = 0; this.danceT = 0; this.jumpT = 0;
   }
   socketPos(name, out) { return (name === 'hand' ? this.R.arms[1].hand : this.R.head).getWorldPosition(out); }
   footPos(i, out) { return this.R.legs[i % 2].foot.getWorldPosition(out); }
   dispose() {}
   setRide(on) { this.riding = on; this.height = on ? 3.3 : 1.9; this.R.hips.position.y = on ? 0.13 : 0.7; this.R.obj.position.y = on ? 2.1 : 0; this.R.root.position.y = 0; this.R.torso.rotation.set(0, 0, 0); }
   animate(dt, speed, o = {}) {
-    const R = this.R, t = (this.t += dt); R.t += dt; this.throwT -= dt; this.tootT -= dt; this.squishT -= dt; if (R.cheerT > 0) R.cheerT -= dt;
+    const R = this.R, t = (this.t += dt); R.t += dt; this.throwT -= dt; this.tootT -= dt; this.squishT -= dt; this.noseT -= dt; this.slipT -= dt; this.danceT -= dt; this.jumpT -= dt; if (R.cheerT > 0) R.cheerT -= dt; R.obj.rotation.set(0, 0, 0);
     const nm = Math.round(clamp(this.mud, 0, 1) * this.splotch.length); this.splotch.forEach((s, i) => { s.visible = i < nm; });
     if (this.riding) { const k = clamp(speed / 12, 0, 1.6); this.phase += dt * (2 + speed * 0.55); R.root.position.y = Math.abs(Math.sin(this.phase)) * 0.09 * Math.min(1, k) + 0.02;
       R.setPose(dt, { k: Math.min(1, k), hold: o.boost ? 0.7 : 0.2 }); if (this.throwT > 0) this.throwArm(); if (this.tootT > 0) { R.torso.rotation.x = 0.35; R.root.position.y += Math.max(0, Math.sin((0.8 - this.tootT) / 0.8 * Math.PI)) * 0.15; } return; }
+    R.root.position.y = 0;
     const k = clamp(speed / 3, 0, 1), run = clamp((speed - 5) / 5, 0, 1); this.phase += dt * (speed > 0.3 ? 2.6 + speed * 1.05 : 0); const s = Math.sin(this.phase);
     R.legs.forEach((g, i) => { const ss = i ? -s : s; g.hip.rotation.set(-ss * (0.65 + 0.3 * run) * k, 0, g.s * 0.05); g.knee.rotation.set(0.05 + Math.max(0, ss) * (0.8 + 0.6 * run) * k, 0, 0); g.foot.rotation.set(0, 0, 0); });
     R.arms.forEach((a, i) => { const ss = i ? s : -s; a.sh.rotation.set(-ss * (0.6 + 0.5 * run) * k - 0.05, 0, a.s * (0.1 + 0.04 * Math.sin(t * 1.7))); a.el.rotation.set(-0.25 - 0.7 * run * k, 0, 0); });
@@ -657,16 +705,21 @@ export class KidMech {
     if (this.squishT > 0) { R.head.rotation.x = 0.5; for (const a of R.arms) { a.sh.rotation.set(-0.3, 0, a.s * (1.2 + Math.sin(t * 25) * 0.3)); a.el.rotation.set(-0.4, 0, 0); } }
     if (R.cheerT > 0) for (const a of R.arms) { const pump = Math.abs(Math.sin(R.cheerT * 9)); a.sh.rotation.set(-2.7 - 0.2 * pump, 0, a.s * 0.3); a.el.rotation.set(-0.3, 0, 0); }
     if (this.throwT > 0) this.throwArm();
+    // v5.2 silly animations
+    if (this.jumpT > 0) { const u = 1 - this.jumpT / 0.55; R.root.position.y = Math.sin(u * Math.PI) * 0.75; for (const g of R.legs) { g.hip.rotation.x = -0.6; g.knee.rotation.x = 1.1; } }
+    if (this.noseT > 0 && this.throwT <= 0) { const A = R.arms; A[0].sh.rotation.set(-2.5, 0, -0.55); A[0].el.rotation.set(-1.6, 0, 0); A[1].sh.rotation.set(-1.4 + Math.sin(t * 22) * 0.5, 0, 0.6 + Math.sin(t * 22) * 0.4); A[1].el.rotation.set(-0.4, 0, 0); R.head.rotation.set(-0.15, Math.sin(t * 9) * 0.3, 0); } // holds his nose + fans the air
+    if (this.danceT > 0) { const b = Math.sin(t * 10); R.root.position.y = Math.abs(b) * 0.25; R.torso.rotation.set(0, 0, b * 0.25); for (const [i, a] of R.arms.entries()) { a.sh.rotation.set(-2.6 + Math.sin(t * 10 + i * Math.PI) * 0.6, 0, a.s * 0.4); a.el.rotation.set(-0.4, 0, 0); } R.head.rotation.set(0, 0, -b * 0.2); R.obj.rotation.y = Math.sin(t * 2.5) * 0.6; } // victory dance
+    if (this.slipT > 0) { const u = 1 - this.slipT / 1.4, k = Math.min(1, u * 5) * (u > 0.8 ? (1 - u) * 5 : 1); R.obj.rotation.x = -1.35 * k; R.root.position.y = 0.25 * k + (u < 0.2 ? Math.sin(u / 0.2 * Math.PI) * 0.5 : 0); for (const g of R.legs) { g.hip.rotation.x = -1.4 * k; g.knee.rotation.x = 0.2; } for (const a of R.arms) a.sh.rotation.set(-2.8 * k, 0, a.s * 1.0 * k); } // whoops! pratfall
   }
   throwArm() { const a = this.R.arms[1], u = 1 - this.throwT / 0.45; a.sh.rotation.set(lerp(-2.9, -0.9, smooth(0, 1, u)), 0, 0.15); a.el.rotation.set(-0.5 * (1 - u), 0, 0); }
 }
 
 // ---------------- BAD DAVID: an original cheeky little troublemaker (gentle mischief only) ----------------
-const ACTIONS = ['undies', 'mud', 'pigride', 'chickens', 'pie', 'megafart', 'footprints', 'tickle'];
+const ACTIONS = ['undies', 'mud', 'pigride', 'chickens', 'pie', 'megafart', 'footprints', 'tickle', 'pogo', 'ropeswing'];
 const LINES = { undies: 'DAVID, NOOO! Put your clothes back on!', mud: 'DAVID, NOOO! Not in the mud!', pigride: "DAVID, NOOO! You're riding backwards!", chickens: 'DAVID! The chickens are OUT!',
-  pie: 'DAVID, NOOO! No pie fights!', megafart: 'DAVID!!! Say excuse me!', footprints: 'DAVID, NOOO! Muddy feet everywhere!', tickle: 'DAVID! Stop tickling the {a}!' };
+  pie: 'DAVID, NOOO! No pie fights!', megafart: 'DAVID!!! Say excuse me!', footprints: 'DAVID, NOOO! Muddy feet everywhere!', tickle: 'DAVID! Stop tickling the {a}!', pogo: 'DAVID, NOOO! No fart-powered pogo sticks!', ropeswing: 'DAVID, NOOO! Not the rope swing!' };
 const TOASTS = { undies: '😜 Bad David ran around in his undies! 🩲', mud: '😜 Bad David jumped in the mud! SPLOOSH!', pigride: '😜 Bad David is riding a piggy BACKWARDS! 🐷', chickens: '😜 Bad David let the chickens out! 🐔🐔🐔',
-  pie: '😜 Bad David threw a cream pie! 🥧', megafart: '😜 Bad David did a MEGA TOOT! 💨💨💨', footprints: '😜 Bad David is tracking mud everywhere! 👣', tickle: '😜 Bad David is tickling the {a} with a feather! 🪶' };
+  pie: '😜 Bad David threw a cream pie! 🥧', megafart: '😜 Bad David did a MEGA TOOT! 💨💨💨', footprints: '😜 Bad David is tracking mud everywhere! 👣', tickle: '😜 Bad David is tickling the {a} with a feather! 🪶', pogo: '😜 Bad David is on a FART-POWERED POGO STICK! 💨🦘', ropeswing: '😜 Bad David grabbed a rope swing! AAAH-AH-AAAH! 🌳' };
 function davidModel() {
   const M = mats(), g = new THREE.Group(); g.name = 'bad-david'; const body = new THREE.Group(); g.add(body);
   const SK = 0xf5cfa6, HR = 0x5a3015, Y = 0xffd23a, GR = 0x3aa655, SH = 0xd63a2a, mesh = (list, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(mergeGeometries(list), M.vc); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
@@ -697,7 +750,7 @@ function davidModel() {
   g.visible = false; return { g, body, hips, legs, torso, head, arms, shirt, bare, shorts, briefs, feather, pie, mud };
 }
 class BadDavid {
-  constructor(F) { this.F = F; Object.assign(this, davidModel()); F.root.add(this.g); this.state = 'off'; this.bag = []; this.log = []; this.done = { undies: 0, mud: 0, pigride: 0, chickens: 0, pie: 0, campie: 0, megafart: 0, footprints: 0, tickle: 0 };
+  constructor(F) { this.F = F; Object.assign(this, davidModel()); F.root.add(this.g); this.state = 'off'; this.bag = []; this.log = []; this.done = { undies: 0, mud: 0, pigride: 0, chickens: 0, pie: 0, campie: 0, megafart: 0, footprints: 0, tickle: 0, pogo: 0, pogoHops: 0, ropeswing: 0, flips: 0, prats: 0 }; this.spin = 0; this.flipX = 0;
     this.pos = V(); this.yaw = 0; this.speed = 0; this.ph = 0; this.t = 0; this.mode = 'idle'; this.jy = 0; this.gigT = 1; this.flying = []; this.proj = []; this.bubT = 0; this.el = $('david-say'); this.n = 0; }
   get active() { return this.state !== 'off'; }
   trigger(name) {
@@ -724,6 +777,13 @@ class BadDavid {
     else if (name === 'megafart') { let b = F.nearestBale(this.pos, 30); if (!b) { b = F.W.farmData.bales.find(x => x.fallen && !x.roll) || F.W.farmData.bales[0]; const x = this.pos.x + Math.sin(this.yaw) * 4, z = this.pos.z + Math.cos(this.yaw) * 4;
         b.fallen = false; b.roll = null; b.x = x; b.z = z; b.col.x = x; b.col.z = z; b.m.rotation.order = 'XYZ'; b.m.rotation.set(0, Math.random() * TAU, 0); b.m.position.set(x, F.W.height(x, z) + 0.85, z); F.fx.dust(b.m.position, 8, 1.4, 4); } d.b = b; }
     else if (name === 'footprints') { d.c = kp.clone(); d.a = 0; for (const m of this.mud) m.visible = true; }
+    else if (name === 'pogo') { d.c = kp.clone(); d.a = Math.atan2(this.pos.x - kp.x, this.pos.z - kp.z); d.hop = -1; this.pogoMesh().visible = true; }
+    else if (name === 'ropeswing') { const P = FARM.pond, dp = Math.hypot(kp.x - P.x, kp.z - P.z); let c, r, water;
+      if (dp < 55) { c = V(P.x, 0, P.z); r = P.r * 0.8; water = true; } else { let best = null, bd = 60; for (const m of F.W.farmData.mud) { if (m.temp) continue; const dd = Math.hypot(m.x - kp.x, m.z - kp.z); if (dd < bd) { bd = dd; best = m; } }
+        if (!best) best = this.tempMud(kp.x + 6, kp.z + 6); c = V(best.x, 0, best.z); r = best.r || 3; water = false; }
+      const dir = V(kp.x - c.x, 0, kp.z - c.z); if (dir.lengthSq() < 0.01) dir.set(1, 0, 0); dir.normalize(); const gy = Math.max(F.W.height(c.x + dir.x * (r + 2), c.z + dir.z * (r + 2)), 0);
+      d.c = c; d.dir = dir; d.water = water; d.L = 6.5; d.piv = V(c.x + dir.x * (r * 0.55 + 2.5), gy + 8.2, c.z + dir.z * (r * 0.55 + 2.5)); d.th0 = 0.85; d.splY = water ? 0.02 : F.W.height(c.x, c.z);
+      d.grab = this.ropePt(d, d.th0); this.swingRig(d, true); }
     else if (name === 'tickle') { const pref = { cow: -20, horse: -8, goat: -6, sheep: -4, pig: -2, chicken: 10 }; d.a = F.animals.filter(a => a.state !== 'ridden' && a.state !== 'herded' && a !== F.runaway).sort((a, b) => a.pos.distanceTo(this.pos) + pref[a.kind] - b.pos.distanceTo(this.pos) - pref[b.kind])[0] || null; if (d.a) { d.a.set('wait'); d.a.t = -8; } }
   }
   tempMud(x, z) { const F = this.F, M = mats(); let m = F.W.farmData.mud.find(q => q.temp); if (!m) { m = { temp: true, r: 3 }; const g = new THREE.CircleGeometry(3, 24); g.rotateX(-Math.PI / 2); m.mesh = new THREE.Mesh(g, M.mud); F.W.farmRoot.add(m.mesh); F.W.farmData.mud.push(m); }
@@ -742,14 +802,17 @@ class BadDavid {
     if (!this.active) return;
     const T = (this.t += dt), d = this.d, kp = F.kid ? F.kid.pos : this.pos; this.mode = 'idle'; this.speed = 0;
     if ((this.gigT -= dt) <= 0) { this.gigT = 1.4 + Math.random() * 1.6; sfx.giggle(clamp(1.2 - F.camDist(this.pos) / 40, 0, 0.8)); }
-    if (this.state === 'leave') { const away = V(this.pos.x - kp.x, 0, this.pos.z - kp.z).normalize(); this.run(this.pos.x + away.x * 10, this.pos.z + away.z * 10, 9, dt); this.mode = 'run';
+    if (this.state === 'leave' && this.prat > 0) { this.prat -= dt; this.mode = 'prat'; if (this.prat <= 0) { this.t = 0; this.F.emote('star', null, 3, V(this.pos.x, this.pos.y + 1.4, this.pos.z)); } }
+    else if (this.state === 'leave') { const away = V(this.pos.x - kp.x, 0, this.pos.z - kp.z).normalize(); this.run(this.pos.x + away.x * 10, this.pos.z + away.z * 10, 9, dt); this.mode = 'run';
       if (T > 1.4) { F.fx.dust(this.pos, 10, 1.2, 5); sfx.whoosh && sfx.whoosh(0.5); this.stop(); return; } }
     else this.act_(dt, T, d, kp);
+    if (this.rope && this.rope.visible && this.act === 'ropeswing' && d.piv) { const end = this.stage >= 1 && this.stage <= 2 ? V(this.pos.x, this.pos.y + 1.55 + this.jy, this.pos.z) : this.ropePt(d, this.stage >= 3 ? -d.th0 * 0.5 : d.th0).add(V(0, 1.55, 0)); const mid = d.piv.clone().add(end).multiplyScalar(0.5);
+      this.rope.position.copy(mid); this.rope.scale.set(1, d.piv.distanceTo(end), 1); this.rope.quaternion.setFromUnitVectors(V(0, 1, 0), end.clone().sub(d.piv).normalize()); }
     this.animate(dt);
     if (this.el && this.bubT > 0) { const cam = F.g.camera, hp = V(this.pos.x, this.pos.y + 2.0 + this.jy, this.pos.z).project(cam); const vis = hp.z < 1 && Math.abs(hp.x) < 1.1 && Math.abs(hp.y) < 1.1;
       this.el.style.opacity = vis ? 1 : 0; this.el.style.left = ((hp.x * 0.5 + 0.5) * innerWidth) + 'px'; this.el.style.top = ((-hp.y * 0.5 + 0.5) * innerHeight) + 'px'; }
   }
-  leave() { this.cleanup(); this.state = 'leave'; this.t = 0; }
+  leave() { const pr = this.prat > 0 ? this.prat : (Math.random() < 0.4 ? 0.9 : 0); this.cleanup(); this.state = 'leave'; this.t = 0; this.prat = pr; if (pr) { this.done.prats++; sfx.trip(clamp(1.2 - this.F.camDist(this.pos) / 40, 0.1, 0.8)); } }
   act_(dt, T, d, kp) {
     const F = this.F, a = this.act;
     if (a === 'undies') {
@@ -758,7 +821,7 @@ class BadDavid {
       else { d.a += dt * 1.6; this.run(d.c.x + Math.sin(d.a) * 4.5, d.c.z + Math.cos(d.a) * 4.5, 7.5, dt); this.mode = 'flail'; if (T > 5.2) this.leave(); } }
     else if (a === 'mud') { const m = d.m;
       if (this.stage === 0) { this.mode = 'run'; if (this.run(m.x, m.z, 8.5, dt) < 1.5 || T > 4) { this.stage = 1; d.t0 = T; d.p0 = this.pos.clone(); } }
-      else if (this.stage === 1) { const u = Math.min(1, (T - d.t0) / 0.6); this.jy = Math.sin(u * Math.PI) * 1.8; this.mode = 'jump'; this.pos.lerpVectors(d.p0, V(m.x, d.p0.y, m.z), u);
+      else if (this.stage === 1) { const u = Math.min(1, (T - d.t0) / 0.6); this.jy = Math.sin(u * Math.PI) * 2.6; this.flipX = u < 1 ? u * TAU : 0; this.mode = 'jump'; this.pos.lerpVectors(d.p0, V(m.x, d.p0.y, m.z), u);
         if (u >= 1) { this.jy = 0; this.stage = 2; d.t1 = T; this.muddy(true); this.done.mud++; sfx.splash(clamp(1.3 - F.camDist(this.pos) / 40, 0.2, 1)); F.splat(this.pos, 28, 1.8); F.fx.ring(this.pos, 4, 0x6a4020); F.fx.shake = Math.max(F.fx.shake, 0.3); this.noo();
           const k = F.kid; if (k && k.pos.distanceTo(this.pos) < 8) { k.mech.mud = Math.min(1, (k.mech.mud || 0) + 0.5); F.toast('🟤 SPLOOSH! Leandro got splashed with mud! 😂', 0); }
           for (const b of F.animals) if (b.pos.distanceTo(this.pos) < 7 && b.kind !== 'pig') F.startle(b, this.pos); } }
@@ -788,20 +851,46 @@ class BadDavid {
       else if (this.stage === 1) { this.faceTo(this.pos.x * 2 - b.x, this.pos.z * 2 - b.z, dt, 14); this.mode = 'squat'; if (T - d.t0 > 1.0) { this.stage = 2; d.t1 = T; this.done.megafart++; sfx.fart('mega', 1.2); F.n.farts++;
         const back = V(b.x - this.pos.x, 0, b.z - this.pos.z).normalize(), at = V(this.pos.x + back.x * 0.3, this.pos.y + 0.6, this.pos.z + back.z * 0.3); F.cloud(at, back, 40, 2.2); F.fx.ring(at, 7, 0x8ad040); F.fx.ring(at, 12, 0x6ab030); F.fx.shake = Math.max(F.fx.shake, 1.0);
         F.knockBale(b, this.pos); F.emote('stink', null, 3, at.clone().setY(at.y + 1)); this.noo(); for (const q of F.animals) if (q.state !== 'ridden' && q.pos.distanceTo(this.pos) < 25) F.startle(q, this.pos, 1.8); } }
-      else { this.mode = 'cheer'; if (T - d.t1 > 1.8) this.leave(); } }
+      else { const u = Math.min(1, (T - d.t1) / 0.9); this.jy = Math.sin(u * Math.PI) * 2.6; this.flipX = u < 1 ? u * TAU : 0; this.mode = u < 1 ? 'jump' : 'cheer'; if (u >= 1 && !d.fl) { d.fl = true; this.done.flips++; F.fx.dust(this.pos, 8, 1, 4); } if (T - d.t1 > 2.2) this.leave(); } }
     else if (a === 'footprints') { d.a += dt * 0.95; const x = d.c.x + Math.sin(d.a) * 7, z = d.c.z + Math.sin(d.a * 2) * 4; this.run(x, z, 7, dt); this.mode = 'run'; if (T > 0.4 && !d.said) { d.said = true; this.noo(); }
       if (T > 6) this.leave(); }
+    else if (a === 'pogo') { // boing… pfft… BOING! each bounce is fart-powered, the last one is HUGE
+      if (d.hop < 0 || T - d.h0 >= d.hd) { d.hop++; d.h0 = T; d.hd = d.hop >= 6 ? 1.5 : 0.62; if (d.hop > 6) { this.jy = 0; this.pogoMesh().visible = false; F.fx.dust(this.pos, 10, 1.2, 4); sfx.trip(0.8); this.done.prats++; this.prat = 0.9; return this.leave(); }
+        if (d.hop === 0) { this.done.pogo++; this.noo(); } this.done.pogoHops++; F.n.farts++; const near = clamp(1.3 - F.camDist(this.pos) / 40, 0.15, 1); sfx.boing(near, d.hop >= 6 ? 0.6 : 1 + Math.random() * 0.3); sfx.fart(d.hop >= 6 ? 'trumpet' : pick(['tiny', 'squeaky', 'squeakup', 'short']), near * (d.hop >= 6 ? 1.1 : 0.8));
+        F.cloud(V(this.pos.x, this.pos.y + 0.3, this.pos.z), V(0, -1, 0), d.hop >= 6 ? 14 : 5, d.hop >= 6 ? 1.2 : 0.6); F.fx.ring(this.pos, 1.5, 0x9be04a); }
+      const u = Math.min(1, (T - d.h0) / d.hd); this.jy = 0.32 + Math.sin(u * Math.PI) * (d.hop >= 6 ? 4.2 : 1.3 + d.hop * 0.15); this.mode = 'pogo'; d.a += dt * 0.9; this.run(d.c.x + Math.sin(d.a) * 5, d.c.z + Math.cos(d.a) * 5, 6, dt);
+      if (d.hop >= 6) this.flipX = -u * TAU; }
+    else if (a === 'ropeswing') { // AAH-AH-AAAH… let go… SPLOOSH!
+      if (this.stage === 0) { this.mode = 'run'; const L = this.run(d.grab.x, d.grab.z, 24, dt); if (Math.random() < 0.6) F.fx.dust(this.pos, 1, 0.8, 3);
+        if (L < 0.8 || T > 2.4) { if (L >= 0.8) { F.fx.dust(this.pos, 8, 1, 4); this.pos.set(d.grab.x, F.W.height(d.grab.x, d.grab.z), d.grab.z); F.fx.dust(this.pos, 8, 1, 4); } this.stage = 1; d.t0 = T; d.p0 = this.pos.clone(); this.onPig = true; this.done.ropeswing++; this.noo(); } }
+      else if (this.stage === 1) { const u = Math.min(1, (T - d.t0) / 0.4), top = this.ropePt(d, d.th0); this.mode = 'jump'; this.pos.lerpVectors(d.p0, top, u); this.pos.y += Math.sin(u * Math.PI) * 0.6; if (u >= 1) { this.stage = 2; d.t1 = T; sfx.whoosh && sfx.whoosh(1); this.say('AAAH-AH-AAAAH! 🌳', 2); } }
+      else if (this.stage === 2) { const k = (T - d.t1) / 2.2, th = d.th0 * Math.cos(k * Math.PI * 1.75); this.pos.copy(this.ropePt(d, th)); this.yaw = Math.atan2(-d.dir.x, -d.dir.z); this.mode = 'hang';
+        if (Math.random() < dt * 3) sfx.giggle(0.6); if (k >= 1 || (k > 0.45 && th < -d.th0 * 0.9)) { this.stage = 3; d.t2 = T; d.p1 = this.pos.clone(); d.to = V(d.c.x + d.dir.x * 1.5, d.splY, d.c.z + d.dir.z * 1.5); this.mode = 'flail'; sfx.whoosh && sfx.whoosh(0.8); } }
+      else if (this.stage === 3) { const u = Math.min(1, (T - d.t2) / 0.7); this.pos.lerpVectors(d.p1, d.to, u); this.pos.y += Math.sin(u * Math.PI) * 2.2; this.flipX = -u * TAU; this.mode = 'jump';
+        if (u >= 1) { this.flipX = 0; this.stage = 4; d.t3 = T; this.done.flips++; const near = clamp(1.3 - F.camDist(this.pos) / 45, 0.25, 1.1); sfx.splash(near); sfx.splash(near * 0.7); F.fx.shake = Math.max(F.fx.shake, 0.4);
+          for (let i = 0; i < F.fx.n(30); i++) F.fx.glow.spawn({ pos: V(this.pos.x, d.splY + 0.2, this.pos.z), vel: { x: (Math.random() - 0.5) * 7, y: 4 + Math.random() * 6, z: (Math.random() - 0.5) * 7 }, size: 0.25, size1: 0.12, life: 1.1, r: d.water ? 0.7 : 0.6, g: d.water ? 1.1 : 0.42, b: d.water ? 1.6 : 0.2, alpha: 0.9, grav: 12 });
+          F.fx.ring(this.pos, 4, d.water ? 0x8ad0ff : 0x6a4020); F.fx.ring(this.pos, 7, d.water ? 0xbfe8ff : 0x8a6030); if (!d.water) { F.splat(this.pos, 24, 1.6); this.muddy(true); }
+          F.toast(d.water ? '😜 SPLOOSH! Bad David swung right into the POND! 🌊😂' : '😜 SPLOOSH! Bad David swung right into the MUD! 🟤😂', 0); this.say(d.water ? 'Hee hee! The water is FINE! 🌊' : 'Hee hee! SO muddy! 😜', 2.4);
+          for (const q of F.animals) if (q.pos.distanceTo(this.pos) < 9 && !q.busy) F.startle(q, this.pos); } }
+      else { this.mode = 'cheer'; this.pos.y = d.splY - (d.water ? 0.75 : 0.25) + Math.sin(T * 4) * 0.08; if (T - d.t3 > 2.2) { F.fx.dust(this.pos, 10, 1.2, 5); sfx.whoosh && sfx.whoosh(0.5); this.stop(); return; } } }
     else if (a === 'tickle') { const t = d.a; if (!t) return this.leave();
       if (this.stage === 0) { this.mode = 'run'; const side = V(Math.cos(t.yaw), 0, -Math.sin(t.yaw)), gx = t.pos.x + side.x * (t.K.r + 0.8), gz = t.pos.z + side.z * (t.K.r + 0.8); if (this.run(gx, gz, 10, dt) < 0.7 || T > 4.5) { this.stage = 1; d.t0 = T; t.set('tickled'); this.done.tickle++; this.noo(t.name); } }
       else { this.feather.visible = true; this.mode = 'tickle'; this.faceTo(t.pos.x, t.pos.z, dt); if (T - d.t0 > 3.4) { this.feather.visible = false; this.leave(); } } }
   }
+  pogoMesh() { if (!this.pogo) { this.pogo = new THREE.Mesh(mergeGeometries([C(CYL(0.025, 0.025, 1.15, 6), 0xd63a2a, 0, 0.35, 0.13), C(BOX(0.42, 0.04, 0.04), 0x222222, 0, 0.9, 0.13), C(BOX(0.36, 0.03, 0.09), 0x333333, 0, -0.05, 0.12), C(new THREE.TorusGeometry(0.05, 0.012, 4, 10), 0xc0c0c0, 0, -0.12, 0.13, 1, 1, 1, Math.PI / 2, 0, 0), C(new THREE.TorusGeometry(0.05, 0.012, 4, 10), 0xc0c0c0, 0, -0.17, 0.13, 1, 1, 1, Math.PI / 2, 0, 0), C(SPH(0.04, 6, 4), 0x222222, 0, -0.24, 0.13)]), mats().vc); this.pogo.position.y = -0.04; this.g.add(this.pogo); } return this.pogo; }
+  ropePt(d, th) { return V(d.piv.x - d.dir.x * Math.sin(th) * d.L * -1, d.piv.y - Math.cos(th) * d.L - 1.5, d.piv.z - d.dir.z * Math.sin(th) * d.L * -1); }
+  // the rope hangs from a branch of a little temporary tree at the edge of the pond / puddle
+  swingRig(d, on) { const F = this.F; if (!this.rig) { const g = new THREE.Group(), M = mats(); g.add(new THREE.Mesh(mergeGeometries([C(CYL(0.4, 0.6, 10, 8), 0x6a4420, 0, 5, 0), C(SPH(2.6, 10, 8), 0x3f8a2a, 0, 10.5, 0), C(SPH(2, 10, 8), 0x56a53a, 1.6, 9.6, 0.8)]), M.vc)); this.branch = new THREE.Mesh(C(CYL(0.18, 0.25, 1, 6), 0x6a4420), M.vc); g.add(this.branch);
+      this.rope = new THREE.Mesh(CYL(0.035, 0.035, 1, 5), new THREE.MeshStandardMaterial({ color: 0xc8a060, roughness: 0.9 })); this.rope.castShadow = true; F.root.add(this.rope); this.rig = g; F.root.add(g); }
+    this.rig.visible = this.rope.visible = on; if (!on) return; const tx = d.piv.x + d.dir.x * 4.5, tz = d.piv.z + d.dir.z * 4.5, ty = F.W.height(tx, tz); this.rig.position.set(tx, ty, tz);
+    const a = V(0, d.piv.y - ty, 0), b = V(d.piv.x - tx, d.piv.y - ty, d.piv.z - tz); this.branch.position.copy(a).add(b).multiplyScalar(0.5); this.branch.scale.set(1, a.distanceTo(b) + 0.4, 1); this.branch.quaternion.setFromUnitVectors(V(0, 1, 0), b.clone().sub(a).normalize()); }
   pieMesh() { return new THREE.Mesh(mergeGeometries([C(CYL(0.22, 0.18, 0.07, 14), 0xd9a35a), C(SPH(1, 12, 6, 0, TAU, 0, Math.PI / 2), 0xfffaf0, 0, 0.03, 0, 0.21, 0.1, 0.21), C(SPH(0.04, 6, 4), 0xd8202a, 0, 0.13, 0)]), mats().vc); }
   pieHit(a) { const F = this.F; this.done.pie++; sfx.pie(clamp(1.2 - F.camDist(a.pos) / 40, 0.2, 1)); const p = a.mouthPt(V()); for (let i = 0; i < F.fx.n(18); i++) F.fx.smoke.spawn({ pos: p, vel: { x: (Math.random() - 0.5) * 4, y: 1 + Math.random() * 3, z: (Math.random() - 0.5) * 4 }, size: 0.2, size1: 0.35, life: 0.7, r: 1, g: 0.97, b: 0.9, alpha: 1, grav: 10 });
     if (!a.cream) { a.cream = new THREE.Mesh(mergeGeometries([C(SPH(1, 10, 8), 0xfffaf0, 0, 0, 0, 0.3, 0.22, 0.12), C(SPH(0.05, 6, 4), 0xd8202a, 0.05, 0.12, 0.08), C(SPH(0.09, 6, 5), 0xfffaf0, -0.12, -0.18, 0.02)]), mats().vc); a.head.add(a.cream); }
     a.cream.position.copy(a.mouth).add(V(0, 0.22, -0.05)); a.cream.visible = true; clearTimeout(a._creamTO); a._creamTO = setTimeout(() => { if (a.cream) a.cream.visible = false; }, 9000); a.say(1.1); F.emote('bang', a); if (!a.busy) { a.set('wait'); a.hop = 0.4; } }
   camPie() { const F = this.F; this.done.campie++; sfx.pie(1.2); F.fx.shake = Math.max(F.fx.shake, 0.4); const el = $('pie-splat'); if (el) { el.classList.remove('hidden'); el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); clearTimeout(this._pieTO); this._pieTO = setTimeout(() => el.classList.add('hidden'), 2600); }
     F.toast('🥧 SPLAT! Bad David pied the camera! 😂', 0); }
-  cleanup() { const d = this.d || {}; this.feather.visible = false; this.pie.visible = false; this.clothes(true); this.jy = 0; this.onPig = false;
+  cleanup() { const d = this.d || {}; this.feather.visible = false; this.pie.visible = false; this.clothes(true); this.jy = 0; this.onPig = false; this.flipX = 0; this.spin = 0; if (this.pogo) this.pogo.visible = false; if (this.rig) { this.rig.visible = false; this.rope.visible = false; }
     for (const m of this.flying) this.F.root.remove(m); this.flying.length = 0;
     if (this.act === 'pigride' && d.pig && d.pig.state === 'rodeo') d.pig.goHome(1.4); if (this.act === 'pigride' && d.pig && d.pig.state === 'wait') d.pig.set('idle');
     if (this.act === 'tickle' && d.a && d.a.state === 'wait') d.a.set('idle'); }
@@ -823,7 +912,12 @@ class BadDavid {
     if (m === 'windup') { const R = A[1]; R.sh.rotation.set(-2.9, 0, 0.3); R.el.rotation.set(-0.6, 0, 0); this.torso.rotation.x = -0.1; }
     if (m === 'throw') { const R = A[1]; R.sh.rotation.set(-0.9, 0, 0.1); R.el.rotation.set(-0.1, 0, 0); this.torso.rotation.x = 0.25; }
     if (m === 'tickle') { const R = A[1]; R.sh.rotation.set(-1.4 + Math.sin(T * 20) * 0.25, 0, 0.2 + Math.sin(T * 17) * 0.3); R.el.rotation.set(-0.3 + Math.sin(T * 23) * 0.3, 0, 0); A[0].sh.rotation.set(-1.2, 0, -0.4); bodyY = Math.abs(Math.sin(T * 8)) * 0.05; }
+    if (m === 'cheer') { this.spin += dt * 9; bodyY = Math.abs(Math.sin(T * 9)) * 0.3; } else this.spin = 0;
+    if (m === 'pogo') { L.forEach(g => { g.hip.rotation.set(-0.15, 0, g.s * 0.12); g.knee.rotation.set(0.3, 0, 0); }); A.forEach(a => { a.sh.rotation.set(-1.2, 0, a.s * 0.35); a.el.rotation.set(-0.6, 0, 0); }); this.head.rotation.x = -0.25; }
+    if (m === 'hang') { A.forEach(a => { a.sh.rotation.set(-3.0, 0, a.s * 0.15); a.el.rotation.set(0, 0, 0); }); L.forEach((g, i) => { g.hip.rotation.set(-0.5 - Math.sin(T * 12 + i * 3) * 0.6, 0, g.s * 0.1); g.knee.rotation.set(0.8, 0, 0); }); }
+    if (m === 'prat') { bodyX = -1.45; this.hips.position.y = 0.2; L.forEach((g, i) => { g.hip.rotation.set(-1.6 + Math.sin(T * 16 + i * 3) * 0.3, 0, g.s * 0.3); g.knee.rotation.set(0.3, 0, 0); }); A.forEach(a => a.sh.rotation.set(-2.9, 0, a.s * 1.2)); }
+    bodyX += this.flipX;
     const gy = this.onPig ? this.pos.y : this.F.W.height(this.pos.x, this.pos.z); if (!this.onPig) this.pos.y = gy;
-    this.g.position.set(this.pos.x, this.pos.y + this.jy, this.pos.z); this.g.rotation.set(0, this.yaw, 0); this.body.position.y = bodyY; this.body.rotation.set(bodyX, 0, bodyZ); this.g.scale.setScalar(1.15);
+    this.g.position.set(this.pos.x, this.pos.y + this.jy, this.pos.z); this.g.rotation.set(0, this.yaw, 0); this.body.position.y = bodyY; this.body.rotation.set(bodyX, this.spin, bodyZ); this.g.scale.setScalar(1.15);
   }
 }
