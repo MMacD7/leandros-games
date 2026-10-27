@@ -185,21 +185,21 @@ body.breath #a-melee { background: radial-gradient(circle at 50% 40%, rgba(255,1
 .g-tabs .tab { font-size: 13px; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
 body.peak .logo i { color: #ffb08a; }
 #ver { position: absolute; right: calc(var(--sar) + 10px); bottom: calc(var(--sab) + 6px); font-size: 12px; font-weight: 800; color: rgba(255,255,255,.75); text-shadow: 0 1px 2px #000; pointer-events: none; }
-/* v4.1b: DRAGON PEAK title card is the eye-catcher: lava glow, pulse, gentle bounce, NEW! badge */
-#title #lv-peak { filter: none; border: 4px solid #ffb35a; animation: lavaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; z-index: 1; }
-#title #lv-peak:active { animation: none; transform: scale(.96); }
-#title #lv-peak b { font-size: clamp(20px, 5vh, 38px); color: #fff3d0; }
-#title #lv-peak .art { font-size: clamp(38px, 10vh, 84px); }
+/* v5: MEGA CITY SMASH title card is the eye-catcher (v4.1b: was Dragon Peak): lava glow, pulse, gentle bounce, NEW! badge */
+#title #lv-ocean { filter: none; border: 4px solid #ffb35a; animation: lavaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; z-index: 1; }
+#title #lv-ocean:active { animation: none; transform: scale(.96); }
+#title #lv-ocean b { font-size: clamp(20px, 5vh, 38px); color: #fff3d0; }
+#title #lv-ocean .art { font-size: clamp(38px, 10vh, 84px); }
 @keyframes lavaPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(255,90,20,.9), 0 0 18px 4px rgba(255,80,10,.7), inset 0 0 18px rgba(255,140,40,.5); border-color: #ff9a3a; } 50% { box-shadow: 0 0 0 5px rgba(255,200,60,1), 0 0 42px 12px rgba(255,60,0,.9), inset 0 0 28px rgba(255,180,60,.8); border-color: #ffe08a; } }
 @keyframes peakBounce { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.03); } }
 .lv.card .new { display: none; }
-#title #lv-peak .new { display: block; position: absolute; top: 6px; left: 8px; padding: 3px 10px; border-radius: 999px; font-size: clamp(12px, 2.4vh, 16px); font-weight: 900; font-style: italic; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 12px rgba(255,40,40,.9); transform: rotate(-8deg); animation: newBlink 1s steps(2, start) infinite; }
+#title #lv-ocean .new { display: block; position: absolute; top: 6px; left: 8px; padding: 3px 10px; border-radius: 999px; font-size: clamp(12px, 2.4vh, 16px); font-weight: 900; font-style: italic; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 12px rgba(255,40,40,.9); transform: rotate(-8deg); animation: newBlink 1s steps(2, start) infinite; }
 @keyframes newBlink { 50% { filter: brightness(1.35); } }
-#title #lv-peak .txt { padding-top: 10px; }
-@media (orientation: landscape) { #title .levels .lv.card.jungle { flex: 0.8 1 0; } #title .levels #lv-peak { flex: 1.2 1 0; } }
-@media (orientation: portrait) { #title #lv-peak { height: clamp(96px, 14vh, 180px); order: -1; } }
-@media (max-height: 430px) { #title #lv-peak { height: 84px; } #title #lv-peak b { font-size: 22px; } #title #lv-peak .art { font-size: 40px; } }
-@media (prefers-reduced-motion: reduce) { #title #lv-peak, #title #lv-peak .new { animation: none; } }
+#title #lv-ocean .txt { padding-top: 10px; }
+@media (orientation: landscape) { #title .levels .lv.card.jungle { flex: 0.8 1 0; } #title .levels #lv-ocean { flex: 1.2 1 0; } }
+@media (orientation: portrait) { #title #lv-ocean { height: clamp(96px, 14vh, 180px); order: -1; } }
+@media (max-height: 430px) { #title #lv-ocean { height: 84px; } #title #lv-ocean b { font-size: 22px; } #title #lv-ocean .art { font-size: 40px; } }
+@media (prefers-reduced-motion: reduce) { #title #lv-ocean, #title #lv-ocean .new { animation: none; } }
 /* v4.1c: NEW badges in the garage + title callout */
 .newb { display: inline-block; vertical-align: middle; font-size: .55em; font-weight: 900; font-style: italic; padding: 2px 8px; border-radius: 999px; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 10px rgba(255,40,40,.8); transform: rotate(-6deg) translateY(-2px); }
 #g-dots i.new { background: #ff5a2a; box-shadow: 0 0 6px #ff7a3a; } #g-dots i.new.own { background: radial-gradient(circle, #fff 0 25%, #ff5a2a 30%); }
@@ -225,7 +225,60 @@ body.peak .logo i { color: #ffb08a; }
 @media (max-height: 430px) { .g-tabs { margin-bottom: 6px; } .g-tabs .tab { padding-top: 8px; padding-bottom: 8px; font-size: 14px; } }
 .rb-btn.here #rb-cd { opacity: 0; }
 .lv.card .tag { top: auto; bottom: 6px; }
-@media (orientation: portrait) { #title #lv-peak .art { font-size: clamp(30px, 5.2vh, 60px); } #title #lv-peak b { font-size: clamp(22px, 3.5vh, 36px); } .lv.card .txt { flex: 1; } }
+@media (orientation: portrait) { #title #lv-ocean .art { font-size: clamp(30px, 5.2vh, 60px); } #title #lv-ocean b { font-size: clamp(22px, 3.5vh, 36px); } .lv.card .txt { flex: 1; } }
 #mcd, #rcd { display: none !important; } /* v4.2: no attack cooldowns, so no rings */
 .act { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #banner.rb { top: 15%; } /* v4.3: Ricky & Bobby banner high, above the floating dance floors */
+
+/* ---- v5: Mega City Smash ---- */
+.lv.card.city { background: radial-gradient(circle at 80% 24%, rgba(255,236,170,.95) 0 6%, transparent 7%), linear-gradient(180deg, #2a1650 0%, #a8306a 34%, #ff7a3a 60%, #ffc070 72%, #3a2438 73%, #1a1220 100%); }
+.lv.card.city::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 58%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, #ffe08a 0 1.4px, transparent 1.8px) 0 0 / 9px 11px, #1c1426;
+  clip-path: polygon(0 100%, 0 52%, 7% 52%, 7% 30%, 13% 30%, 13% 60%, 19% 60%, 19% 12%, 23% 12%, 23% 4%, 25% 4%, 25% 12%, 29% 12%, 29% 46%, 36% 46%, 36% 26%, 44% 26%, 44% 62%, 50% 62%, 50% 18%, 57% 18%, 57% 40%, 64% 40%, 64% 8%, 70% 8%, 70% 50%, 77% 50%, 77% 32%, 84% 32%, 84% 58%, 90% 58%, 90% 22%, 96% 22%, 96% 48%, 100% 48%, 100% 100%); opacity: .9; }
+.lv.card.city .art, .lv.card.city .txt, .lv.card.city .tag, .lv.card.city .new { position: relative; z-index: 1; }
+.lv.card.city .tag, .lv.card.city .new { position: absolute; }
+.lv.card.city.on { box-shadow: 0 0 0 3px rgba(255,170,80,.95), 0 0 30px rgba(255,110,60,.8); }
+body.city .logo i { color: #ffc08a; }
+@media (orientation: landscape) { #title .levels .lv.card.peak { flex: 0.9 1 0; } }
+#citybar { position: absolute; top: calc(var(--sat) + 10px); left: 50%; transform: translateX(-50%); width: min(40vw, 380px); text-align: center; pointer-events: none; }
+#citybar .cb { height: 12px; border-radius: 8px; background: rgba(0,0,0,.55); border: 2px solid rgba(255,220,170,.85); overflow: hidden; box-shadow: 0 0 12px rgba(255,120,40,.5); }
+#citybar .cb i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffb03a, #ff5a1a 60%, #ff1a3a); transition: width .3s; }
+#citybar b { display: block; margin-top: 2px; font-size: 13px; font-weight: 900; letter-spacing: 1px; color: #fff3d8; text-shadow: 0 1px 3px #000, 0 0 8px rgba(255,90,30,.8); }
+body:has(#hud-tc:not(.hidden)) #citybar { top: calc(var(--sat) + 62px); }
+body.city #boss { top: calc(var(--sat) + 112px); }
+@media (max-height: 430px) { #citybar { width: 34vw; } #citybar .cb { height: 9px; } #citybar b { font-size: 11px; } body:has(#hud-tc:not(.hidden)) #citybar { top: calc(var(--sat) + 70px); } body.city #boss { top: calc(var(--sat) + 104px); } }
+@media (orientation: portrait) { #citybar { top: calc(var(--sat) + 64px); width: 52vw; } body:has(#hud-tc:not(.hidden)) #citybar { top: calc(var(--sat) + 112px); } body.city #boss { top: calc(var(--sat) + 150px); } }
+
+/* ---- v5: Deep Sea Showdown ---- */
+.lv.card.ocean { background: radial-gradient(ellipse at 30% -10%, rgba(200,250,255,.85), transparent 45%), linear-gradient(105deg, transparent 20%, rgba(190,250,255,.22) 26%, transparent 32%, transparent 52%, rgba(190,250,255,.18) 58%, transparent 64%), linear-gradient(180deg, #2bc0e8 0%, #0e7aa8 36%, #0a4a78 70%, #c8a868 86%, #8a6a3a 100%); }
+.lv.card.ocean.on { box-shadow: 0 0 0 3px rgba(90,230,255,.95), 0 0 30px rgba(40,200,255,.8); }
+#title #lv-ocean { border-color: #7ae8ff; animation: seaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; }
+#title #lv-ocean b { color: #e8fdff; }
+@keyframes seaPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(40,180,255,.9), 0 0 18px 4px rgba(20,160,255,.7), inset 0 0 18px rgba(120,230,255,.5); border-color: #6adcff; } 50% { box-shadow: 0 0 0 5px rgba(140,250,255,1), 0 0 42px 12px rgba(0,170,255,.9), inset 0 0 28px rgba(160,240,255,.8); border-color: #e8ffff; } }
+body.ocean .logo i { color: #8ae8ff; }
+/* 4 level cards: keep them readable side by side in landscape */
+@media (orientation: landscape) { #title .levels, .lv-panel .levels { width: min(98vw, 1000px); gap: clamp(6px, 1.2vw, 14px); } .lv-panel { width: min(97vw, 1020px); }
+  #title .levels .lv.card, #title .levels #lv-ocean, #title .levels .lv.card.jungle, #title .levels .lv.card.peak, .lv-panel .lv.card { flex: 1 1 0; flex-direction: column; justify-content: center; text-align: center; padding: 6px 6px 8px; gap: 2px; }
+  .lv.card .txt { align-items: center; } .lv.card .art, #title #lv-ocean .art { letter-spacing: -4px; font-size: clamp(24px, 6.5vh, 56px); }
+  .lv.card b, #title #lv-ocean b { font-size: clamp(13px, 3.1vh, 25px); white-space: normal; line-height: 1; overflow-wrap: anywhere; } .lv.card small { font-size: clamp(10px, 1.7vh, 14px); }
+  #title #lv-ocean .txt { padding-top: 0; } }
+@media (orientation: landscape) and (max-height: 430px) { .lv.card small { display: none; } .lv.card .art, #title #lv-ocean .art { font-size: 28px; } .lv.card b, #title #lv-ocean b { font-size: 14px; } }
+@media (orientation: portrait) { .levels { gap: clamp(5px, 0.8vh, 12px); } .lv.card { height: clamp(56px, 7.6vh, 120px); } #title #lv-ocean { height: clamp(76px, 10vh, 150px); } #levels .lv.card { height: clamp(80px, 13vh, 170px); }
+  .lv.card .art { font-size: clamp(28px, 4.6vh, 60px); } .lv.card b { font-size: clamp(18px, 2.9vh, 32px); } }
+@media (orientation: portrait) and (max-height: 900px) { #title .lv.card small { display: none; } #title .lv.card .tag { display: none; } #title .lv.card { height: 50px; } #title #lv-ocean { height: 66px; } #title .lv.card .art { font-size: 30px; } }
+@media (orientation: landscape) and (max-height: 430px) { #title .lv.card .tag { display: none; } #title-bolts { display: none; } }
+/* swim ▲▼ buttons (only for sea creatures) */
+.act.ud { display: none; width: 58px; height: 58px; font-size: 18px; background: radial-gradient(circle at 35% 30%, #c8fbff, #1aa8c8 55%, #064a6a); border-color: #c8f6ff; }
+.act.ud small { font-size: 9px; }
+body.swimmer .act.ud { display: block; }
+#a-up { right: 178px; bottom: 152px; } #a-down { right: 188px; bottom: 88px; }
+@media (max-height: 430px) { .act.ud { width: 52px; height: 52px; font-size: 16px; } #a-up { right: 170px; bottom: 140px; } #a-down { right: 174px; bottom: 82px; } }
+body.swimmer #a-boost span, body.swimmer #a-laser span, body.swimmer #a-missile span, body.swimmer #a-melee span { font-size: 11px; }
+/* octopus ink splat on the player's screen */
+#ink { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; background: radial-gradient(circle at 30% 40%, rgba(5,5,15,.95) 0 18%, transparent 30%), radial-gradient(circle at 70% 60%, rgba(5,5,15,.9) 0 16%, transparent 28%), radial-gradient(circle at 50% 50%, rgba(5,5,20,.6), rgba(5,5,20,.25) 70%); }
+#ink.on { animation: inkFade 3s ease-out; }
+@keyframes inkFade { 0% { opacity: 0; } 8% { opacity: 1; } 60% { opacity: .7; } 100% { opacity: 0; } }
+/* 6 garage tabs (Real, Robots, Dragons, Sea, Dogs, Upgrades) fit on one row */
+.g-tabs { gap: 4px; } .g-tabs .tab { font-size: 12px; padding-left: 2px; padding-right: 2px; letter-spacing: -0.2px; }
+@media (max-width: 430px) { .g-tabs .tab { font-size: 11px; } }
+@media (orientation: portrait) { #title .menu { margin-bottom: calc(var(--sab) + 40px); } }
