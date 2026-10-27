@@ -1,11 +1,13 @@
 // Mayhem: fire, burning, explosive props with chain reactions, volcano eruptions + lava bombs + lava rivers,
 // battle power-ups (meteor storm / air strike), combo + KO streaks, boss waves and the end-of-battle celebration.
 import * as THREE from './vendor/three.bundle.min.js';
+import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { ARENA, BASE, VOLC } from './world.js';
 import { sfx } from './audio.js';
 import { rng, clamp } from './noise.js';
 
-const TYPES = { barrel: { hp: 12, power: 1.0, r: 0.8, h: 1.9 }, fuel: { hp: 22, power: 1.7, r: 1.35, h: 3.4 }, crate: { hp: 9, power: 0.8, r: 1.0, h: 1.8 } };
+const TYPES = { barrel: { hp: 12, power: 1.0, r: 0.8, h: 1.9 }, fuel: { hp: 22, power: 1.7, r: 1.35, h: 3.4 }, crate: { hp: 9, power: 0.8, r: 1.0, h: 1.8 }, car: { hp: 14, power: 1.15, r: 2.0, h: 2.0 } };
+const CAR_COLS = [0xd8262a, 0x2a6ad8, 0xf2c21a, 0xf4f4f0, 0x1c1c22, 0x3aa84a, 0xff7a1a, 0x8a3ad8];
 const G = new THREE.Vector3(0, -22, 0), V = new THREE.Vector3(), V2 = new THREE.Vector3();
 const TITLE = { x: 16, z: 181 };
 
@@ -34,7 +36,7 @@ export class Mayhem {
   // per-level state (props + lava rivers) is built once per world and cached on it
   setWorld(w) {
     if (this.world && this.world.mhState) { const s = this.world.mhState; s.lavaMesh.visible = false; s.lavaGlows.forEach(g => g.visible = false); }
-    this.world = w; this.fires = []; for (const F of this.falls) { this.scene.remove(F.m); if (F.warn) F.warn.dead = true; } this.falls = [];
+    this.world = w; if (w.city) w.city.game = this.g; this.fires = []; for (const F of this.falls) { this.scene.remove(F.m); if (F.warn) F.warn.dead = true; } this.falls = [];
     for (const p of this.powerups) this.scene.remove(p.m); this.powerups = [];
     if (!w.mhState) { this.items = []; this.placeProps(); this.buildLavaRivers(); w.mhState = { items: this.items, lavaMesh: this.lavaMesh, lavaGlows: this.lavaGlows, lavaPts: this.lavaPts }; }
     const s = w.mhState; this.items = s.items; this.lavaMesh = s.lavaMesh; this.lavaGlows = s.lavaGlows; this.lavaPts = s.lavaPts;
@@ -53,17 +55,26 @@ export class Mayhem {
       barrel: mk(new THREE.CylinderGeometry(0.75, 0.75, 1.9, 16), null, [new THREE.MeshStandardMaterial({ map: barrelT, metalness: 0.4, roughness: 0.5 }), cap, cap], 160),
       fuel: mk(new THREE.CylinderGeometry(1.3, 1.3, 3.4, 18), null, [new THREE.MeshStandardMaterial({ map: fuelT, metalness: 0.5, roughness: 0.45 }), new THREE.MeshStandardMaterial({ color: 0xbab4a8, metalness: 0.6, roughness: 0.4 }), cap], 40),
       crate: mk(new THREE.BoxGeometry(1.8, 1.8, 1.8), crateT, null, 80),
+      // v5: city cars (explode like fuel tanks, so a smashed street goes up in a chain reaction)
+      car: mk(mergeGeometries([new THREE.BoxGeometry(1.9, 0.95, 4.3).translate(0, -0.3, 0), new THREE.BoxGeometry(1.7, 0.75, 2.3).translate(0, 0.5, -0.2),
+        ...[[-0.9, -1.35], [0.9, -1.35], [-0.9, 1.35], [0.9, 1.35]].map(([x, z]) => new THREE.CylinderGeometry(0.42, 0.42, 0.3, 10).rotateZ(Math.PI / 2).translate(x, -0.6, z))]),
+        null, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.55, roughness: 0.3 }), 120),
     };
+    for (let i = 0; i < 120; i++) this.mesh.car.setColorAt(i, new THREE.Color(1, 1, 1));
   }
   placeProps() {
-    const W = this.world, ok = (x, z, r) => { const h = W.height(x, z); if (h < 1.2 || h > 38 || W.normalAtY(x, z) < 0.93) return false;
+    const W = this.world, ok = (x, z, r) => { const h = W.height(x, z); if (h < 1.2 || h > 38 || W.normalAtY(x, z) < 0.93) return false; if (W.city && W.city.blocked(x, z, r + 1)) return false;
       for (const c of W.colliders) if ((c.x - x) ** 2 + (c.z - z) ** 2 < (c.r + r + 1.5) ** 2) return false; for (const it of this.items) if ((it.x - x) ** 2 + (it.z - z) ** 2 < (it.r + r + 0.4) ** 2) return false; return true; };
-    const add = (type, x, z, zone) => { const T = TYPES[type]; if (!ok(x, z, T.r)) return false; this.items.push({ type, x, z, y: W.height(x, z), r: T.r, h: T.h, hp: T.hp, alive: true, t: 0, zone, rot: Math.random() * 6 }); return true; };
+    const add = (type, x, z, zone, rot) => { const T = TYPES[type]; if (!ok(x, z, T.r)) return false; this.items.push({ type, x, z, y: W.height(x, z), r: T.r, h: T.h, hp: T.hp, alive: true, t: 0, zone, rot: rot ?? Math.random() * 6, col: new THREE.Color(CAR_COLS[(Math.random() * CAR_COLS.length) | 0]) }); return true; };
     const cluster = (cx, cz, zone, r, big) => { if (big && r() < 0.6) add('fuel', cx, cz, zone); const n = 2 + (r() * 3 | 0);
       for (let i = 0; i < n; i++) { const a = r() * 6.28, d = 2 + r() * 3; add(r() < 0.7 ? 'barrel' : 'crate', cx + Math.cos(a) * d, cz + Math.sin(a) * d, zone); } };
     const r = rng(4242);
     // arena: clusters around the fighting floor (kept off the player start line and the enemy spawn)
     for (const [a, d] of [[0.9, 22], [2.2, 24], [4.0, 23], [5.3, 21], [1.57, 11], [4.7, 12], [2.75, 30], [3.55, 30]]) cluster(ARENA.x + Math.cos(a) * d, ARENA.z + Math.sin(a) * d, 'arena', r, d > 15);
+    // city: cars parked along the curbs (they explode!)
+    if (W.city) { const B = 44, rr = rng(909); for (let i = 0, n = 0; i < 900 && n < 110; i++) { const k = Math.round((rr() - 0.5) * 14), along = (rr() - 0.5) * 560, side = rr() < 0.5 ? -3.6 : 3.6, alongX = rr() < 0.5;
+      const x = alongX ? along : k * B + side, z = alongX ? k * B + side : along; if (Math.hypot(x, z) > 270) continue; const m = ((along % B) + B) % B; if (Math.min(m, B - m) < 10) continue; // not in intersections
+      if (add('car', x, z, 'city', alongX ? Math.PI / 2 : 0)) n++; } }
     // island: scattered depots
     for (let i = 0, n = 0; i < 200 && n < 24; i++) { const a = r() * 6.28, d = 40 + r() * 250, x = Math.cos(a) * d, z = Math.sin(a) * d;
       if (Math.hypot(x - BASE.x, z - BASE.z) < 45 || Math.hypot(x - ARENA.x, z - ARENA.z) < 45 || Math.hypot(x - VOLC.x, z - VOLC.z) < 50 || Math.hypot(x - TITLE.x, z - TITLE.z) < 28) continue;
@@ -71,14 +82,16 @@ export class Mayhem {
     this.dirty = true;
   }
   syncProps() {
-    if (!this.dirty) return; this.dirty = false; const n = { barrel: 0, fuel: 0, crate: 0 }, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1);
-    for (const it of this.items) { if (!it.alive) continue; q.setFromAxisAngle(V.set(0, 1, 0), it.rot); m4.compose(V2.set(it.x, it.y + it.h / 2 - 0.05, it.z), q, s); this.mesh[it.type].setMatrixAt(n[it.type]++, m4); }
+    if (!this.dirty) return; this.dirty = false; const n = { barrel: 0, fuel: 0, crate: 0, car: 0 }, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1);
+    for (const it of this.items) { if (!it.alive) continue; q.setFromAxisAngle(V.set(0, 1, 0), it.rot); m4.compose(V2.set(it.x, it.y + it.h / 2 - 0.05, it.z), q, s); if (it.type === 'car') this.mesh.car.setColorAt(n.car, it.col); this.mesh[it.type].setMatrixAt(n[it.type]++, m4); }
+    if (this.mesh.car.instanceColor) this.mesh.car.instanceColor.needsUpdate = true;
     for (const k in n) { this.mesh[k].count = n[k]; this.mesh[k].instanceMatrix.needsUpdate = true; }
   }
   resetArena() { for (const it of this.items) if (it.zone === 'arena') { it.alive = true; it.hp = TYPES[it.type].hp; } this.dirty = true; for (const p of this.powerups) this.scene.remove(p.m); this.powerups = []; this.puT = 7; }
   damageItem(it, dmg, by) { if (!it.alive) return; it.hp -= dmg; if (it.hp <= 0) this.explodeItem(it, by); else if (Math.random() < 0.5) this.fx.sparks(V.set(it.x, it.y + it.h * 0.6, it.z), 5, { r: 1, g: 0.7, b: 0.3 }, 0.6); }
-  damageAt(pos, R, dmg, by) { for (const it of this.items) { if (!it.alive) continue; const d = Math.hypot(it.x - pos.x, it.z - pos.z) - it.r; if (d < R && Math.abs(it.y + it.h / 2 - pos.y) < R + it.h) this.damageItem(it, dmg, by); } }
+  damageAt(pos, R, dmg, by) { if (this.world.city && dmg > 0 && !this.safe) this.world.city.damageAt(pos, R, dmg, by); for (const it of this.items) { if (!it.alive) continue; const d = Math.hypot(it.x - pos.x, it.z - pos.z) - it.r; if (d < R && Math.abs(it.y + it.h / 2 - pos.y) < R + it.h) this.damageItem(it, dmg, by); } }
   hitSegment(a, b, dmg, by) {
+    if (this.world.city && !this.safe) { const bl = this.world.city.hitSegment(a, b, dmg, by); if (bl) return { building: bl }; }
     const dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz || 1e-6;
     for (const it of this.items) { if (!it.alive) continue; const t = clamp(((it.x - a.x) * dx + (it.z - a.z) * dz) / L2, 0, 1), px = a.x + dx * t, pz = a.z + dz * t, py = a.y + (b.y - a.y) * t;
       if ((px - it.x) ** 2 + (pz - it.z) ** 2 < (it.r + 0.3) ** 2 && py > it.y - 0.3 && py < it.y + it.h + 0.3) { this.damageItem(it, dmg, by); return it; } }
@@ -105,12 +118,12 @@ export class Mayhem {
       if (k <= 0) continue; const f = 1 - clamp(dist / R, 0, 1) * 0.6;
       d.hit(dmg * f * k, pos, by); V.subVectors(d.pos, pos).setY(0).normalize(); d.knock.addScaledVector(V, (d.boss ? 3 : 14) * f); this.ignite(d, 1.5 + P, by); }
     if (!o.item) this.damageAt(pos, R * 0.8, 99, by); else this.damageAt(pos, 0, 0, by);
-    const gy = o.groundY ?? this.world.height(pos.x, pos.z); if (gy > -0.5 && o.fire !== false) this.addFire(V2.set(pos.x, gy, pos.z), 1.6 + P * 1.1, 4 + P * 2.5, by);
+    const gy = o.groundY ?? this.world.height(pos.x, pos.z); if (gy > -0.5 && o.fire !== false && !this.world.ocean) this.addFire(V2.set(pos.x, gy, pos.z), 1.6 + P * 1.1, 4 + P * 2.5, by);
   }
 
   // ---------- fire ----------
-  ignite(d, t, by) { if (!d || !d.alive || d.shieldT > 0 || (d.ground !== undefined && d.ground < -0.8 && !d.fly)) return; if (!(d.burnT > 0)) { this.stats.ignites++; if (this.near(d.pos, 80) > 0) sfx.ignite(); } d.burnT = Math.max(d.burnT || 0, t); d.burnBy = by; d.burnTick = d.burnTick || 0.3; }
-  addFire(pos, r, dur, by) { const cap = Math.round(5 + 12 * this.fx.k); if (this.fires.length >= cap) this.fires.shift(); this.fires.push({ x: pos.x, y: pos.y, z: pos.z, r, dur, t: 0, by, tick: 0.4 }); }
+  ignite(d, t, by) { if (!d || !d.alive || this.world.ocean || d.shieldT > 0 || (d.ground !== undefined && d.ground < -0.8 && !d.fly)) return; if (!(d.burnT > 0)) { this.stats.ignites++; if (this.near(d.pos, 80) > 0) sfx.ignite(); } d.burnT = Math.max(d.burnT || 0, t); d.burnBy = by; d.burnTick = d.burnTick || 0.3; }
+  addFire(pos, r, dur, by) { if (this.world.ocean) return; const cap = Math.round(5 + 12 * this.fx.k); if (this.fires.length >= cap) this.fires.shift(); this.fires.push({ x: pos.x, y: pos.y, z: pos.z, r, dur, t: 0, by, tick: 0.4 }); }
   updateFire(dt) {
     const fx = this.fx, cp = this.g.camera.position, lvl = this.g.save.up.fire || 0;
     for (let i = this.fires.length - 1; i >= 0; i--) { const F = this.fires[i]; F.t += dt; if (F.t > F.dur) { this.fires.splice(i, 1); continue; }
@@ -140,7 +153,8 @@ export class Mayhem {
       const dps = isP ? 34 * (1 + 0.15 * lvl) : (d.boss ? 22 : 9 + d.level * 2);
       for (const e of g.foesOf(d)) { if (!e || !e.alive) continue; V.copy(e.center).sub(m); const L = V.length() - e.radius; if (L > R) continue; V.normalize(); if (V.dot(dir) < 0.78 && L > 2) continue;
         e.hit(dps * 0.25 * (kind === 'ice' ? 0.75 : 1), d.pos, d); if (kind === 'ice') g.chill(e, 0.2, d); else this.ignite(e, 2 + 0.5 * lvl, d); }
-      for (const it of this.items) { if (!it.alive) continue; V.set(it.x - m.x, it.y + it.h / 2 - m.y, it.z - m.z); const L = V.length(); if (L < R && V.normalize().dot(dir) > 0.75) this.damageItem(it, 5, d); } }
+      for (const it of this.items) { if (!it.alive) continue; V.set(it.x - m.x, it.y + it.h / 2 - m.y, it.z - m.z); const L = V.length(); if (L < R && V.normalize().dot(dir) > 0.75) this.damageItem(it, 5, d); }
+      if (this.world.city) this.world.city.damageAt(m.clone().addScaledVector(dir, R * 0.6), R * 0.45, 8, d); }
     d.breathFire -= dt; if (d.breathFire <= 0) { d.breathFire = 0.4; const e = m.clone().addScaledVector(dir, 9 * len); const gy = this.world.height(e.x, e.z); if (kind === 'fire' && gy > -0.5 && e.y - gy < (d.fly ? 9 : 4)) this.addFire(V2.set(e.x, gy, e.z), 1.5, 2.5, d); }
   }
   // Storm Dragon breath: a crackling stream of lightning that forks into every foe in the cone
@@ -230,7 +244,8 @@ export class Mayhem {
   }
   updateVolcano(dt, title) {
     const Vc = this.volc, W = this.world, fx = this.fx, cp = this.g.camera.position;
-    this.lavaTex.offset.y -= dt * 0.22; const pulse = 0.5 + 0.15 * Math.sin(W.time * 3.1);
+    this.lavaTex.offset.y -= dt * 0.22; if (W.isCity) return; // no volcano in the city
+    const pulse = 0.5 + 0.15 * Math.sin(W.time * 3.1);
     for (const s of this.lavaGlows) s.material.opacity = pulse + Vc.glow * 0.3;
     if (Vc.on > 0) { Vc.on -= dt; Vc.glow = Math.min(1, Vc.glow + dt * 2);
       const c = { x: VOLC.x, y: W.craterY + 2, z: VOLC.z };

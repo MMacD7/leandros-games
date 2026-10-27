@@ -2,8 +2,11 @@
 import * as THREE from './vendor/three.bundle.min.js';
 import { Mech } from './mech.js';
 import { Beast } from './beast.js';
-import { DINOS, DRAGON_KING, statsFor } from './data.js';
-import { Westies } from './westies.js';
+import { DINOS, DRAGON_KING, MEGA_REX, KRAKEN, MONSTER_MEG, statsFor } from './data.js';
+import { SeaBeast } from './sea.js';
+import { SURF } from './ocean.js';
+import { Westies, Pup, setScuba } from './westies.js';
+import { music } from './music.js';
 import { BASE, ARENA, VOLC } from './world.js';
 import { sfx } from './audio.js';
 import { clamp, lerp, rng } from './noise.js';
@@ -13,7 +16,9 @@ import { Rider } from './rider.js';
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const pool = new Map();
-export const makeDino = (def, assets, wild) => def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+export const makeDino = (def, assets, wild) => def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+const ROID = ['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero']; // v5 "on steroids" dinos (every level)
+const STAMPEDERS = ['raptorpack', 'velo', 'megatrike', 'trice', 'pachy', 'para', 'raptor'];
 function getMech(def, assets, wild) { const k = def.id + (wild ? '!' : ''); const p = pool.get(k); if (p && p.length) return p.pop(); return makeDino(def, assets, wild); }
 function freeMech(m) { const k = m.def.id + (m.wild ? '!' : ''); if (!pool.has(k)) pool.set(k, []); m.ko = 0; m.flash = 0; m.obj.scale.setScalar(1); m.obj.rotation.set(0, 0, 0); pool.get(k).push(m); }
 const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -36,11 +41,12 @@ class Dino {
   }
   get center() { return tmp2.set(this.pos.x, this.pos.y + this.mech.height * 0.5, this.pos.z); }
   forward(out) { return out.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
-  place(x, z, yaw = 0) { this.pos.set(x, this.g.world.height(x, z), z); this.yaw = yaw; if (this.fly) this.alt = 7; this.groundY(); }
+  place(x, z, yaw = 0) { this.pos.set(x, this.g.world.height(x, z), z); this.yaw = yaw; if (this.fly) this.alt = this.def.sea ? 3 : 7; this.groundY(); if (this.fly) this.pos.y = this.def.sea ? this.ground + 0.6 + this.alt : Math.max(this.ground, 0) + 2 + this.alt; }
   groundY() { const w = this.g.world, h = w.height(this.pos.x, this.pos.z); this.ground = h;
-    if (this.fly) { const base = Math.max(h, 0) + 2; this.pos.y = lerp(this.pos.y, Math.max(base, base + this.alt), 0.15); }
+    if (this.fly) { const sea = this.def.sea, base = sea ? h + 0.6 : Math.max(h, 0) + 2; let y = Math.max(base, base + this.alt); if (w.ocean) y = Math.min(y, Math.max(base, SURF - 3 - this.mech.height)); this.pos.y = lerp(this.pos.y, y, sea ? 0.25 : 0.15); } // v5: swimmers hug the sea floor, nobody leaves the water
     else if (this.swim && h < -0.8 && !w.lava) this.pos.y = lerp(this.pos.y, Math.max(h, -1.7), 0.2);
-    else this.pos.y = h; }
+    else this.pos.y = h;
+    if (this.jy > 0) this.pos.y += this.jy; } // v5: westie jumps / flying hops
   hit(dmg, from, attacker, quiet) {
     if (!this.alive) return;
     if (this.shieldT > 0) { this.mech.flash = 0.4; return; }
@@ -52,7 +58,7 @@ class Dino {
   move(dt, dir, mag, boost) {
     const w = this.g.world;
     if (this.stunT > 0) mag = 0;
-    const spd = this.st.speed * (boost ? 1.75 : 1) * (this.slowT > 0 ? 0.45 : 1) * (this.rageT > 0 ? 1.4 : 1) * (this.swim && this.ground < -0.8 ? 1.3 : 1) * (!this.swim && !this.fly && this.ground < -0.4 ? 0.6 : 1);
+    const spd = this.st.speed * (boost ? (this.def.glide ? 2.4 : 1.75) : 1) * (this.slowT > 0 ? 0.45 : 1) * (this.rageT > 0 ? 1.4 : 1) * (this.swim && this.ground < -0.8 ? 1.3 : 1) * (!this.swim && !this.fly && this.ground < -0.4 ? 0.6 : 1);
     if (mag > 0.05) {
       const want = Math.atan2(dir.x, dir.z), d = angDiff(this.yaw, want), tr = (this.def.kind === 'raptor' ? 6 : 4) * (boost ? 0.8 : 1);
       this.turn = clamp(d, -1, 1); this.yaw += clamp(d, -tr * dt, tr * dt);
@@ -66,11 +72,17 @@ class Dino {
     const h = w.height(this.pos.x, this.pos.z);
     if (!this.fly && (!this.swim || this.g.world.lava) && h < -1.6) { this.pos.x = ox; this.pos.z = oz; this.speedNow *= 0.5; }
     const r = Math.hypot(this.pos.x, this.pos.z); if (r > 380) { this.pos.x *= 380 / r; this.pos.z *= 380 / r; }
-    w.collide(this.pos, this.radius * 0.6, this.fly && this.alt > 4);
+    const hitB = w.collide(this.pos, this.radius * 0.6, this.fly && this.alt > 4 || this.jy > 6); if (hitB && w.city) w.city.slam(this, hitB, dt); // v5: smash into buildings
     this.groundY();
   }
   updateVisual(dt) {
     const m = this.mech, w = this.g.world;
+    // v5 LOD: far dinos skip shadows, animate at a lower rate, and are hidden beyond the draw distance (keeps big waves iPad-friendly)
+    if (this !== this.g.player) { const cp = this.g.camera.position, dd = Math.hypot(this.pos.x - cp.x, this.pos.z - cp.z), far = dd > 95, Q = this.g.quality;
+      if (far !== this._far) { this._far = far; for (const mm of m.meshes) mm.castShadow = !far; }
+      m.obj.visible = dd < Math.min(330, (Q && Q.draw) || 400, w.drawCap ? w.drawCap / 0.75 * 0.9 : 1e9) * 0.75;
+      if (!m.obj.visible) { m.obj.position.copy(this.pos); return; }
+      if (far) { this._lodT = (this._lodT || 0) + dt; if (this._lodSkip = !this._lodSkip) { m.obj.position.copy(this.pos); return; } dt = this._lodT; } this._lodT = 0; }
     const n = w.normalAt(this.pos.x, this.pos.z, tmp);
     if (this.fly || (this.swim && this.ground < -0.8)) n.set(0, 1, 0);
     const q = new THREE.Quaternion().setFromUnitVectors(up, n.lerp(up, this.mech.quad ? 0.35 : 0.65).normalize());
@@ -124,15 +136,16 @@ export class Game {
     this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
     this.westies = new Westies(this);
   }
-  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && this.save.ride !== false) R.mount(p.mech); }
+  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && this.save.ride !== false && !p.def.westie && !p.def.sea && !(this.world && this.world.ocean)) R.mount(p.mech); } // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }
 
   // ---------- setup ----------
   spawnPlayer(atArena) {
     if (this.player) this.player.remove();
-    const def = DINOS.find(d => d.id === this.save.selected) || DINOS[0];
-    const p = new Dino(this, def, false); this.player = p; this.mountRider();
+    let def = DINOS.find(d => d.id === this.save.selected) || DINOS[0]; const oc = this.world && this.world.ocean, by = id => DINOS.find(d => d.id === id);
+    if (oc && !def.sea && !def.westie) def = by(this.save.seaSel) || by('shark'); else if (!oc && def.sea) def = by(this.save.landSel) || by('rex'); // v5: sea creatures swim in the Deep Sea, land dinos stomp on land
+    const p = new Dino(this, def, false); this.player = p; if (def.westie) setScuba(p.mech.w, oc); // Ricky / Bobby dive in scuba gear this.mountRider();
     if (atArena) p.place(ARENA.x - 30, ARENA.z, Math.PI / 2); else p.place(BASE.x, BASE.z - 6, Math.PI);
     this.cam.yaw = p.yaw + Math.PI; this.snapCam = true;
     if (this.hud.actions) this.hud.actions(def);
@@ -143,11 +156,19 @@ export class Game {
     // wild island life is a mix of real dinos and robots (alternating-ish so both always show up)
     this.mixN = (this.mixN || 0) + 1; const wantReal = this.r() < 0.35 ? this.r() < 0.5 : this.mixN % 2 === 0;
     let pickFrom;
-    if (this.level === 'peak') { // Dragon Peak: dragons rule the skies, plus the new dinos and mechs on the ground
+    const roidNow = this.r() < 0.3 && this.level !== 'ocean'; // v5: the supercharged dinos show up everywhere (on land)
+    if (roidNow) pickFrom = DINOS.filter(d => ROID.includes(d.id) && !(d.fly && this.mode === 'battle' && this.level !== 'peak'));
+    else if (this.level === 'peak') { // Dragon Peak: dragons rule the skies, plus the new dinos and mechs on the ground
       const NEW = ['giga', 'allo', 'dilo', 'pachy', 'para', 'gmech', 'dblast', 'trex', 'rex'];
       pickFrom = this.mixN % 2 === 0 ? DINOS.filter(d => d.dragon) : DINOS.filter(d => NEW.includes(d.id) && d.real === wantReal); }
+    else if (this.level === 'city') { // Mega City: big stompers + mechs + the occasional dragon over the rooftops
+      const CITY = ['trex', 'giga', 'allo', 'spinos', 'trice', 'ankys', 'stegos', 'pachy', 'velo', 'carno', 'rex', 'gmech', 'tri', 'raptor', 'spino', 'ankylo', 'bronto', 'dblast'];
+      pickFrom = this.mixN % 7 === 0 && this.mode !== 'battle' ? DINOS.filter(d => d.dragon) : DINOS.filter(d => CITY.includes(d.id) && d.real === wantReal); }
+    else if (this.level === 'ocean') { // v5 Deep Sea: sharks, rays, octopuses, jellyfish, anglers, serpents, crabs (+ a rare megalodon)
+      const OCEAN = ['shark', 'stingray', 'octopus', 'jellyfish', 'angler', 'serpent', 'crab', 'shark']; if (this.r() < 0.12) OCEAN.push('megalodon'); pickFrom = DINOS.filter(d => OCEAN.includes(d.id)); }
     else { const PEAK_ONLY = ['giga', 'allo', 'dilo', 'gmech', 'dblast']; // Jungle Island keeps its classic cast (+ Pachy and Para); the big new hunters live on Dragon Peak
-      pickFrom = DINOS.filter(d => d.real === wantReal && !d.dragon && !PEAK_ONLY.includes(d.id) && !(d.fly && this.mode === 'battle')); }
+      pickFrom = DINOS.filter(d => d.real === wantReal && !d.dragon && !d.westie && !ROID.includes(d.id) && !PEAK_ONLY.includes(d.id) && !(d.fly && this.mode === 'battle')); }
+    const oc = this.level === 'ocean'; pickFrom = pickFrom.filter(d => !d.westie && (oc ? d.sea : !d.sea)); if (!pickFrom.length) pickFrom = DINOS.filter(d => d.real && !d.westie && !d.dragon && (oc ? d.sea : !d.sea));
     const def = defId ? DINOS.find(d => d.id === defId) : pickFrom[(this.r() * pickFrom.length) | 0];
     const e = new Dino(this, def, true, level); e.place(x, z, this.r() * 6.28); e.ai.home.set(x, 0, z); e.laserT = 1 + this.r(); e.missileT = 2 + this.r() * 3; e.meleeT = 2;
     this.enemies.push(e); return e;
@@ -158,7 +179,9 @@ export class Game {
       const h = this.world.height(x, z);
       if (h < 1.5 || h > 40) continue; if (Math.hypot(x - BASE.x, z - BASE.z) < 75) continue;
       if (this.player && Math.hypot(x - this.player.pos.x, z - this.player.pos.z) < 45) continue;
+      if (this.player && t < 30 && Math.hypot(x - this.player.pos.x, z - this.player.pos.z) > 200) continue; // v5: keep new arrivals near the action (far ones despawn at 260 m)
       if (Math.hypot(x - VOLC.x, z - VOLC.z) < 30) continue;
+      if (this.world.city && this.world.city.blocked(x, z, 5)) continue; // not inside a skyscraper
       return [x, z, 1 + Math.min(3, Math.floor(Math.hypot(x - BASE.x, z - BASE.z) / 90))];
     }
     return [ARENA.x, ARENA.z, 2];
@@ -198,6 +221,8 @@ export class Game {
   }
   bossWave() {
     if (this.level === 'peak') return this.dragonKing();
+    if (this.level === 'city') return this.megaRex();
+    if (this.level === 'ocean') return this.krakenBoss();
     const b = this.battle, k = (b.wave / 3) | 0, real = k % 2 === 0, base = DINOS.find(d => d.id === (real ? 'trex' : 'rex')), S = 2.1;
     const def = { ...base, id: 'boss-' + base.id, name: real ? 'TITAN T-REX' : 'MEGA ROBO-REX', scale: base.scale * S, radius: (base.radius ?? 2.4 * base.scale) * S, boss: true };
     const e = new Dino(this, def, true, 4); e.boss = true; e.place(ARENA.x + 20, ARENA.z, -Math.PI / 2); e.ai.home.copy(ARENA); e.ai.state = 'chase';
@@ -221,19 +246,72 @@ export class Game {
     for (let i = 0; i < 4; i++) this.later(0.1 + i * 0.12, () => this.fx.zap(new THREE.Vector3(e.pos.x + (Math.random() - 0.5) * 30, e.pos.y + 60, e.pos.z + (Math.random() - 0.5) * 30), e.center.clone(), { r: 1, g: 0.85, b: 0.5 }, 0.6, 0.25, 0.1));
     if (this.world.flash) this.world.flash(1);
   }
+  // v5 City boss: MEGA-REX, a kaiju-sized armored Giganotosaurus that flattens buildings as it walks
+  megaRex() {
+    const b = this.battle, k = (b.wave / 3) | 0, def = { ...MEGA_REX };
+    const e = new Dino(this, def, true, 4); e.boss = true; e.mega = true; e.place(ARENA.x + 26, ARENA.z, -Math.PI / 2); e.ai.home.copy(ARENA); e.ai.state = 'chase';
+    const hp = 900 + 260 * (k - 1); e.st = { ...e.st, hp, speed: 12, bite: 26, rate: 1.0, missileCD: 4.5, melee: 26, roar: 1.6, roarCD: 8 };
+    e.maxHp = e.hp = hp; e.laserT = 2; e.missileT = 3; e.meleeT = 3; e.roar = 1.7; this.enemies.push(e);
+    for (let i = 0; i < 3; i++) { const m = this.spawnEnemy(ARENA.x + 26, ARENA.z + (i - 1) * 18, 3); m.ai.state = 'chase'; m.ai.home.copy(ARENA); m.yaw = -Math.PI / 2; }
+    b.boss = e; b.bosses++; b.t += 40;
+    this.hud.banner('🦖 MEGA-REX 🦖', 4); this.hud.say?.('Mega Rex is stomping into the city! Get him, Leandro!', { prio: 2 }); if (this.westies && this.r() < 0.5) this.later(5, () => this.westies.trigger('boss')); this.hud.toast('MEGA-REX has arrived!  +40s');
+    sfx.bigRoar(0.38, 1.4, false); sfx.bigBoom(1.3); sfx.rumble(3, 1); this.fx.boom(new THREE.Vector3(e.pos.x, e.pos.y + 3, e.pos.z), 2.8, { groundY: e.pos.y, shake: 1.8 }); this.fx.ring(e.pos, 40, 0xff3020); this.fx.ring(e.pos, 24, 0xffffff);
+    for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28; this.fx.chunk(e.pos.clone().add(new THREE.Vector3(Math.cos(a) * 8, 1, Math.sin(a) * 8)), { x: Math.cos(a) * 12, y: 14 + this.r() * 8, z: Math.sin(a) * 12 }, 1.2); }
+    music.bossHit && music.bossHit();
+  }
+  // v5 Deep Sea boss: THE KRAKEN rises from the deep (every other boss wave: a MONSTER MEGALODON)
+  krakenBoss() {
+    const b = this.battle, k = (b.wave / 3) | 0, mons = k % 2 === 0, def = mons ? { ...MONSTER_MEG } : { ...KRAKEN };
+    const e = new Dino(this, def, true, 4); e.boss = true; e.kraken = !mons; e.place(ARENA.x + 28, ARENA.z, -Math.PI / 2); e.alt = 6; e.ai.home.copy(ARENA); e.ai.state = 'chase';
+    const hp = (mons ? 950 : 1100) + 260 * (k - 1); e.st = { ...e.st, hp, speed: mons ? 15 : 10.5, bite: mons ? 32 : 26, rate: 0.9, missileCD: mons ? 4 : 4.5, melee: 26, roar: 1.6, roarCD: 8 };
+    e.maxHp = e.hp = hp; e.laserT = 2; e.missileT = 3; e.meleeT = 3; e.roar = 1.7; this.enemies.push(e);
+    for (let i = 0; i < 3; i++) { const m = this.spawnEnemy(ARENA.x + 26, ARENA.z + (i - 1) * 18, 3); m.ai.state = 'chase'; m.ai.home.copy(ARENA); m.yaw = -Math.PI / 2; }
+    b.boss = e; b.bosses++; b.t += 40;
+    this.hud.banner(mons ? '🦈 MONSTER MEGALODON 🦈' : '🐙 THE KRAKEN 🐙', 4); this.hud.say?.(mons ? 'A monster megalodon! Chomp it, Leandro!' : 'The Kraken is rising from the deep! Get him, Leandro!', { prio: 2 });
+    if (this.westies && this.r() < 0.5) this.later(5, () => this.westies.trigger('boss')); this.hud.toast(def.name + ' has arrived!  +40s');
+    sfx.bigRoar(0.32, 1.4, false); sfx.bigBoom(1.2); sfx.rumble(3, 1); sfx.bubbles && sfx.bubbles(1.2, 14); this.fx.ring(e.pos, 40, 0x40e0ff); this.fx.ring(e.pos, 24, 0xffffff); this.fx.shake = Math.max(this.fx.shake, 1.6);
+    this.bubbles(e.center.clone(), 70, 18, 9);
+    music.bossHit && music.bossHit();
+  }
   nextWave() {
-    const b = this.battle; b.wave++; if (b.wave % 3 === 0) return this.bossWave(); const n = Math.min(5, 1 + b.wave);
-    for (let i = 0; i < n; i++) { const a = Math.PI / 2 + (i - (n - 1) / 2) * 0.5 + Math.PI; const e = this.spawnEnemy(ARENA.x + 24 + Math.cos(a + Math.PI) * 6, ARENA.z + Math.sin(a) * 18, Math.min(4, 1 + ((b.wave - 1) / 2 | 0))); e.ai.state = 'chase'; e.ai.home.copy(ARENA); e.yaw = -Math.PI / 2; e.roar = 1; }
-    this.hud.toast('Wave ' + b.wave + '!');
+    const b = this.battle; b.wave++; if (b.wave % 3 === 0) { this.bossWave(); music.bossHit && music.bossHit(); return; }
+    // v5 "on steroids": bigger, mixed waves (capped so iPads stay smooth) + a STAMPEDE now and then
+    const n = Math.min(this.maxEnemies() - 1, 2 + b.wave + (b.wave > 3 ? 2 : 0));
+    for (let i = 0; i < n; i++) { const a = Math.PI / 2 + (i - (n - 1) / 2) * (2.6 / Math.max(3, n)) + Math.PI, row = i % 2; const e = this.spawnEnemy(ARENA.x + 24 + row * 7 + Math.cos(a + Math.PI) * 6, ARENA.z + Math.sin(a) * 22, Math.min(4, 1 + ((b.wave - 1) / 2 | 0))); e.ai.state = 'chase'; e.ai.home.copy(ARENA); e.yaw = -Math.PI / 2; e.roar = 1; }
+    this.hud.toast('Wave ' + b.wave + '!  ' + n + ' dinos!');
     sfx.bigRoar(0.8, 0.8, false);
+    if (b.wave >= 2 && this.r() < 0.45) this.later(4, () => this.battle === b && !b.over && this.stampede());
+  }
+  maxEnemies() { return 9 + Math.min(5, ((this.quality && this.quality.tier) || 0) * 2); } // cap on living enemies (perf)
+  // v5: STAMPEDE! A pack of fast dinos thunders straight through, smashing everything in its path, then runs off
+  stampede(force) {
+    const p = this.player; if (!p || !p.alive) return 0; const alive = this.enemies.filter(e => e.alive).length, room = this.maxEnemies() + 4 - alive; if (room < 3 && !force) return 0;
+    const n = Math.max(3, Math.min(7, room)), side = new THREE.Vector3(), f = new THREE.Vector3(), a = this.r() * 6.28;
+    f.set(Math.cos(a), 0, Math.sin(a)); side.set(-f.z, 0, f.x);
+    const start = p.pos.clone().addScaledVector(f, -70);
+    let made = 0;
+    for (let i = 0; i < n; i++) { const x = start.x + side.x * (i - n / 2) * 6 + f.x * (this.r() * 10), z = start.z + side.z * (i - n / 2) * 6 + f.z * (this.r() * 10);
+      const L = this.level === 'ocean' ? ['shark', 'shark', 'stingray', 'megalodon'] : STAMPEDERS; const e = this.spawnEnemy(x, z, 2, L[(this.r() * L.length) | 0]); e.stampede = { dir: f.clone(), t: 0 }; e.yaw = Math.atan2(f.x, f.z); e.ai.state = 'stampede'; e.st.speed *= 1.25; e.hp = e.maxHp = Math.round(e.maxHp * 0.6); made++; }
+    if (this.level === 'ocean') { this.hud.banner('🦈 SHARK FRENZY! 🦈', 3); this.hud.say?.('Shark frenzy! Watch out, Leandro!', { prio: 2 }); this.hud.toast('🦈🦈🦈 SHARK FRENZY! Chomp them as they zoom by!'); }
+    else { this.hud.banner('🦖 STAMPEDE! 🦖', 3); this.hud.say?.('Stampede! Watch out, Leandro!', { prio: 2 }); this.hud.toast('🦖🦖🦖 STAMPEDE! Smash them as they charge!'); }
+    sfx.rumble(4, 1.1); sfx.bigRoar(0.9, 0.9, false); this.fx.shake = Math.max(this.fx.shake, 1.2); this.stampedes = (this.stampedes || 0) + 1;
+    return made;
   }
 
   // ---------- events ----------
-  onHit(d, dmg, attacker, quiet) { if (d === this.player && !quiet) this.hud.hurt(); this.mh.onHit(d, attacker, quiet); }
+  onHit(d, dmg, attacker, quiet) { if (d === this.player && !quiet) this.hud.hurt(); this.mh.onHit(d, attacker, quiet);
+    if (attacker === this.player && !quiet && dmg > 8) this.fx.shake = Math.max(this.fx.shake, Math.min(0.6, 0.12 + dmg * 0.01)); } // v5: punchier hits
+  // v5 city: a building came down
+  onBuildingDown(b, by) { this.buildingsDown = (this.buildingsDown || 0) + 1; if (by !== this.player) return; const c = this.world.city, n = c ? c.destroyed : 0;
+    if (n === 1 || n % 10 === 0) { this.hud.say?.(n === 1 ? 'Timber! Smash it, Leandro!' : n + ' buildings down! Mega smash!', { prio: 1, cd: 6000 }); }
+    this.hud.toast(['🏢💥 CRASH!', '🏙️ KA-BOOM! Building down!', '💥 SMASHED IT!', '🏚️ TIMBER!'][(this.r() * 4) | 0] + '  (' + n + ')'); if (this.battle) this.battle.smashed = (this.battle.smashed || 0) + 1; }
   onKO(d, attacker) {
     d.side = this.r() < 0.5 ? -1 : 1; d.act = null; d.air = 0; d.chargeA = d.whipA = d.rearA = 0; d.burnT = 0; d.breathT = 0;
-    if (d.real) { sfx.ko(true); this.fx.dust(d.pos, 16, 2.5 * d.def.scale, 7); this.fx.impact(d.center.clone(), 2); }
-    else { sfx.ko(); this.fx.sparks(d.center.clone(), 40, { r: 1, g: 0.6, b: 0.2 }, 1.8); this.fx.boom(d.center.clone(), 1.0, { groundY: d.ground, shake: d === this.player || attacker === this.player ? 1 : 0.4 }); sfx.boom(0.9); this.mh.damageAt(d.center, 5, 99, attacker); }
+    const byP = attacker === this.player && d !== this.player; // v5 "on steroids": every KO is a big, loud, glowing blast
+    if (d.real) { sfx.ko(true); this.fx.dust(d.pos, 24, 3.2 * d.def.scale, 9); this.fx.impact(d.center.clone(), 2.6); if (byP) { this.fx.boom(d.center.clone(), 0.8 + 0.4 * d.def.scale, { groundY: d.ground, shake: 1.2 }); sfx.boom(0.8); this.fx.ring(d.pos, 18 * d.def.scale + 6, 0xffb040); } }
+    else { sfx.ko(); this.fx.sparks(d.center.clone(), 60, { r: 1, g: 0.6, b: 0.2 }, 2.2); this.fx.boom(d.center.clone(), 1.5, { groundY: d.ground, shake: d === this.player || byP ? 1.4 : 0.5 }); sfx.boom(1.1); this.mh.damageAt(d.center, 7, 99, attacker); }
+    if (this.world.ocean) { this.bubbles(d.center.clone(), byP ? 40 : 16, 3 * d.def.scale, 7); sfx.bubbles && sfx.bubbles(byP ? 1 : 0.4, 8); }
+    if (byP) for (let i = 0; i < this.fx.n(8); i++) this.fx.chunk(d.center.clone(), { x: (this.r() - 0.5) * 18, y: 8 + this.r() * 10, z: (this.r() - 0.5) * 18 }, 0.5 + this.r() * 0.6);
     if (d.boss) { const c = d.center.clone(), S = d.def.scale; if (this.battle) this.battle.boss = null;
       for (let i = 0; i < 7; i++) this.later(0.15 + i * 0.22, () => { const q = c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 5 * S, (Math.random() - 0.3) * 3 * S, (Math.random() - 0.5) * 5 * S)); this.fx.boom(q, 1.5 + Math.random(), { groundY: d.ground, shake: 1.2 }); sfx.bigBoom(1); });
       if (this.hud.leandroWins) this.hud.leandroWins('💥 Boss defeated!'); else this.hud.banner('💥 BOSS DEFEATED! 💥', 4); if (attacker === this.player || !attacker) { this.dropBolts(d.pos, 40); this.addBolts(25); } }
@@ -241,10 +319,10 @@ export class Game {
     if (d === this.player) { this.hud.knockedOut(d.real); this.respawnT = 3.2; this.rider.pop(); this.rider.popOf = d; return; }
     if (attacker === this.player) this.rider.cheer();
     if (attacker === this.player) {
-      this.save.kos++; const n = 4 + d.level * 3; this.dropBolts(d.pos, n);
+      this.save.kos++; const n = 7 + d.level * 4 + (d.def.roid ? 6 : 0); this.dropBolts(d.pos, n);
       if (this.battle) { this.battle.kos++; }
       // dramatic KO: slow motion, white flash, big rumble
-      this.slowmo = 0.75; if (!this.flashT || this.world.time - this.flashT > 2) { this.flashT = this.world.time; this.hud.flash(); } this.fx.shake = Math.max(this.fx.shake, 0.9); this.fx.ring(d.pos, 14, 0xfff0c0); sfx.slam();
+      this.slowmo = 0.75; if (!this.flashT || this.world.time - this.flashT > 2) { this.flashT = this.world.time; this.hud.flash(); } this.fx.shake = Math.max(this.fx.shake, 1.25); this.fx.ring(d.pos, 14, 0xfff0c0); this.fx.ring(d.pos, 24, 0xffffff); sfx.slam();
       const real = attacker.real;
       this.hud.toast((real ? ['CHOMP! Knocked out!', 'Roar-some!', 'Dino power!', 'Unstoppable!'] : ['Knocked out!', 'Great shot!', 'Robo power!', 'Awesome!'])[(this.r() * 4) | 0]);
     }
@@ -297,8 +375,7 @@ export class Game {
     d.forward(fwd);
     if (k === 'chomp') d.act = { type: 'chomp', t: 0, dur: 0.5, dir: fwd.clone(), speed: 22 * s + 6, hit: new Set() };
     else if (k === 'charge') d.act = { type: 'charge', t: 0, dur: 1.15, dir: fwd.clone(), speed: Math.max(20, d.st.speed * 2.3), hit: new Set() };
-    else if (k === 'pounce') { const to = target && target.alive && target.pos.distanceTo(d.pos) < 30 ? target.pos.clone() : d.pos.clone().addScaledVector(fwd, 14); const dist = to.distanceTo(d.pos);
-      d.act = { type: 'pounce', t: 0, dur: 0.55 + dist * 0.014, from: d.pos.clone(), to, h: 3 + dist * 0.16, target }; d.roar = 0.5; }
+    else if (k === 'pounce') { d.act = this.pounceAct(d, target, fwd); d.roar = 0.5; }
     else if (k === 'whip') d.act = { type: 'whip', t: 0, dur: 0.75, yaw0: d.yaw, dir: this.r() < 0.5 ? 1 : -1, hit: new Set() };
     else if (k === 'stomp') { d.act = { type: 'stomp', t: 0, dur: 1.2, slam: false }; d.roar = 0.8; }
     else if (k === 'rage') { d.rageT = 6.5; d.roar = 1.7; sfx.rage(); sfx.bigRoar(0.6, d === this.player ? 1 : 0.5, false); this.fx.ring(d.pos, 12 * s, 0xff3020); this.fx.roarWave(this.mouthPos(d), fwd, s, new THREE.Color(1, 0.2, 0.1)); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.8 : 0.3); if (d === this.player) this.hud.toast('😡 BERSERK RAGE! Faster + harder bites!'); return; }
@@ -306,8 +383,115 @@ export class Game {
     else if (k === 'spit') { d.frillT = 1.1; d.jaw = 1.4; this.later(0.25, () => { if (!d.alive) return; for (let i = 0; i < 3; i++) this.later(i * 0.09, () => d.alive && this.launchOrb(d, target, 'goo', i ? 0.08 : 0)); }); sfx.whoosh(0.7); return; }
     else if (k === 'headbutt') { d.act = { type: 'headbutt', t: 0, dur: 0.95, dir: fwd.clone(), speed: Math.max(24, d.st.speed * 2.5), hit: new Set() }; sfx.whoosh(0.6); return; }
     else if (k === 'honk') { this.honk(d); return; }
+    // ---- v5 "on steroids" signature specials ----
+    else if (k === 'tsunami') { this.tsunami(d); return; }
+    else if (k === 'rockethorn') { d.act = { type: 'rocket', t: 0, dur: 1.05, dir: fwd.clone(), speed: Math.max(34, d.st.speed * 3), hit: new Set() }; sfx.jet(); d.roar = 0.8; return; }
+    else if (k === 'pack') { this.packPounce(d, target, 3); return; }
+    else if (k === 'cannon') { this.megaCannon(d, target); return; }
+    else if (k === 'lavaslam') { d.act = { type: 'whip', t: 0, dur: 0.75, yaw0: d.yaw, dir: this.r() < 0.5 ? 1 : -1, hit: new Set(), lava: true }; sfx.whoosh(1); return; }
+    else if (k === 'bark') { this.barkBlast(d); return; }
     else if (k === 'breath') { this.dragonBreath(d); return; }
+    // ---- v5 Deep Sea signature moves ----
+    else if (k === 'ram') { d.act = { type: 'charge', t: 0, dur: 0.9, dir: fwd.clone(), speed: Math.max(36, d.st.speed * 2.6), hit: new Set(), ram: true }; sfx.whoosh(1.3); sfx.bubbles && sfx.bubbles(0.7, 6); if (d === this.player) this.hud.toast('🦈 TORPEDO RAM!'); return; }
+    else if (k === 'crush') { d.act = { type: 'chomp', t: 0, dur: 0.6, dir: fwd.clone(), speed: 26 * s + 8, hit: new Set(), crush: true }; d.roar = 0.6; sfx.whoosh(1.4); if (d === this.player) this.hud.toast('🦈 CRUSHING CHOMP!'); return; }
+    else if (k === 'zap') { this.stingZap(d, target); return; }
+    else if (k === 'grab') { this.tentacleGrab(d, target); return; }
+    else if (k === 'shock') { this.shockAura(d); return; }
+    else if (k === 'lure') { this.lureFlash(d, target); return; }
+    else if (k === 'kraken') { this.krakenAttack(d, target); return; }
     sfx.whoosh(k === 'charge' || k === 'stomp' ? 0.6 : 1);
+  }
+  // ---------- v5 Deep Sea moves ----------
+  bubbles(pos, n = 10, spread = 2, up = 6) { const fx = this.fx; for (let i = 0; i < fx.n(n); i++) fx.glow.spawn({ pos: { x: pos.x + (this.r() - 0.5) * spread, y: pos.y + (this.r() - 0.5) * spread, z: pos.z + (this.r() - 0.5) * spread }, vel: { x: (this.r() - 0.5) * 2.5, y: up * (0.5 + this.r() * 0.8), z: (this.r() - 0.5) * 2.5 }, size: 0.22 + this.r() * 0.4, size1: 0.45, life: 1.1 + this.r() * 1.2, r: 1.1, g: 1.5, b: 1.8, alpha: 0.75, grav: -3, drag: 0.9 }); }
+  // stingray / jellyfish primary: a venomous sting (bite + poison)
+  sting(d, target) { const t = this.bite(d, target); d.mech.zapK = Math.max(d.mech.zapK || 0, 0.5); d.whipA = 1; this.later(0.25, () => { d.whipA = 0; });
+    if (t) this.later(0.12, () => { if (!t.alive) return; t.poisonT = Math.max(t.poisonT || 0, 3.5); t.poisonBy = d; this.fx.sparks(t.center.clone(), 8, { r: 0.6, g: 0.9, b: 1.2 }, 0.7); }); return t; }
+  // Thunder Stingray: ZAP STRIKE — lightning from the tail barb that chains through up to 5 foes
+  stingZap(d, target) { const isP = d === this.player, t = target && target.alive && target.pos.distanceTo(d.pos) < 42 ? target : this.nearestFoe(d, 40), from = d.mech.socketPos('sting', new THREE.Vector3());
+    d.mech.zapK = 1.5; d.whipA = 1; this.later(0.35, () => { d.whipA = 0; }); this.zaps = (this.zaps || 0) + 1;
+    if (t) { this.fx.zap(from, t.center.clone(), { r: 0.6, g: 0.95, b: 1.2 }, 0.55, 0.3, 0.12); this.zapChain(d, t, d.st.bite * 2.4, 4); this.bubbles(t.center.clone(), 14, 3, 6); }
+    else { const q = d.pos.clone().addScaledVector(d.forward(new THREE.Vector3()), 18); this.fx.zap(from, q, { r: 0.6, g: 0.95, b: 1.2 }, 0.5, 0.25, 0.12); this.fx.ring(q, 6, 0x5ae8ff); this.mh.damageAt(q, 5, 30, d); sfx.zap(isP ? 1 : 0.4); }
+    this.fx.shake = Math.max(this.fx.shake, isP ? 0.5 : 0.2); if (isP) this.hud.toast('⚡ ZAP STRIKE!'); }
+  // Giant Octopus: TENTACLE GRAB — pull a foe in and squeeze
+  tentacleGrab(d, target) { const isP = d === this.player, t = target && target.alive && target.pos.distanceTo(d.pos) < 30 + target.radius ? target : this.nearestFoe(d, 30); d.mech.grabK = 1;
+    sfx.whoosh(1.2); if (!t) { this.later(0.5, () => { d.mech.grabK = 0; }); return; }
+    d.act = { type: 'grab', t: 0, dur: 1.7, target: t, n: 0 }; this.stun(t, 2); this.grabs = (this.grabs || 0) + 1; if (isP) this.hud.toast('🐙 TENTACLE GRAB!'); }
+  // Giant Octopus: INK CLOUD — a big black cloud; every enemy in it is blinded and wanders off
+  inkCloud(d) { const isP = d === this.player, c = d.mech.socketPos('ink', new THREE.Vector3()), fx = this.fx; d.roar = 0.9; this.inks = (this.inks || 0) + 1;
+    for (let i = 0; i < fx.n(30); i++) fx.smoke.spawn({ pos: { x: c.x + (this.r() - 0.5) * 4, y: c.y + (this.r() - 0.5) * 3, z: c.z + (this.r() - 0.5) * 4 }, vel: { x: (this.r() - 0.5) * 10, y: (this.r() - 0.3) * 5, z: (this.r() - 0.5) * 10 }, size: 3, size1: 16, life: 4, r: 0.02, g: 0.02, b: 0.05, alpha: 0.9, alpha1: 0, drag: 1.1, rv: 0.5 });
+    d.knock.addScaledVector(d.forward(new THREE.Vector3()), 16); sfx.ink && sfx.ink(isP ? 1 : 0.4); this.bubbles(c, 16, 3, 5);
+    for (const e of this.foesOf(d)) { if (!e || !e.alive || e.pos.distanceTo(d.pos) > 26 + e.radius) continue; if (e === this.player) { this.hud.ink?.(); e.slowT = Math.max(e.slowT || 0, 1); } else { e.blindT = 5; this.stun(e, 0.5); } }
+    if (isP) this.hud.toast("🐙 INK CLOUD! They can't see you!"); }
+  // Mega Jellyfish: SHOCK AURA — electric burst all around
+  shockAura(d) { const isP = d === this.player, s = Math.max(1, d.def.scale), c = d.center.clone(), R = 15 * s; d.mech.zapK = 1.6; d.roar = 0.6; this.shocks = (this.shocks || 0) + 1;
+    this.fx.ring(c, R, 0xd05aff); this.fx.ring(c, R * 0.55, 0xffffff); this.fx.sparks(c, 30, { r: 0.9, g: 0.6, b: 1.3 }, 1.6);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, q = c.clone().add(new THREE.Vector3(Math.cos(a) * R * 0.8, (this.r() - 0.5) * 6, Math.sin(a) * R * 0.8)); this.fx.zap(c, q, { r: 0.9, g: 0.6, b: 1.3 }, 0.35, 0.22, 0.14); }
+    for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; const dd = e.center.distanceTo(c); if (dd > R + e.radius) continue; tmp.subVectors(e.pos, d.pos).setY(0).normalize();
+      e.hit(d.st.bite * 2.2, c, d); this.stun(e, 1.4); e.knock.addScaledVector(tmp, e.boss ? 4 : 14); this.fx.zap(c, e.center.clone(), { r: 1, g: 0.7, b: 1.4 }, 0.45, 0.25, 0.1); }
+    this.mh.damageAt(c, R * 0.6, 30, d); sfx.zap(isP ? 1 : 0.4); sfx.boom(isP ? 0.5 : 0.2); this.fx.shake = Math.max(this.fx.shake, isP ? 0.7 : 0.25); if (isP) this.hud.toast('⚡ SHOCK AURA!'); }
+  // Mega Jellyfish: STINGING TENDRILS — whip every tendril out in a ring
+  tendrilWhip(d) { const isP = d === this.player, c = d.center.clone(), R = 12; d.whipA = 1; d.mech.zapK = 1; this.later(0.6, () => { d.whipA = 0; }); this.whips = (this.whips || 0) + 1;
+    this.fx.ring(new THREE.Vector3(c.x, d.pos.y, c.z), R, 0xff7ad8); sfx.whoosh(1.1); sfx.zap(isP ? 0.5 : 0.2);
+    for (const e of this.foesOf(d)) { if (!e || !e.alive || e.center.distanceTo(c) > R + e.radius) continue; tmp.subVectors(e.pos, d.pos).setY(0).normalize(); e.hit(d.st.bite * 1.5, c, d); e.poisonT = Math.max(e.poisonT || 0, 4); e.poisonBy = d; e.knock.addScaledVector(tmp, e.boss ? 3 : 10); this.fx.impact(e.center.clone(), 1, true); }
+    if (isP) this.hud.toast('🪼 STINGING TENDRILS!'); }
+  // Great White: FEEDING FRENZY (faster + harder bites for a while)
+  frenzy(d) { d.rageT = 6.5; d.roar = 1.2; sfx.rage(); this.fx.ring(d.pos, 12, 0xff3020); this.bubbles(d.center.clone(), 24, 4, 6); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.2); if (d === this.player) this.hud.toast('🦈 FEEDING FRENZY! Faster + harder bites!'); }
+  seaThird(d) { const t = d.def.third; if (t === 'ink') this.inkCloud(d); else if (t === 'tendrils') this.tendrilWhip(d); else if (t === 'frenzy') this.frenzy(d); else { this.roarAt(d); this.bubbles(this.mouthPos(d), 18, 2, 7); } }
+  // Anglerfish: a blinding LURE FLASH, then a lunge
+  lureFlash(d, target) { const c = d.mech.socketPos('lure', new THREE.Vector3()); d.mech.zapK = 1.5; this.fx.glow.spawn({ pos: c, size: 14, size1: 2, life: 0.5, r: 1.6, g: 3, b: 2.6, alpha: 1 }); sfx.zap(0.4);
+    const p = this.player; if (p && p.alive && p.pos.distanceTo(d.pos) < 26 && d.wild) { p.slowT = Math.max(p.slowT || 0, 1.2); if (this.hud.flash) this.hud.flash(); }
+    this.later(0.35, () => { if (d.alive && !d.act) d.act = { type: 'chomp', t: 0, dur: 0.5, dir: d.forward(new THREE.Vector3()), speed: 26, hit: new Set() }; }); }
+  // THE KRAKEN: tentacle slams on red circles, an ink storm, or a whirlpool that drags you in
+  krakenAttack(e, target) { const p = this.player; if (!p || !p.alive) return; e.kn = (e.kn || 0) + 1; e.roar = 1.4; sfx.bigRoar(0.3, 0.8, false); const mode = e.kn % 3;
+    if (mode === 1) { this.hud.toast('🐙 TENTACLE SLAM! Dodge the red circles!'); for (let i = 0; i < 4; i++) this.later(0.1 + i * 0.35, () => { if (!e.alive || !p.alive) return; const a = this.r() * 6.28, dd = i ? 3 + this.r() * 9 : 0, q = new THREE.Vector3(p.pos.x + Math.cos(a) * dd, 0, p.pos.z + Math.sin(a) * dd); q.y = this.world.height(q.x, q.z);
+        this.fx.warn(q, 6, 0.9); this.later(0.9, () => { if (!e.alive) return; this.mh.blast(q.clone().setY(q.y + 1), 1.2, { by: e, dmg: 22, R: 7, only: x => x === this.player, playerScale: 0.7 }); this.fx.ring(q, 10, 0xff4a8a); this.bubbles(q, 20, 6, 8); this.fx.shake = Math.max(this.fx.shake, 0.8); sfx.slam(); }); }); }
+    else if (mode === 2) { this.hud.toast('🐙 INK STORM!'); this.inkCloud(e); }
+    else { this.hud.toast('🌀 WHIRLPOOL! Swim away!'); e.whirl = 2.6; sfx.rumble(2.5, 0.8); } }
+  pounceAct(d, target, fwd, chain = 0) { const to = target && target.alive && target.pos.distanceTo(d.pos) < 30 ? target.pos.clone() : d.pos.clone().addScaledVector(fwd || d.forward(new THREE.Vector3()), 14); const dist = to.distanceTo(d.pos);
+    return { type: 'pounce', t: 0, dur: 0.55 + dist * 0.014, from: d.pos.clone(), to, h: 3 + dist * 0.16, target, chain, done: new Set() }; }
+  // Raptor Pack Alpha: pounce from foe to foe to foe
+  packPounce(d, target, n) { const t = target && target.alive ? target : this.nearestFoe(d, 30); d.act = this.pounceAct(d, t, null, n - 1); d.roar = 0.8; d.jaw = 1.4; sfx.whoosh(1.1); if (d === this.player) this.hud.toast('🦖 PACK STRIKE!'); }
+  nearestFoe(d, R, skip) { let best = null, bd = R; for (const e of this.foesOf(d)) { if (!e || !e.alive || (skip && skip.has(e))) continue; const q = e.pos.distanceTo(d.pos); if (q < bd) { bd = q; best = e; } } return best; }
+  // Spino-Titan: a giant TIDAL WAVE that blasts everything in front away
+  tsunami(d) {
+    const s = d.def.scale, fwd = d.forward(new THREE.Vector3()), isP = d === this.player; d.roar = 1.6; d.jaw = 1.5; sfx.honk(); sfx.rumble(1.6, isP ? 0.9 : 0.4); this.fx.shake = Math.max(this.fx.shake, isP ? 1.1 : 0.4);
+    const col = new THREE.Color(0.3, 0.8, 1.2);
+    for (let i = 0; i < 6; i++) this.later(i * 0.1, () => { const c = d.pos.clone().addScaledVector(fwd, 5 + i * 5.5); c.y = d.ground + 0.2; this.fx.ring(c, 7 + i * 3, 0x5ad8ff);
+      for (let j = 0; j < this.fx.n(8); j++) this.fx.glow.spawn({ pos: { x: c.x + (this.r() - 0.5) * (8 + i * 4), y: c.y + this.r() * 2, z: c.z + (this.r() - 0.5) * (8 + i * 4) }, vel: { x: fwd.x * 14, y: 7 + this.r() * 8, z: fwd.z * 14 }, size: 0.7, size1: 0.2, life: 0.9, r: 0.6, g: 1.6, b: 2.4, alpha: 0.9, grav: 18 });
+      this.fx.roarWave(this.mouthPos(d), fwd, s * (1 + i * 0.25), col); });
+    for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length(); tmp.y = 0; tmp.normalize();
+      if (dist < 30 * s + 6 && tmp.dot(fwd) > 0.25) { e.hit(d.st.bite * 1.8, d.pos, d); e.knock.addScaledVector(tmp, e.boss ? 6 : 30); this.stun(e, 1.8); } }
+    this.mh.damageAt(this.mouthPos(d).addScaledVector(fwd, 14), 12, 60, d);
+  }
+  // Brachio-Tank: lobs three glowing mortar shells
+  megaCannon(d, target) {
+    const isP = d === this.player, from = new THREE.Vector3(); if (d.mech.sockets && d.mech.sockets.cannon) d.mech.sockets.cannon.getWorldPosition(from); else from.copy(d.center).setY(d.pos.y + d.mech.height);
+    const fwd = d.forward(new THREE.Vector3()), only = e => (d.wild ? e === this.player : e !== this.player);
+    sfx.boom(isP ? 0.9 : 0.5); this.fx.muzzle(from, { r: 1, g: 0.8, b: 0.3 }, fwd); this.fx.shake = Math.max(this.fx.shake, isP ? 0.7 : 0.25); d.roar = 0.5;
+    for (let i = 0; i < 3; i++) this.later(i * 0.22, () => { if (!d.alive) return; const t = target && target.alive && target.pos.distanceTo(d.pos) < 70 ? target.pos : d.pos.clone().addScaledVector(fwd, 32);
+      const to = new THREE.Vector3(t.x + (this.r() - 0.5) * 9, 0, t.z + (this.r() - 0.5) * 9); to.y = this.world.height(to.x, to.z) + 0.5;
+      this.mh.launch('lava', from.clone(), to, 1.1 + i * 0.1, { size: 1.3, P: 1.1, dmg: (d.wild ? 14 : 45), R: 7, by: d, only, playerScale: 0.6 }); sfx.whistle(0.5); });
+    if (isP) this.hud.toast('💣 MEGA CANNON!');
+  }
+  // Ricky & Bobby: BARK BLAST — a yippy shockwave cone that knocks dinos flying (and cracks buildings)
+  barkBlast(d) {
+    const fwd = d.forward(new THREE.Vector3()), isP = d === this.player, m = this.mouthPos(d); d.roar = 0.6; d.jaw = 1.2;
+    sfx.bark(d.def.id === 'bobby' ? 1.15 : 1, 1, 2); this.barks = (this.barks || 0) + 1;
+    const col = new THREE.Color(d.def.accent || 0xffffff).multiplyScalar(1.5);
+    for (let i = 0; i < 3; i++) this.later(i * 0.08, () => { this.fx.roarWave(this.mouthPos(d), fwd, 0.7 + i * 0.35, col); const c = d.pos.clone().addScaledVector(fwd, 4 + i * 5); c.y = d.ground + 0.2; this.fx.ring(c, 4 + i * 3, d.def.accent || 0xffffff); });
+    this.fx.shake = Math.max(this.fx.shake, isP ? 0.6 : 0.2);
+    for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length() - e.radius; tmp.y = 0; tmp.normalize();
+      if (dist < 20 && tmp.dot(fwd) > 0.3) { e.hit(d.st.bite * 1.4, d.pos, d); e.knock.addScaledVector(tmp, e.boss ? 5 : 26); this.stun(e, 1.2); this.fx.impact(e.center.clone(), 1, e.real); } }
+    this.mh.damageAt(m.clone().addScaledVector(fwd, 9), 8, 40, d);
+  }
+  // Thunder-Ptero: THUNDER STRIKE, sky lightning that chains through up to 5 foes
+  thunderStrike(d, foes) {
+    const t = this.nearestFoe(d, 60); d.jaw = 1.3; d.roar = 0.6; sfx.thunder(d === this.player ? 1 : 0.5);
+    if (this.world.flash) this.world.flash(0.5);
+    if (t) { this.fx.zap(t.center.clone().add(new THREE.Vector3(0, 40, 0)), t.center.clone(), { r: 1, g: 0.95, b: 0.5 }, 0.5, 0.25, 0.1); this.zapChain(d, t, d.st.melee * 1.1, 4); this.mh.blast(t.center.clone(), 0.8, { by: d, dmg: d.st.melee * 0.5, R: 6, only: e => (d.wild ? e === this.player : e !== this.player) }); }
+    else { const p = d.pos.clone().addScaledVector(d.forward(new THREE.Vector3()), 20); p.y = this.world.height(p.x, p.z); this.fx.zap(p.clone().setY(p.y + 40), p, { r: 1, g: 0.95, b: 0.5 }, 0.5, 0.25, 0.1); this.mh.damageAt(p, 7, 60, d); this.fx.ring(p, 10, 0xffe23a); }
+    this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.8 : 0.3);
+    return 'thunder';
   }
   updateAct(d, dt) {
     const A = d.act; if (!A) return false; A.t += dt; const u = Math.min(1, A.t / A.dur), s = d.def.scale, foes = this.foesOf(d);
@@ -315,14 +499,32 @@ export class Game {
       e.hit(dmg, d.pos, d); const dir = dirFn ? dirFn(e) : new THREE.Vector3().subVectors(e.pos, d.pos).setY(0).normalize(); e.knock.addScaledVector(dir, knock); if (stunT) this.stun(e, stunT); this.fx.impact(e.center.clone(), 1.2 + knock * 0.03, e.real); } return n; };
     const slide = (dir, sp) => { d.speedNow = sp; d.yaw = Math.atan2(dir.x, dir.z); d.pos.addScaledVector(dir, sp * dt); const h = this.world.height(d.pos.x, d.pos.z); if (h < -1.6 && !d.swim) d.pos.addScaledVector(dir, -sp * dt); this.world.collide(d.pos, d.radius * 0.6, false); d.groundY(); };
     if (A.type === 'chomp') { slide(A.dir, A.speed * Math.max(0, 1 - u * 1.4)); d.biteA = Math.max(d.biteA, 0.6); d.jaw = u < 0.55 ? 1.8 : 0.1;
-      if (u > 0.55 && !A.done) { A.done = true; d.biteA = 1; if (hitFoes(d.radius + 3.5 * s, d.st.bite * 3, 12, 0.8, A.hit)) { this.fx.shake = Math.max(this.fx.shake, 0.8); sfx.chomp(1.5); } } }
+      if (u > 0.55 && !A.done) { A.done = true; d.biteA = 1; const cr = A.crush ? 1.7 : 1; if (hitFoes(d.radius + 3.5 * s * cr, d.st.bite * (A.crush ? 4.2 : 3), A.crush ? 22 : 12, A.crush ? 1.6 : 0.8, A.hit)) { this.fx.shake = Math.max(this.fx.shake, A.crush ? 1.3 : 0.8); sfx.chomp(1.5); }
+        if (A.crush) { const m = this.mouthPos(d); this.fx.ring(m, 14 * s, 0xff3a1a); this.fx.ring(m, 8 * s, 0xffffff); this.bubbles(m, 40, 5 * s, 8); sfx.boom(d === this.player ? 0.9 : 0.4); this.mh.damageAt(m, 6 * s, 80, d); this.crushes = (this.crushes || 0) + 1; } } }
+    else if (A.type === 'grab') { const t = A.target; d.speedNow = 0; d.biteA = Math.max(d.biteA, 0.3); d.mech.grabK = 1;
+      if (t && t.alive) { const f = d.forward(new THREE.Vector3()), gx = d.pos.x + f.x * (d.radius + t.radius * 0.6 + 1), gz = d.pos.z + f.z * (d.radius + t.radius * 0.6 + 1); t.pos.x += (gx - t.pos.x) * Math.min(1, dt * 5); t.pos.z += (gz - t.pos.z) * Math.min(1, dt * 5);
+        if (t.fly && d.fly) t.alt += ((d.alt + 0.5) - t.alt) * Math.min(1, dt * 4); d.yaw += angDiff(d.yaw, Math.atan2(t.pos.x - d.pos.x, t.pos.z - d.pos.z)) * Math.min(1, dt * 8); if (t !== this.player) this.stun(t, 0.5);
+        const k = Math.floor(u * 5); if (k > A.n && u < 0.98) { A.n = k; t.hit(d.st.bite * 0.7, d.pos, d, true); this.fx.impact(t.center.clone(), 0.8, true); this.bubbles(t.center.clone(), 6, 2, 5); sfx.bite(0.6); }
+        if (u >= 1 && !A.done) { A.done = true; t.hit(d.st.bite * 2.2, d.pos, d); t.knock.addScaledVector(d.forward(new THREE.Vector3()), 22); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.7 : 0.3); sfx.chomp(1.3); } }
+      if (u >= 1 || !t || !t.alive) { d.mech.grabK = 0; A.t = A.dur; } }
     else if (A.type === 'charge') { const sp = A.speed * Math.min(1, u * 5) * (u > 0.82 ? (1 - u) / 0.18 : 1); slide(A.dir, sp); d.chargeA = 1;
       if (hitFoes(d.radius + 1.4, d.st.bite * 1.8, 24, 1.0, A.hit, e => A.dir.clone().multiplyScalar(0.8).add(tmp.subVectors(e.pos, d.pos).setY(0).normalize().multiplyScalar(0.5)))) { this.fx.shake = Math.max(this.fx.shake, 0.7); sfx.slam(); }
-      if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.4 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.2, 40 * dt * 10, d); }
+      if (d.def.sea) { if (this.r() < 0.8) this.bubbles(d.center.clone(), 2, 1.5 * s, 3); } else if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.4 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.2, 40 * dt * 10, d); }
     else if (A.type === 'pounce') { if (A.target && A.target.alive && u < 0.7) A.to.lerp(A.target.pos, Math.min(1, dt * 5));
       d.pos.x = A.from.x + (A.to.x - A.from.x) * u; d.pos.z = A.from.z + (A.to.z - A.from.z) * u; this.world.collide(d.pos, d.radius * 0.5, true); d.groundY(); d.pos.y += Math.sin(Math.PI * u) * A.h;
       d.air = u < 0.9 ? 1 : 0; d.yaw = Math.atan2(A.to.x - A.from.x, A.to.z - A.from.z) || d.yaw; d.speedNow = 0; d.jaw = 1.4;
-      if (u >= 1) { d.air = 0; d.biteA = 1; hitFoes(d.radius + 3.2, d.st.bite * 2.6, 9, 1.6, null); this.fx.dust(d.pos, 12, 1.8, 7); this.fx.ring(d.pos, 8, 0xffc070); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.3); sfx.stomp(); sfx.chomp(1); } }
+      if (u >= 1) { d.air = 0; d.biteA = 1; hitFoes(d.radius + 3.2, d.st.bite * 2.6, 9, 1.6, null); this.fx.dust(d.pos, 12, 1.8, 7); this.fx.ring(d.pos, 8, 0xffc070); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.3); sfx.stomp(); sfx.chomp(1);
+        if (A.chain > 0) { if (A.target) A.done.add(A.target); const nx = this.nearestFoe(d, 28, A.done); if (nx) { A.next = this.pounceAct(d, nx, null, A.chain - 1); A.next.done = A.done; sfx.whoosh(1); } } } }
+    else if (A.type === 'rocket') { const sp = A.speed * Math.min(1, u * 6) * (u > 0.85 ? (1 - u) / 0.15 : 1); slide(A.dir, sp); d.chargeA = 1; // Mega-Trike: rocket-powered horn charge, ends in a KABOOM
+      const at = d.pos.clone().addScaledVector(A.dir, -d.radius).setY(d.pos.y + d.mech.height * 0.5); for (let i = 0; i < this.fx.n(2); i++) this.fx.fire.spawn({ pos: at, vel: { x: -A.dir.x * 16 + (this.r() - 0.5) * 3, y: 1 + this.r() * 2, z: -A.dir.z * 16 + (this.r() - 0.5) * 3 }, size: 1.2, size1: 3, life: 0.3, r: 3.2, g: 1.4, b: 0.35, alpha: 1, drag: 1.5, rv: 3 });
+      if (this.r() < 0.6) this.fx.dust(d.pos, 1, 1.4 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.5, 60 * dt * 10, d);
+      const n = hitFoes(d.radius + 1.6, d.st.bite * 2.2, 30, 1.2, A.hit, e => A.dir.clone());
+      if ((n || u >= 0.98) && !A.boom) { A.boom = true; const bp = d.pos.clone().addScaledVector(A.dir, d.radius + 1).setY(d.pos.y + 1.5); this.mh.blast(bp, 1.4, { by: d, dmg: d.st.bite * 2.2, R: 9, only: e => (d.wild ? e === this.player : e !== this.player) }); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 1.4 : 0.5); A.t = Math.max(A.t, A.dur * 0.85); } }
+    else if (A.type === 'zoomies') { // Ricky & Bobby: ZOOMIES, a blur of a dash in a wiggly line that bowls dinos over
+      A.dir.applyAxisAngle(up, Math.sin(A.t * 14) * dt * 5); const sp = A.speed * Math.min(1, u * 8) * (u > 0.85 ? (1 - u) / 0.15 : 1); slide(A.dir, sp); d.chargeA = 1;
+      if (this.r() < 0.9) this.fx.dust(d.pos, 1, 1.0, 5); if (this.r() < 0.5) this.fx.glow.spawn({ pos: d.center.clone(), vel: { x: 0, y: 1, z: 0 }, size: 1.2, size1: 0.1, life: 0.35, r: 2.2, g: 2.2, b: 2.2, alpha: 0.6 });
+      const n = hitFoes(d.radius + 2.2, d.st.bite * 1.6, 18, 0.9, A.hit); if (n) { sfx.bark(d.def.id === 'bobby' ? 1.15 : 1, 0.7, 1); this.fx.shake = Math.max(this.fx.shake, 0.5); }
+      this.mh.damageAt(d.pos, d.radius + 1.5, 25 * dt * 10, d); }
     else if (A.type === 'whip') { d.yaw = A.yaw0 + A.dir * Math.PI * 2 * sstep(0, 1, u); d.whipA = Math.sin(u * Math.PI) * A.dir; d.speedNow = 0;
       if (u > 0.2) hitFoes(d.radius + 5.5 * s, d.st.bite * 2.3, 20, 0.8, A.hit, e => { const r = tmp.subVectors(e.pos, d.pos).setY(0).normalize(); return new THREE.Vector3(-r.z * A.dir, 0, r.x * A.dir).multiplyScalar(0.6).add(r); });
       if (this.r() < 0.6) { const tp = d.pos.clone().addScaledVector(new THREE.Vector3(-Math.sin(d.yaw), 0, -Math.cos(d.yaw)), 5 * s); tp.y = d.ground + 0.3; this.fx.dust(tp, 1, 1.4 * s, 4); } }
@@ -338,7 +540,10 @@ export class Game {
       const n = hitFoes(d.radius + 1.6, d.st.bite * 2.6, 34, 1.8, A.hit, e => A.dir.clone().add(new THREE.Vector3(0, 0, 0)));
       if (n) { this.fx.shake = Math.max(this.fx.shake, 0.9); sfx.headbutt(); this.fx.ring(this.mouthPos(d), 7, 0xfff080); for (const e of A.hit) if (!e.dizzyFx) { e.dizzyFx = 1; for (let i = 0; i < 6; i++) this.later(i * 0.12, () => this.fx.dizzy(e, true)); } A.t = Math.max(A.t, A.dur * 0.8); }
       if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.3 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.2, 40 * dt * 10, d); }
-    if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; if (A.hit) for (const e of A.hit) e.dizzyFx = 0; }
+    if (A.type === 'whip' && A.lava && u > 0.5 && !A.lavaDone) { A.lavaDone = true; // Lava Ankylo: a ring of fire + a molten blast
+      const P = d.pos; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, q = new THREE.Vector3(P.x + Math.cos(a) * 7 * s, 0, P.z + Math.sin(a) * 7 * s); q.y = this.world.height(q.x, q.z); this.mh.addFire(q, 2.4, 3.5, d); }
+      this.mh.blast(P.clone().setY(P.y + 1), 1.2, { by: d, dmg: d.st.bite * 1.6, R: 9 * s, only: e => (d.wild ? e === this.player : e !== this.player), fire: false }); this.fx.ring(P, 16 * s, 0xff5a10); this.fx.ring(P, 9 * s, 0xffd040); }
+    if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; if (A.hit) for (const e of A.hit) e.dizzyFx = 0; if (A.next) d.act = A.next; }
     return true;
   }
 
@@ -468,6 +673,7 @@ export class Game {
   }
   melee(d, foes) {
     if (d.def.quake) return this.quake(d, foes);
+    if (d.def.thunder) return this.thunderStrike(d, foes);
     if (d.def.goo) return this.gooSpray(d);
     const fwd = d.forward(new THREE.Vector3());
     let target = null, bd = Infinity;
@@ -514,9 +720,11 @@ export class Game {
       const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); // camera forward on ground
       const dir = new THREE.Vector3(fx * -inp.y + (-fz) * inp.x, 0, fz * -inp.y + fx * inp.x);
       const mag = Math.min(1, Math.hypot(inp.x, inp.y));
-      p.boosting = inp.btn.boost && p.boostE > 0.05;
+      p.boosting = !p.def.westie && inp.btn.boost && p.boostE > 0.05;
+      if (p.def.westie) this.pupJump(p, inp, dt);
       if (p.boosting) { p.boostE = Math.max(0, p.boostE - dt); if (inp.pressed.boost) sfx.boost(); this.jetFlame(p); } else p.boostE = Math.min(p.st.boost, p.boostE + dt * 0.45);
-      if (p.fly) { p.climb = p.boosting ? 1 : 0; p.alt = clamp(p.alt + (p.boosting ? 9 : -2.5) * dt, 5, 40); }
+      if (p.def.sea && p.fly) { const v = (inp.btn.up ? 1 : 0) - (inp.btn.down ? 1 : 0) + (inp.pressed.up ? 0.5 : 0) - (inp.pressed.down ? 0.5 : 0); p.climb = clamp(v, -1, 1); p.alt = clamp(p.alt + v * 15 * dt, 0, 48); if (v) this.swimUD = (this.swimUD || 0) + 1; } // v5: free 3D swimming (▲/▼)
+      else if (p.fly) { p.climb = p.boosting ? 1 : 0; p.alt = clamp(p.alt + (p.boosting ? 9 : -2.5) * dt, 5, 40); }
       if (!this.updateAct(p, dt)) p.move(dt, mag > 0.05 ? dir.normalize() : dir, mag, p.boosting && !p.fly ? true : p.boosting);
       // weapons
       p.laserT -= dt; p.missileT -= dt; p.meleeT -= dt;
@@ -529,7 +737,15 @@ export class Game {
       const taps = k => Math.min(4, +inp.pressed[k] || 0) || (inp.btn[k] && p[k + 'T'] <= 0 ? 1 : 0); // every tap counts (even several between two frames)
       const nL = taps('laser'), nM = taps('missile'), nB = taps('melee'), L = nL > 0, M = nM > 0, B = nB > 0;
       if (L) p.laserT = p.st.rate; if (M) p.missileT = REP; if (B) p.meleeT = REP;
-      if (p.real && p.dragon) {
+      if (p.def.westie) { // v5: Ricky / Bobby: BITE, BARK BLAST, ZOOMIES (jump is on the 4th button)
+        if (L) { if (p.act && p.act.type !== 'zoomies') p.act = null; this.bite(p, this.lock); }
+        if (M) this.barkBlast(p);
+        if (B && !(p.act && p.act.type === 'zoomies')) { const dir = this.lock && this.lock.alive && this.lock.pos.distanceTo(p.pos) < 40 ? new THREE.Vector3().subVectors(this.lock.pos, p.pos).setY(0).normalize() : p.forward(new THREE.Vector3()); p.act = { type: 'zoomies', t: 0, dur: 0.95, dir, speed: 44, hit: new Set() }; this.zooms = (this.zooms || 0) + 1; sfx.whoosh(1.3); sfx.bark(p.def.id === 'bobby' ? 1.15 : 1, 0.6, 1); }
+      } else if (p.def.sea) { // v5 Deep Sea: BITE (or STING), the signature SPECIAL, and a 3rd move (frenzy / ink / tendrils / sonar roar)
+        if (L) { if (p.act && p.act.type !== 'grab') p.act = null; if (p.def.sting) this.sting(p, this.lock); else this.bite(p, this.lock); }
+        if (M && (inp.pressed.missile || !p.act)) { p.act = null; this.special(p, this.lock); } // holding lets a chomp / grab / ram finish before it repeats
+        if (B) this.seaThird(p);
+      } else if (p.real && p.dragon) {
         for (let i = 0; i < nL; i++) this.fireOrb(p, this.lock);
         if (M) this.dragonBreath(p);
         if (B) this.roarAt(p);
@@ -561,6 +777,7 @@ export class Game {
     // enemies
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
+      if (e.gone) { e.remove(); this.enemies.splice(i, 1); continue; } // v5: stampede runners leave the map
       if (e.alive) { if (this.battle && this.battle.over) { e.move(dt, tmp.set(0, 0, 0), 0, false); e.breathT = 0; } else this.think(e, dt); }
       else { e.koT += dt;
         if (e.real) { if (Math.random() < dt * 6) this.fx.dizzy(e, true); }
@@ -577,11 +794,12 @@ export class Game {
 
     // spawning
     if (this.mode === 'roam') { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
-      if (this.spawnT <= 0 && alive < this.quality.enemies) { this.spawnT = 4; const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
+      if (this.spawnT <= 0 && alive < Math.min(this.maxEnemies(), this.quality.enemies)) { this.spawnT = 2.5; const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
+      this.stampT = (this.stampT ?? 70) - dt; if (this.stampT <= 0) { this.stampT = 75 + this.r() * 60; if (p.alive) this.stampede(); }
       // despawn very far enemies so the island stays lively near the player
       for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; if (e.alive && e.pos.distanceTo(p.pos) > 260) { e.remove(); this.enemies.splice(i, 1); } } }
     else if (this.battle && !this.battle.over) {
-      this.battle.t -= dt; if (this.enemies.length === 0) { if (this.battle.wave > 0) this.hud.leandroWins?.('Wave ' + this.battle.wave + ' cleared!'); this.nextWave(); }
+      this.battle.t -= dt; if (music.setIntensity) music.setIntensity(clamp(this.enemies.filter(e => e.alive).length / 8 + (this.battle.boss ? 0.5 : 0), 0, 1)); if (this.enemies.length === 0) { if (this.battle.wave > 0) this.hud.leandroWins?.('Wave ' + this.battle.wave + ' cleared!'); this.nextWave(); }
       if (this.battle.t <= 0) this.endBattle();
     }
     this.mh.update(dt);
@@ -593,7 +811,15 @@ export class Game {
     if (this.lock && this.lock.alive) { this.lockRing.visible = true; this.lockRing.position.set(this.lock.pos.x, this.lock.ground + 0.3, this.lock.pos.z); this.lockRing.scale.setScalar(this.lock.radius * 1.4); this.lockRing.rotation.y += dt * 2; }
     else this.lockRing.visible = false;
   }
-  jetFlame(d) {
+  // v5 westie: big jump + flying hops (tap again in the air, up to 2), hold to glide with the little cape
+  pupJump(p, inp, dt) {
+    for (let k = Math.min(3, +inp.pressed.boost || 0); k > 0; k--) { if (!(p.jy > 0.05) && !(p.jvy > 0)) { p.jvy = 17; p.hops = 0; sfx.whoosh(0.8); sfx.bark(p.def.id === 'bobby' ? 1.15 : 1, 0.5, 1); this.fx.dust(p.pos, 6, 1.4, 6); }
+      else if ((p.hops || 0) < 2) { p.hops = (p.hops || 0) + 1; p.jvy = Math.max(p.jvy, 13); sfx.flap(0.8); this.fx.ring(p.pos.clone().setY(p.pos.y), 4, p.def.accent); for (let i = 0; i < this.fx.n(8); i++) this.fx.glow.spawn({ pos: p.center.clone(), vel: { x: (this.r() - 0.5) * 6, y: -3, z: (this.r() - 0.5) * 6 }, size: 0.4, size1: 0.05, life: 0.7, r: 2.4, g: 2, b: 0.8, alpha: 1 }); } }
+    if (p.jy > 0 || p.jvy > 0) { p.jvy -= (inp.btn.boost && p.jvy < 0 ? 12 : 34) * dt; p.jy = Math.max(0, (p.jy || 0) + p.jvy * dt); p.air = p.jy > 0.2 ? 1 : 0;
+      if (p.jy <= 0) { if (p.jvy < -12) { this.fx.dust(p.pos, 8, 1.6, 6); sfx.step(0.4); this.mh.damageAt(p.pos, 4, 12, p); } p.jvy = 0; p.air = 0; p.hops = 0; } }
+    this.jumps = (this.jumps || 0) + Math.min(3, +inp.pressed.boost || 0);
+  }
+  jetFlame(d) { if (d.def.sea) { if (this.r() < 0.6) this.bubbles(d.pos.clone().addScaledVector(d.forward(tmp), -d.radius).setY(d.pos.y + d.mech.height * 0.5), 2, 1, 2); return; }
     if (d.real) { if (!d.fly && Math.random() < 0.5) this.fx.dust(d.pos, 1, 1.2 * d.def.scale, 3); return; }
     const m = d.mech, f = d.forward(tmp).clone();
     const at = new THREE.Vector3(); if (m.sockets.jet) m.sockets.jet.getWorldPosition(at); else at.copy(d.pos).addScaledVector(f, -1.2 * d.def.scale).setY(d.pos.y + m.height * 0.55);
@@ -606,9 +832,18 @@ export class Game {
   }
   think(e, dt) {
     const p = this.player, ai = e.ai; ai.t -= dt;
+    if (e.stampede) { e.stampede.t += dt; if (e.stampede.t > 9) { e.gone = true; return; } } // v5: runners always leave, even if stunned/re-targeted
     e.laserT -= dt; e.missileT -= dt; e.meleeT -= dt;
     if (e.stunT > 0) { e.stunT -= dt; e.move(dt, tmp.set(0, 0, 0), 0, false); if (Math.random() < dt * 7) this.fx.dizzy(e, e.real); return; }
+    if (e.blindT > 0) { e.blindT -= dt; e.move(dt, tmp.set(Math.sin(this.world.time * 0.7 + e.level * 3), 0, Math.cos(this.world.time * 0.9 + e.level)), 0.5, false); if (this.r() < dt * 3) this.fx.dizzy(e, true); return; } // v5: blinded by ink
+    if (e.def.sea && e.fly && ai.state !== 'stampede') { const chasing = ai.state === 'chase' && p.alive; const want = chasing ? clamp(p.pos.y + (p.mech.height - e.mech.height) * 0.5 - e.ground - 0.6, 0.3, 44) : 2.5 + e.level * 1.5 + Math.sin(this.world.time * 0.3 + e.level * 2) * 2;
+      const da = clamp(want - e.alt, -6 * dt, 6 * dt); e.alt += da; e.climb = clamp(da / Math.max(1e-3, dt) * 0.25, -1, 1); }
+    if (e.whirl > 0) { e.whirl -= dt; const P = this.player; if (P && P.alive) { tmp2.subVectors(e.pos, P.pos).setY(0); const dd = tmp2.length(); if (dd > e.radius + P.radius + 2) { tmp2.normalize(); P.knock.addScaledVector(tmp2, 22 * dt).addScaledVector(tmp2.set(-tmp2.z, 0, tmp2.x), 14 * dt); } }
+      if (this.r() < 0.9) { const a = this.world.time * 6 + this.r() * 6, rr = 4 + this.r() * 20; this.bubbles(new THREE.Vector3(e.pos.x + Math.cos(a) * rr, e.pos.y + this.r() * 8, e.pos.z + Math.sin(a) * rr), 2, 1, 4); } }
     if (this.updateAct(e, dt)) return;
+    if (ai.state === 'stampede') { const S = e.stampede; e.move(dt, S.dir, 1, true); if (this.r() < 0.5) this.fx.dust(e.pos, 1, 1.6 * e.def.scale, 6);
+      if (p.alive && !S.hitP && Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z) < e.radius + p.radius + 1) { S.hitP = true; p.hit(8, e.pos, e); p.knock.addScaledVector(S.dir, 18); this.fx.shake = Math.max(this.fx.shake, 0.8); }
+      this.mh.damageAt(e.pos, e.radius + 1, 30 * dt * 10, e); return; }
     const toP = tmp.subVectors(p.pos, e.pos); const dist = toP.length(); toP.y = 0;
     const battle = this.mode === 'battle';
     const pSafe = !battle && Math.hypot(p.pos.x - this.world.baseGroup.position.x, p.pos.z - this.world.baseGroup.position.z) < 12; // repair pad is a safe zone
@@ -632,6 +867,7 @@ export class Game {
         if (facing && e.laserT <= 0) { if (ai.burst <= 0) { ai.burst = 3; } this.fireLaser(e, p, 0.12); ai.burst--; e.laserT = ai.burst > 0 ? 0.22 : 2.2 + this.r() * 1.2; }
         if (e.st.missiles && e.missileT <= 0 && dist > 15) { e.missileT = e.st.missileCD; this.fireMissiles(e, p); }
         if (e.def.breath && facing && e.meleeT <= 0 && dist < 15 * e.def.scale + 4 && !(e.breathT > 0)) { e.meleeT = e.boss ? 4 : 6; this.mh.startBreath(e, e.boss ? 1.6 : 1.0); }
+        else if (e.def.thunder && e.meleeT <= 0 && dist < 40) { e.meleeT = 4.5; this.melee(e, [p]); }
         else if (e.meleeT <= 0 && dist < e.radius + p.radius + 4) { e.meleeT = 1.6; this.melee(e, [p]); }
       }
       if (e.hp < e.maxHp * 0.28 && !ai.retreated && !battle) { ai.state = 'retreat'; ai.t = 5; ai.retreated = true; }
@@ -649,7 +885,10 @@ export class Game {
     const facing = Math.cos(angDiff(e.yaw, Math.atan2(toP.x, toP.z))) > 0.6;
     if (facing && dist < reach + 1.5 && e.laserT <= 0) { e.laserT = e.st.rate; this.bite(e, p); }
     const k = e.def.special, inRange = k === 'chomp' ? dist < 12 : k === 'charge' || k === 'headbutt' ? dist > 7 && dist < 26 : k === 'pounce' || k === 'spit' ? dist > 6 && dist < 24 : k === 'whip' ? dist < e.radius + 6 * s
-      : k === 'rage' ? dist < 22 : k === 'combo' ? dist < 11 : k === 'honk' ? dist < 18 * s + 4 : dist < 13 * s;
+      : k === 'rage' ? dist < 22 : k === 'combo' ? dist < 11 : k === 'honk' ? dist < 18 * s + 4
+      : k === 'tsunami' ? dist < 24 * s + 4 : k === 'rockethorn' ? dist > 7 && dist < 32 : k === 'pack' ? dist > 5 && dist < 26 : k === 'cannon' ? dist > 10 && dist < 50
+      : k === 'lavaslam' ? dist < e.radius + 7 * s : k === 'bark' ? dist < 18
+      : k === 'ram' ? dist > 7 && dist < 30 : k === 'crush' ? dist < 12 * s : k === 'zap' ? dist < 34 : k === 'grab' ? dist < 24 : k === 'shock' ? dist < 13 : k === 'lure' ? dist < 22 : k === 'kraken' ? dist < 70 : dist < 13 * s;
     if (e.missileT <= 0 && inRange && facing) { e.missileT = e.st.missileCD; e.roar = 0.5; e.jaw = 1; this.later(0.4, () => { if (e.alive && !(e.stunT > 0) && !e.act) this.special(e, p); }); }
     if (e.meleeT <= 0 && dist < 30 && this.r() < dt * 0.3) { e.meleeT = e.st.roarCD; this.roarAt(e); }
   }
@@ -723,7 +962,7 @@ export class Game {
     const p = this.player, c = this.cam, h = p.mech.height;
     // auto-follow behind the dino while moving (unless the player is steering the camera)
     if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI; c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
-    let dist = 4 + h * 1.55 + (p.fly ? 4 : 0) + (p.boosting ? 1.5 : 0);
+    let dist = 4 + h * 1.55 + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
     // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
@@ -731,7 +970,7 @@ export class Game {
     c.dist = lerp(c.dist, dist, Math.min(1, dt * 3));
     const tgt = tmp.set(p.pos.x, p.pos.y + h * 0.82, p.pos.z);
     const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, tgt.y + Math.sin(c.pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
-    const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh;
+    const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
     if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
     c.pos.lerp(cp, Math.min(1, dt * 8)); c.look.lerp(tgt, Math.min(1, dt * 12));
     this.camera.position.copy(c.pos);

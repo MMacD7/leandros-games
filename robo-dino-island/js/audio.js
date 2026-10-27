@@ -56,6 +56,10 @@ function cheer(t, v) { noise(t, 2.6, 'bandpass', 900, 1400, 0.38 * v, 0.6); nois
 export const sfx = {
   // v4.4: n quick yips ('yip-yip'); p = pitch (Bobby is a bit higher), v = volume. Silent until the first tap unlocks audio.
   bark(p = 1, v = 1, n = 2) { if (!ctx) return; const t = now(); for (let i = 0; i < n; i++) yip(t + i * 0.16, p * (1 + i * 0.06), v * (1 - i * 0.15)); },
+  // v5 Deep Sea: a cluster of bubbly blips (n bubbles over ~0.4 s), a squishy INK splurt, and a sonar ping
+  bubbles(v = 1, n = 6) { this.nBubbles = (this.nBubbles || 0) + 1; if (!ctx) return; const t = now(); for (let i = 0; i < n; i++) { const s = t + Math.random() * 0.4, f = 300 + Math.random() * 700; tone(s, 'sine', f, f * (2 + Math.random()), 0.05 + Math.random() * 0.04, 0.07 * v); } },
+  ink(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.55, 'lowpass', 900, 120, 0.4 * v, 1.2); tone(t, 'sine', 140, 50, 0.4, 0.3 * v); this.bubbles(v * 0.7, 8); },
+  sonar(v = 1) { if (!ctx) return; const t = now(); for (let k = 0; k < 3; k++) tone(t + k * 0.35, 'sine', 1240, 1230, 0.9, 0.1 * v * Math.pow(0.45, k)); },
   cheer(v = 1) { if (!ctx) return; cheer(now(), v); duck(0.35, 2.4); },
   laser(vol = 1) { if (!ctx) return; const t = now(); if (t - lastLaser < 0.05) return; lastLaser = t;
     tone(t, 'sawtooth', 1600 + Math.random() * 200, 220, 0.16, 0.12 * vol); tone(t, 'square', 900, 120, 0.12, 0.05 * vol); },
@@ -68,6 +72,12 @@ export const sfx = {
     for (let i = 0; i < 6; i++) noise(t + 0.25 + Math.random() * 0.9, 0.06, 'bandpass', 2500 + Math.random() * 2000, 1500, 0.12 * vol, 3);
     duck(0.55 * Math.min(1, vol), 0.7 + 0.4 * vol); },
   bigBoom(vol = 1) { if (!ctx) return; const t = now(); this.boom(vol); tone(t + 0.02, 'sine', 55, 22, 2.2, 0.8 * vol, 0.01); noise(t + 0.1, 2.4, 'lowpass', 600, 40, 0.5 * vol, 0.5); duck(0.75, 2); },
+  // v5: a building collapsing: deep thump, long rumbling crumble, cracking concrete and shattering glass (h = building size 0..1)
+  crash(v = 1, h = 0.6) { if (!ctx) return; const t = now(); v = Math.min(1.4, v); const d = 1.6 + h * 1.6;
+    tone(t, 'sine', 70, 24, 1.2 + h, 0.9 * v, 0.006); noise(t, d, 'lowpass', 900, 50, 0.7 * v, 0.5); noise(t + 0.05, d * 0.8, 'bandpass', 400, 160, 0.35 * v, 0.9);
+    for (let i = 0; i < 10; i++) noise(t + Math.random() * d * 0.8, 0.07 + Math.random() * 0.08, 'bandpass', 600 + Math.random() * 900, 300, 0.22 * v, 2); // concrete cracks
+    for (let i = 0; i < 8; i++) noise(t + 0.1 + Math.random() * d * 0.6, 0.05, 'highpass', 4500 + Math.random() * 3000, 7000, 0.08 * v, 4); // glass
+    duck(0.6, d * 0.6); },
   flame(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.2, 'bandpass', 700, 1200, 0.22 * v, 0.6); noise(t, 0.16, 'highpass', 4000, 6000, 0.05 * v, 1); },
   ignite() { if (!ctx) return; const t = now(); noise(t, 0.5, 'bandpass', 500, 2400, 0.3, 0.8); tone(t, 'sine', 120, 60, 0.3, 0.2); },
   rumble(dur = 4, v = 1) { if (!ctx) return; const t = now(); noise(t, dur, 'lowpass', 220, 60, 0.55 * v, 0.6); tone(t, 'sine', 40, 28, dur, 0.5 * v, 0.6); duck(0.4, dur * 0.6); },

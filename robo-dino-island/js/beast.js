@@ -556,10 +556,31 @@ const SPECIES = {
   },
 };
 
+// v5 "ON STEROIDS": huge glowing spikes down the back, armor plates on the flanks, big glowing head horns
+// (and a cannon for the Brachio-Tank, lava cracks for the Lava Ankylo). Pure decoration on the shared body plan.
+function roid(B, def) {
+  const P = B.pal, pts = B.bodyPts || [], dark = P.hornDark, hot = P.eye.clone().lerp(P.accent, 0.35);
+  for (let i = 2; i < pts.length - 1; i++) { const q = pts[i], len = q.r[1] * (0.7 + 0.25 * Math.sin(i * 1.7)) + 0.12, r0 = q.r[0] * 0.2 + 0.04;
+    B.horn(q.b, [0, q.p[1] + q.r[1] * 0.9, q.p[2]], [-0.3, 0, 0], len, r0, -0.35, dark, dark.clone().lerp(P.accent, 0.4), 'horn', 6, 3);
+    B.horn(q.b, [0, q.p[1] + q.r[1] * 0.92, q.p[2]], [-0.3, 0, 0], len * 1.16, r0 * 0.42, -0.35, hot, hot, 'eye', 5, 2);
+    if (i % 3 === 0 && q.b.indexOf('tail') < 0) for (const sd of [1, -1]) B.blob(q.b, [sd * q.r[0] * 0.78, q.p[1] + q.r[1] * 0.3, q.p[2]], [q.r[0] * 0.42, q.r[1] * 0.3, q.r[0] * 0.62], [0, 0, sd * 0.55], dark.clone().lerp(P.back, 0.25), 'horn', 8); }
+  const h = pts.find(q => q.b === 'head'); if (h && B.bones.head) { const hr = h.r[1];
+    for (const sd of [1, -1]) { B.horn('head', [sd * hr * 0.55, hr * 0.9, hr * 0.4], [-0.75, 0, sd * -0.5], hr * 1.6, hr * 0.26, -0.5, dark, hot, 'horn', 7, 4);
+      B.blob('head', [sd * hr * 0.55, hr * 0.9 + 0.02, hr * 0.4], [hr * 0.3, hr * 0.14, hr * 0.3], [0, 0, 0], hot, 'eye', 8); } }
+  if (def.special === 'cannon' && B.bones.ribs) { // mega cannon strapped to the back
+    B.part('ribs', new THREE.CylinderGeometry(0.32, 0.4, 2.6, 12), 'horn', M([0, 1.6, 0.3], [-1.1, 0, 0]), dark);
+    B.part('ribs', new THREE.CylinderGeometry(0.26, 0.26, 0.12, 12), 'eye', M([0, 1.6 + Math.cos(1.1) * 1.3, 0.3 + Math.sin(1.1) * 1.3], [-1.1, 0, 0]), hot);
+    B.blob('ribs', [0, 1.25, 0.2], [0.8, 0.45, 0.9], [0, 0, 0], dark, 'horn', 10);
+    B.socket('ribs', 'cannon', 0, 1.6 + Math.cos(1.1) * 1.45, 0.3 + Math.sin(1.1) * 1.45); }
+  if (def.special === 'lavaslam') for (let i = 0; i < pts.length; i += 2) { const q = pts[i]; // molten cracks
+    B.blob(q.b, [q.r[0] * 0.3 * Math.sin(i * 2.3), q.p[1] + q.r[1] * 0.75, q.p[2]], [q.r[0] * 0.18, q.r[1] * 0.08, q.r[0] * 0.5], [0, 0.3 * i, 0], hot, 'eye', 6); }
+}
+
 export class Beast {
   constructor(def, assets, wild = false) {
     const B = new OB(def, wild);
     this.info = SPECIES[def.kind](B);
+    if (def.roid) roid(B, def);
     this.obj = new THREE.Group();
     this.rig = B.finish(assets); this.obj.add(this.rig); this.rig.scale.setScalar(def.scale);
     this.b = B.bones; this.sockets = B.sockets; this.mats = B.mats; this.meshes = B.meshes; this.def = def; this.wild = wild; this.real = true;

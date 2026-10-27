@@ -3,13 +3,15 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { HDRLoader } from './vendor/three.bundle.min.js';
 import { World, BASE, VOLC, ARENA } from './world.js';
 import { peakSky } from './peak.js';
+import { citySky } from './city.js';
+import { oceanSky } from './ocean.js';
 import { FX } from './fx.js';
 import { Game } from './game.js';
 import { makeDino } from './game.js';
 import { Input } from './input.js';
 import { music } from './music.js';
 import { Rider } from './rider.js';
-import { DINOS, ROBOS, REALS, DRAGONS, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
+import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
 import { initAudio, setMuted, sfx } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
@@ -19,10 +21,10 @@ const params = new URLSearchParams(location.search);
 
 // ---------------- quality tiers ----------------
 const TIERS = [
-  { tier: 0, name: 'Low', pr: 1.0, shadow: 512, shadowR: 30, grass: 3200, grassR: 30, draw: 360, lodDist: 60, enemies: 4 },
-  { tier: 1, name: 'Medium', pr: 1.3, shadow: 1024, shadowR: 36, grass: 6500, grassR: 40, draw: 460, lodDist: 90, enemies: 5 },
-  { tier: 2, name: 'High', pr: 1.7, shadow: 2048, shadowR: 42, grass: 11000, grassR: 48, draw: 580, lodDist: 125, enemies: 6 },
-  { tier: 3, name: 'Ultra', pr: 2.0, shadow: 2048, shadowR: 48, grass: 16000, grassR: 56, draw: 720, lodDist: 170, enemies: 7 },
+  { tier: 0, name: 'Low', pr: 1.0, shadow: 512, shadowR: 30, grass: 3200, grassR: 30, draw: 360, lodDist: 60, enemies: 6 },
+  { tier: 1, name: 'Medium', pr: 1.3, shadow: 1024, shadowR: 36, grass: 6500, grassR: 40, draw: 460, lodDist: 90, enemies: 8 },
+  { tier: 2, name: 'High', pr: 1.7, shadow: 2048, shadowR: 42, grass: 11000, grassR: 48, draw: 580, lodDist: 125, enemies: 10 },
+  { tier: 3, name: 'Ultra', pr: 2.0, shadow: 2048, shadowR: 48, grass: 16000, grassR: 56, draw: 720, lodDist: 170, enemies: 12 },
 ];
 const ua = navigator.userAgent;
 const isIPad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -83,7 +85,7 @@ assets.smoke = smokeTexture(); assets.glow = glowTexture();
 const skyTex = tl.load((forced ?? startTier) >= 2 ? 'assets/hdri/sky_4k.jpg' : 'assets/hdri/sky_2k.jpg', t => { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; });
 let hdr = null; new HDRLoader(mgr).setDataType(THREE.HalfFloatType).load('assets/hdri/sky_1k.hdr', t => { hdr = t; });
 
-let world, fx, game, input, ready = false; const worlds = {}; let level = save.level === 'peak' ? 'peak' : 'jungle'; const ENV = {};
+let world, fx, game, input, ready = false; const worlds = {}; let level = ['peak', 'city', 'ocean'].includes(save.level) ? save.level : 'jungle'; const ENV = {};
 mgr.onLoad = () => { if (!ready) boot(); };
 
 function boot() {
@@ -133,42 +135,51 @@ function applyEnv(lv) {
     const sky = peakSky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
     ENV.peak = { bg: sky, env, envI: 0.75, fog: new THREE.Color(0x2c1424), near: 45, far: 640, sunDir: new THREE.Vector3(0.68, 0.36, 0.42).normalize(), sunC: 0xffa060, sunI: 3.4, hs: 0x8a6ab8, hg: 0xff6a2a, hi: 0.9, exp: 1.25 };
   }
+  if (lv === 'city' && !ENV.city) { // v5 Mega City: warm sunset, low golden sun, hazy orange fog
+    const sky = citySky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
+    ENV.city = { bg: sky, env, envI: 0.6, fog: new THREE.Color(0xd8906a), near: 70, far: 760, sunDir: new THREE.Vector3(-0.72, 0.3, 0.62).normalize(), sunC: 0xffb070, sunI: 3.6, hs: 0xffc8a0, hg: 0x4a3a40, hi: 0.7, exp: 1.12 };
+  }
+  if (lv === 'ocean' && !ENV.ocean) { // v5 Deep Sea: blue water fog, light from the surface above
+    const sky = oceanSky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
+    ENV.ocean = { bg: sky, env, envI: 0.55, fog: new THREE.Color(0x0e5a78), near: 8, far: 240, sunDir: new THREE.Vector3(0.25, 0.92, 0.3).normalize(), sunC: 0xb8f0ff, sunI: 2.6, hs: 0x4ac0e0, hg: 0x1a3040, hi: 0.95, exp: 1.15 };
+  }
   const E = ENV[lv]; if (!E) return;
   scene.background = E.bg; scene.backgroundIntensity = 1; scene.environment = E.env; scene.environmentIntensity = E.envI; scene.fog.color.copy(E.fog); scene.fog.near = E.near; scene.fog.far = E.far;
   sunDir.copy(E.sunDir); sun.color.set(E.sunC); sun.intensity = E.sunI; hemi.color.set(E.hs); hemi.groundColor.set(E.hg); hemi.intensity = E.hi; renderer.toneMappingExposure = E.exp;
   gScene.environment = scene.environment;
 }
 function levelUI() {
-  document.body.classList.toggle('peak', level === 'peak');
+  document.body.classList.toggle('peak', level === 'peak'); document.body.classList.toggle('city', level === 'city'); document.body.classList.toggle('ocean', level === 'ocean');
   document.querySelectorAll('.lv[data-lv]').forEach(b => { const on = b.dataset.lv === level; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-  const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : 'ISLAND';
-  $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : '▶ Explore the Island';
+  const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : level === 'city' ? 'CITY SMASH' : level === 'ocean' ? 'DEEP SEA' : 'ISLAND';
+  $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : level === 'city' ? '▶ Smash Mega City' : level === 'ocean' ? '▶ Dive into the Deep Sea' : '▶ Explore the Island';
+  $('citybar').classList.toggle('hidden', level !== 'city');
 }
 function setLevel(lv) {
-  if (lv !== 'peak') lv = 'jungle';
+  if (!['peak', 'city', 'ocean'].includes(lv)) lv = 'jungle';
   if (lv === level && world === worlds[lv]) return;
   level = lv; world = makeWorld(lv); world.applyQuality(Q); applyEnv(lv);
   if (game.battle) game.battle = null;
-  game.setWorld(world); game.startRoam(); save.level = lv; persist(); levelUI();
+  game.setWorld(world); game.startRoam(); save.level = lv; if (lv !== 'ocean') save.landLevel = lv; persist(); levelUI();
   if (screen === 'title') { titleEnemies(); game.mh.titleEnter(); }
   for (let i = 0; i < 40; i++) emitSmoke(0.1);
   syncMusic();
 }
 function travel(lv) {
   if (lv === level) return;
-  voice.say(lv === 'peak' ? 'Welcome to Dragon Peak!' : 'Welcome to Jungle Island!', { prio: 2, cd: 1500, replace: true });
-  const L = $('loading'); $('load-t').textContent = lv === 'peak' ? 'Flying to Dragon Peak… 🐉' : 'Sailing to Jungle Island… 🌴'; $('load-bar').style.width = '60%'; L.classList.remove('hidden');
+  voice.say(lv === 'peak' ? 'Welcome to Dragon Peak!' : lv === 'city' ? 'Welcome to Mega City Smash!' : lv === 'ocean' ? 'Welcome to Deep Sea Showdown!' : 'Welcome to Jungle Island!', { prio: 2, cd: 1500, replace: true });
+  const L = $('loading'); $('load-t').textContent = lv === 'peak' ? 'Flying to Dragon Peak… 🐉' : lv === 'city' ? 'Stomping into Mega City… 🏙️' : lv === 'ocean' ? 'Diving into the Deep Sea… 🌊🦈' : 'Sailing to Jungle Island… 🌴'; $('load-bar').style.width = '60%'; L.classList.remove('hidden');
   setTimeout(() => { try { setLevel(lv); renderer.compile(scene, camera); } finally { $('load-bar').style.width = '100%'; setTimeout(() => L.classList.add('hidden'), 120); } }, 40);
 }
 // title: two rivals face off and roar at each other in front of the volcano
 const TITLE = { x: 16, z: 181 };
 function titleEnemies() {
-  game.clearEnemies(); const p = game.player, peak = level === 'peak';
-  const rivalId = peak ? (p.def.id === 'dfire' ? 'dstorm' : 'dfire') : p.def.real ? 'rex' : 'trex';
-  p.place(TITLE.x - 7.5, TITLE.z, Math.PI / 2 - 0.25); if (p.fly) p.alt = 1.2;
+  game.clearEnemies(); const p = game.player, peak = level === 'peak', city = level === 'city', ocean = level === 'ocean';
+  const rivalId = ocean ? (p.def.id === 'megalodon' ? 'shark' : 'megalodon') : peak ? (p.def.id === 'dfire' ? 'dstorm' : 'dfire') : city ? (p.def.id === 'megatrike' ? 'spinotitan' : 'megatrike') : p.def.real ? 'rex' : 'trex';
+  p.place(TITLE.x - 7.5, TITLE.z, Math.PI / 2 - 0.25); if (p.fly) p.alt = ocean ? 2.2 : 1.2;
   const r = game.spawnEnemy(TITLE.x + 7.5, TITLE.z - 1, 1, rivalId); r.yaw = -Math.PI / 2 + 0.25; r.ai.state = 'idle'; if (r.fly) { r.alt = 1.5; r.pos.y = world.height(r.pos.x, r.pos.z) + 3.5; }
-  const a = game.spawnEnemy(TITLE.x - 26, TITLE.z - 38, 1, peak ? 'giga' : 'raptor'); a.yaw = 0.6; a.ai.state = 'idle';
-  const b = game.spawnEnemy(TITLE.x + 30, TITLE.z - 46, 1, peak ? 'dice' : 'trice'); b.yaw = -0.7; b.ai.state = 'idle'; if (b.fly) b.alt = 14;
+  const a = game.spawnEnemy(TITLE.x - 26, TITLE.z - 38, 1, ocean ? 'octopus' : peak ? 'giga' : city ? 'giga' : 'raptor'); a.yaw = 0.6; a.ai.state = 'idle';
+  const b = game.spawnEnemy(TITLE.x + 30, TITLE.z - 46, 1, ocean ? 'jellyfish' : peak ? 'dice' : city ? 'brachiotank' : 'trice'); b.yaw = -0.7; b.ai.state = 'idle'; if (b.fly) b.alt = ocean ? 10 : 14; if (ocean) a.alt = 3;
   titleRoarT = 0.8; titleWho = 0;
 }
 let titleRoarT = 1, titleWho = 0;
@@ -184,13 +195,14 @@ const hud = {
   roar() { document.body.classList.remove('roaring'); void document.body.offsetWidth; document.body.classList.add('roaring'); },
   actions(def) {
     const EL = { fire: 'FIRE<br>BALL', ice: 'ICE<br>SHARD', storm: 'ZAP' };
-    const L = def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
+    const L = def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
       : def.real ? { laser: 'BITE', missile: def.specialName, melee: (save.up.fire ? '🔥 ' : '') + 'ROAR', boost: 'RUN' }
       : { laser: 'LASER', missile: 'MISSILE', melee: def.robodragon ? 'FLAME<br>JETS' : def.breath ? 'FIRE<br>BREATH' : def.quake ? 'QUAKE<br>SLAM' : def.goo ? 'GOO<br>SPRAY' : 'BITE<br>STOMP', boost: def.fly ? 'CLIMB' : 'BOOST' };
     document.body.classList.toggle('breath', !!def.breath);
     for (const k in L) document.querySelector(`[data-btn="${k}"] span`).innerHTML = L[k];
-    document.body.classList.toggle('real-dino', !!def.real);
+    document.body.classList.toggle('real-dino', !!def.real); document.body.classList.toggle('pup', !!def.westie); document.body.classList.toggle('swimmer', !!(def.sea && def.fly));
   },
+  ink() { const el = $('ink'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); },
   revived() { $('ko-msg').classList.add('hidden'); hud.toast('Back in action!'); },
   say(t, o) { return voice.say(t, o); },
   // the big one: every battle win, wave clear and boss KO
@@ -199,7 +211,7 @@ const hud = {
   combo(n) { const el = $('combo'); if (n >= 3) { el.innerHTML = `<b>${n}</b> HIT COMBO`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('show', 'pop'); } else el.classList.remove('show'); },
   victory() { music.victory(); },
   logoBoom() { const el = document.querySelector('#title .logo'); el.classList.remove('boom'); void el.offsetWidth; el.classList.add('boom'); },
-  results(b, bonus) { $('r-text').innerHTML = `Wave reached: <b>${b.wave}</b><br>Robots knocked out: <b>${b.kos}</b><br>Bolts earned: <b>${b.bolts}</b> (incl. ${bonus} bonus)<br>Best ever: <b>${save.bestBattle}</b> KOs`; show('results'); $('ko-msg').classList.add('hidden'); },
+  results(b, bonus) { $('r-text').innerHTML = `Wave reached: <b>${b.wave}</b><br>Robots knocked out: <b>${b.kos}</b><br>Bolts earned: <b>${b.bolts}</b> (incl. ${bonus} bonus)${b.smashed ? `<br>Buildings smashed: <b>${b.smashed}</b>` : ''}<br>Best ever: <b>${save.bestBattle}</b> KOs`; show('results'); $('ko-msg').classList.add('hidden'); },
 };
 const ebarEls = [];
 function updateHUD(dt) {
@@ -225,6 +237,7 @@ function updateHUD(dt) {
     let el = ebarEls[n]; if (!el) { el = document.createElement('div'); el.className = 'ebar'; el.innerHTML = '<b></b><i></i>'; $('ebars').appendChild(el); ebarEls[n] = el; }
     el.style.display = 'block'; el.style.transform = `translate(${(v.x * 0.5 + 0.5) * W}px, ${(-v.y * 0.5 + 0.5) * H}px)`; el.lastChild.style.width = (e.hp / e.maxHp * 100) + '%'; el.firstChild.textContent = 'L' + e.level; n++; }
   for (let i = n; i < ebarEls.length; i++) ebarEls[i].style.display = 'none';
+  const C = world.city; if (C) { const pc = Math.round(C.pct * 100); if (pc !== hud.cityPct) { hud.cityPct = pc; $('city-fill').style.width = pc + '%'; $('city-t').textContent = `🏙️ ${C.destroyed}/${C.total} · ${pc}% SMASHED`; } }
   drawRadar(p);
 }
 const rc = $('radar').getContext('2d');
@@ -234,7 +247,7 @@ function drawRadar(p) {
   const dot = (x, z, col, r) => { const dx = (x - p.pos.x) * scale, dz = (z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
     let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 6) { rx *= (R - 6) / L; ry *= (R - 6) / L; } rc.fillStyle = col; rc.beginPath(); rc.arc(-rx, -ry, r, 0, 7); rc.fill(); };
   rc.strokeStyle = 'rgba(255,255,255,.15)'; rc.lineWidth = 2; rc.beginPath(); rc.arc(0, 0, R * 0.5, 0, 7); rc.stroke();
-  dot(VOLC.x, VOLC.z, '#ff7a2a', 9); dot(ARENA.x, ARENA.z, '#ffd34a', 7); dot(BASE.x, BASE.z, '#3de8ff', 9);
+  if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 9); dot(ARENA.x, ARENA.z, '#ffd34a', 7); dot(BASE.x, BASE.z, '#3de8ff', 9);
   for (const k of game.pickups) if (k.alive && k.type === 'core') dot(k.x, k.z, 'rgba(120,240,255,.8)', 3);
   for (const e of game.enemies) if (e.alive) dot(e.pos.x, e.pos.z, '#ff3a2a', 6);
   rc.restore();
@@ -242,7 +255,7 @@ function drawRadar(p) {
 }
 
 // ---------------- screens ----------------
-let screen = 'loading', paused = false;
+let screen = 'loading', paused = false, gPicked = false;
 let prevScreen = 'loading';
 function show(s) {
   prevScreen = screen; screen = s;
@@ -251,16 +264,17 @@ function show(s) {
   $('hud').classList.toggle('hidden', !(playing || s === 'pause' || s === 'results' || s === 'levels'));
   document.body.classList.toggle('playing', playing);
   if (input) { input.enabled = playing; input.reset(); }
-  if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${save.owned.length}/${DINOS.length} dinos`; }
-  if (s === 'garage') { if (prevScreen !== 'garage') { syncGarageToSelected(); let first = false; try { first = !localStorage.getItem(NEW_GARAGE_KEY); if (first) localStorage.setItem(NEW_GARAGE_KEY, '1'); } catch (e) { }
+  if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${DINOS.filter(d => !d.wildOnly && save.owned.includes(d.id)).length}/${DINOS.filter(d => !d.wildOnly).length} dinos`; }
+  if (s === 'garage') { if (prevScreen !== 'garage') { gPicked = false; syncGarageToSelected(); let first = false; try { first = !localStorage.getItem(NEW_GARAGE_KEY); if (first) localStorage.setItem(NEW_GARAGE_KEY, '1'); } catch (e) { }
       if (first) { gList = gTab = 'real'; gIdx = 0; hud.toast('🆕 NEW dinos first! Tap ‹ › to see them all'); } } refreshGarage(); }
   if (s === 'title' && game) game.mh.titleEnter();
   hud.bolts(); checkRotate(); fpsReset(); syncMusic();
 }
 function syncMusic() {
   const b = game && game.battle;
-  const pk = level === 'peak';
-  const t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (pk ? 'peak' : 'title') : b ? (b.boss && b.boss.alive ? (pk ? 'dragonboss' : 'boss') : (pk ? 'peakbattle' : 'battle')) : (pk ? 'peak' : 'roam');
+  const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
+  const t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
+  if (!b && screen === 'play' && music.setIntensity) music.setIntensity(0);
   music.play(t);
 }
 let rotateDismissed = false;
@@ -269,23 +283,23 @@ $('rot-ok').addEventListener('click', () => { rotateDismissed = true; checkRotat
 const tap = (id, fn) => $(id).addEventListener('click', e => { initAudio(); voice.prime(); sfx.ui(); fn(e); });
 // iOS Safari: speechSynthesis must be unlocked inside the first user gesture
 // v4.1: one-time "new level" shout on the first tap after the update (needs a tap for iOS speech; respects the 🗣️ toggle)
-const NEW_LV_KEY = 'robo-dino-island.announced.peak';
+const NEW_LV_KEY = 'robo-dino-island.announced.ocean'; // v5: Deep Sea Showdown (level 4)
 function announceNewLevel() {
   try { if (localStorage.getItem(NEW_LV_KEY) || !save.voice) return; } catch (e) { return; }
-  if (voice.say('New level unlocked, Leandro! Dragon Peak!', { prio: 3, cd: 0 }) !== false) { try { localStorage.setItem(NEW_LV_KEY, '1'); } catch (e) { } if (screen === 'title') hud.toast('🌋 NEW LEVEL: DRAGON PEAK! 🐉'); }
+  if (voice.say('New level unlocked, Leandro! Deep Sea Showdown!', { prio: 3, cd: 0 }) !== false) { try { localStorage.setItem(NEW_LV_KEY, '1'); } catch (e) { } if (screen === 'title') hud.toast('🌊 NEW LEVEL: DEEP SEA SHOWDOWN! 🦈'); }
 }
 for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { voice.prime(); announceNewLevel(); }, { once: true, capture: true });
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast('Find energy cores ⚡ and wild dinos!'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
 tap('newcall', () => { garageFrom = 'title'; show('garage'); });
-tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak'));
+tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean'));
 // v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
 let levelsFrom = 'play';
 const openLevels = () => { levelsFrom = screen === 'pause' ? 'pause' : 'play'; show('levels'); };
 tap('b-map', openLevels); tap('p-map', openLevels);
 tap('lvd-close', () => show(levelsFrom === 'pause' ? 'pause' : 'play'));
-for (const lv of ['jungle', 'peak']) tap('lvd-' + lv, () => { show('play'); if (lv !== level) travel(lv); });
+for (const lv of ['jungle', 'peak', 'city', 'ocean']) tap('lvd-' + lv, () => { show('play'); if (lv !== level) travel(lv); });
 tap('b-pause', () => show('pause'));
 // 🐶 summon button: entrance + dance + fly away; tapping while they're here = more confetti. Short cooldown with a countdown ring.
 const RB_CD = 25; let rbCd = 0;
@@ -307,7 +321,7 @@ tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
-const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (save.ride) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (save.ride && !gMech.def.westie) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
@@ -324,10 +338,10 @@ const gScene = new THREE.Scene(), gCam = new THREE.PerspectiveCamera(40, 1, 0.1,
 const GARAGE_YAW = 1.5; // ~3/4 front view (camera sits at yaw 0.67)
 let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo';
 // v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
-const NEW_IDS = new Set(['giga', 'allo', 'dilo', 'pachy', 'para', 'gmech', 'dblast', 'dfire', 'dice', 'dstorm', 'rdragon']);
+const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish']); // v5
 const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
-const G_REALS = newFirst(REALS), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS);
-const gListOf = () => gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : G_ROBOS;
+const G_REALS = newFirst(REALS), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS), G_DOGS = WESTIES, G_SEA = SEA.filter(d => !d.wildOnly);
+const gListOf = () => gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;
 const NEW_GARAGE_KEY = 'robo-dino-island.seen.newgarage';
 const gMechs = {}, gRider = new Rider();
 function buildGarage() {
@@ -343,20 +357,20 @@ function buildGarage() {
   const rim2 = new THREE.SpotLight(0xff5a1a, 700, 60, 0.7, 0.6, 1.6); rim2.position.set(12, 7, -11); gScene.add(rim2, rim2.target);
   syncGarageToSelected();
 }
-function syncGarageToSelected() { const d = DINOS.find(d => d.id === save.selected) || ROBOS[0]; gList = d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d)); }
+function syncGarageToSelected() { const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0]; gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d)); }
 function setGarageMech() {
   const def = gListOf()[gIdx]; if (gMech) gScene.remove(gMech.obj);
   gMech = gMechs[def.id] || (gMechs[def.id] = makeDino(def, assets, false)); gScene.add(gMech.obj);
   gMech.obj.position.set(0, 0, 0); if (def.fly) gMech.obj.position.y = 1.2;
-  if (save.ride !== false) gRider.mount(gMech); else gRider.unmount();
+  if (save.ride !== false && !def.westie && !def.sea) gRider.mount(gMech); else gRider.unmount();
 }
 function refreshGarage() {
   if (gTab !== 'ups') gList = gTab;
   const list = gListOf(); gIdx = Math.min(gIdx, list.length - 1); const def = list[gIdx]; setGarageMech();
   const owned = save.owned.includes(def.id), st = statsFor(def, save.up);
-  $('g-name').textContent = def.name; if (NEW_IDS.has(def.id)) $('g-name').insertAdjacentHTML('afterbegin', '<span class="newb">NEW!</span> '); $('g-desc').textContent = def.desc + (def.fly ? ' ✈' : '') + (def.swim ? ' 🌊' : '');
+  $('g-name').textContent = def.name; if (NEW_IDS.has(def.id)) $('g-name').insertAdjacentHTML('afterbegin', '<span class="newb">NEW!</span> '); $('g-desc').textContent = def.desc + (def.sea ? ' 🌊' : (def.fly ? ' ✈' : '') + (def.swim ? ' 🌊' : ''));
   const EL = { fire: 'Fireballs', ice: 'Ice shards', storm: 'Lightning bolts' };
-  $('g-abil').innerHTML = def.dragon && def.real ? `<b>${EL[def.element]}</b> · <b>${def.specialName.replace('<br>', ' ')}</b> · <b>Roar</b> · <b>Fly</b> (Climb)`
+  $('g-abil').innerHTML = def.sea ? `<b>${def.sting ? 'Sting' : 'Bite'}</b> · <b>${def.specialName.replace('<br>', ' ')}</b> · <b>${(def.thirdName || 'SONAR ROAR').replace('<br>', ' ')}</b> · <b>Swim</b> ▲▼ (Deep Sea)` : def.westie ? `<b>Bite</b> · <b>Bark blast</b> (knock-back) · <b>Zoomies</b> · <b>Jump</b> + flying hops` : def.dragon && def.real ? `<b>${EL[def.element]}</b> · <b>${def.specialName.replace('<br>', ' ')}</b> · <b>Roar</b> · <b>Fly</b> (Climb)`
     : def.real ? `<b>Bite</b> · <b>${def.specialName.replace('<br>', ' ')}</b> · <b>Roar</b> (stuns) · <b>Run</b>`
     : `<b>Laser</b> · <b>Missiles</b> · <b>${def.robodragon ? 'Flame jets' : def.breath ? 'Fire breath' : def.quake ? 'Quake slam' : def.goo ? 'Goo spray' : 'Bite/Stomp'}</b> · <b>${def.fly ? 'Fly' : 'Boost'}</b>`;
   const bars = def.real ? [['Health', st.hp / 400], ['Speed', st.speed / 20], [def.dragon ? 'Blast' : 'Bite', st.bite / (st.rate * 80)], ['Special', 3 / st.missileCD], ['Roar', st.roar / 3]]
@@ -368,7 +382,7 @@ function refreshGarage() {
   $('g-ups').innerHTML = UPGRADES.map(u => { const l = save.up[u.id]; return `<div class="up"><span class="ic">${u.icon}</span><div><h4>${u.name}</h4><p>${u.desc}</p><span class="pips">${'●'.repeat(l)}${'○'.repeat(MAX_UP - l)}</span> <small class="lvl">Level ${l}/${MAX_UP}</small></div>
     <span class="upb"><button data-up="${u.id}" data-d="-1" ${l <= 0 ? 'disabled' : ''} aria-label="less">−</button><button data-up="${u.id}" data-d="1" ${l >= MAX_UP ? 'disabled' : ''} aria-label="more">+</button></span></div>`; }).join('');
   $('g-dino').classList.toggle('hidden', gTab === 'ups'); $('g-ups').classList.toggle('hidden', gTab !== 'ups');
-  for (const t of ['real', 'robo', 'dragon', 'ups']) $('t-' + t).classList.toggle('on', gTab === t);
+  for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups']) $('t-' + t).classList.toggle('on', gTab === t);
   $('g-prev').parentElement.classList.toggle('hidden', gTab === 'ups');
   hud.bolts();
 }
@@ -377,12 +391,19 @@ tap('g-next', () => { gIdx = (gIdx + 1) % gListOf().length; refreshGarage(); });
 tap('t-real', () => { if (gList !== 'real') gIdx = 0; gTab = 'real'; refreshGarage(); }); tap('t-robo', () => { if (gList !== 'robo') gIdx = 0; gTab = 'robo'; refreshGarage(); });
 tap('t-ups', () => { gTab = 'ups'; refreshGarage(); });
 tap('t-dragon', () => { if (gList !== 'dragon') gIdx = 0; gTab = 'dragon'; refreshGarage(); });
-tap('g-back', () => { if (garageFrom === 'pause') { if (game.player.def.id !== save.selected) { const hp = game.player.hp / game.player.maxHp; const pos = game.player.pos.clone(), yaw = game.player.yaw; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); } show('play'); } else { game.spawnPlayer(false); titleEnemies(); show('title'); } });
+tap('t-dogs', () => { if (gList !== 'dogs') gIdx = 0; gTab = 'dogs'; refreshGarage(); });
+tap('t-sea', () => { if (gList !== 'sea') gIdx = 0; gTab = 'sea'; refreshGarage(); });
+tap('g-back', () => { const sel = gPicked && DINOS.find(d => d.id === save.selected); gPicked = false; if (sel && !sel.westie && !!sel.sea !== (level === 'ocean')) { // v5: sea creatures go to the Deep Sea, land dinos come back to land
+    const to = sel.sea ? 'ocean' : (save.landLevel && save.landLevel !== 'ocean' ? save.landLevel : 'jungle'); show(garageFrom === 'pause' ? 'play' : 'title'); travel(to); return; }
+  if (garageFrom === 'pause') { if (game.player.def.id !== save.selected) { const hp = game.player.hp / game.player.maxHp; const pos = game.player.pos.clone(), yaw = game.player.yaw; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); } show('play'); } else { game.spawnPlayer(false); titleEnemies(); show('title'); } });
 $('g-action').addEventListener('click', () => {
   initAudio(); const def = gListOf()[gIdx];
   voice.say(def.name + '!', { prio: 2, cd: 1500, replace: true }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 1, cd: 6000 });
-  if (save.owned.includes(def.id)) { save.selected = def.id; sfx.ui(); gMech.roar = 1.6; sfx.bigRoar(def.real ? 1.1 - def.scale * 0.25 : 1.3 - def.scale * 0.3, def.real ? 1 : 0.6, !def.real); }
+  if (def.westie) { save.selected = def.id; if (!save.owned.includes(def.id)) save.owned.push(def.id); sfx.bark(def.id === 'bobby' ? 1.15 : 1, 1, 2); gMech.roar = 1; }
+  else if (save.owned.includes(def.id)) { save.selected = def.id; sfx.ui(); gMech.roar = 1.6; sfx.bigRoar(def.real ? 1.1 - def.scale * 0.25 : 1.3 - def.scale * 0.3, def.real ? 1 : 0.6, !def.real); }
   else { save.owned.push(def.id); save.selected = def.id; sfx.unlock(); }
+  if (def.sea) save.seaSel = def.id; else save.landSel = def.id; gPicked = true;
+  if (def.sea && level !== 'ocean') hud.toast('🌊 ' + def.name + ' swims in DEEP SEA SHOWDOWN! Taking you there…'); else if (!def.sea && !def.westie && level === 'ocean') hud.toast('🏝️ ' + def.name + ' lives on land! Taking you back…');
   persist(); refreshGarage();
 });
 $('g-ups').addEventListener('click', e => { const b = e.target.closest('button[data-up]'); if (!b) return; initAudio(); const id = b.dataset.up, l = save.up[id], n = Math.max(0, Math.min(MAX_UP, l + (+b.dataset.d || 1)));
@@ -462,7 +483,19 @@ function peakAmbience(dt) {
   for (const b of world.braziers) if ((b.x - cp.x) ** 2 + (b.z - cp.z) ** 2 < 140 * 140 && Math.random() < dt * 9) fx.fire.spawn({ pos: { x: b.x + (Math.random() - 0.5) * 0.8, y: b.y, z: b.z + (Math.random() - 0.5) * 0.8 }, vel: { x: 0, y: 2.6 + Math.random() * 1.5, z: 0 }, size: 1.1, size1: 2.2, life: 0.6, r: 2.8, g: 1.0, b: 0.2, alpha: 0.9, rv: 1 });
   if (E) { const f = world.flashT; hemi.intensity = E.hi + f * f * 2.2; scene.backgroundIntensity = 1 + f * f * 1.4; }
 }
+// Deep Sea: bubble streams rise from the hydrothermal vents and the shipwreck
+let bubT = 0;
+function oceanAmbience(dt) {
+  bubT -= dt; const cp = camera.position;
+  while (bubT < 0) { bubT += 0.05;
+    for (const v of world.vents) { if ((v.x - cp.x) ** 2 + (v.z - cp.z) ** 2 > 200 * 200 || Math.random() > 0.5) continue;
+      fx.glow.spawn({ pos: { x: v.x + (Math.random() - 0.5) * 1.5, y: v.y, z: v.z + (Math.random() - 0.5) * 1.5 }, vel: { x: (Math.random() - 0.5) * 1.2, y: 6 + Math.random() * 5, z: (Math.random() - 0.5) * 1.2 }, size: 0.35 + Math.random() * 0.5, size1: 0.7, life: 3 + Math.random() * 3, r: 1.0, g: 1.4, b: 1.7, alpha: 0.7, grav: -1.5, drag: 0.2 }); }
+    if (Math.random() < 0.4) { const o = world.smokeOrigin; fx.smoke.spawn({ pos: new THREE.Vector3(o.x + (Math.random() - 0.5) * 6, o.y, o.z + (Math.random() - 0.5) * 6), vel: { x: 0.5, y: 5 + Math.random() * 3, z: 0 }, size: 6, size1: 30, life: 8, r: 0.12, g: 0.2, b: 0.24, alpha: 0.6, alpha1: 0, drag: 0.05, rv: 0.1, fadeIn: 0.05 }); }
+  }
+}
 function emitSmoke(dt) {
+  if (world && world.isCity) return; // no volcano in Mega City
+  if (world && world.ocean) { oceanAmbience(dt); return; } // Deep Sea: bubble columns from the vents
   smokeT -= dt;
   while (smokeT < 0) { smokeT += 0.1; const o = world.smokeOrigin; const g = 0.13 + Math.random() * 0.12;
     fx.smoke.spawn({ pos: new THREE.Vector3(o.x + (Math.random() - 0.5) * 10, o.y, o.z + (Math.random() - 0.5) * 10), vel: { x: 2.5 + Math.random() * 1.5, y: 8 + Math.random() * 4, z: -0.8 + Math.random() }, size: 20, size1: 110, life: 15, r: g, g, b: g * 1.03, alpha: 0.9, alpha1: 0, drag: 0.03, rv: (Math.random() - 0.5) * 0.2, fadeIn: 0.04 });
@@ -487,4 +520,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 // test / debug hooks (no network, local only)
 function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+window.G = { defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };

@@ -30,6 +30,10 @@ export const ROBOS = [
   { id: 'dblast', name: 'Dilo-Blaster', price: 0, desc: 'A frilled blaster bot. Sprays sticky GOO that slows foes down!', goo: true,
     hp: 105, speed: 14.5, laser: 7, rate: 0.11, missiles: 2, melee: 20, scale: 0.82, kind: 'dblast',
     body: 0x2c3a24, armor: 0x101410, glow: 0x9aff2a },
+  // v5 "on steroids": a supercharged storm pterosaur mech
+  { id: 'tptero', name: 'Thunder-Ptero', price: 0, desc: 'A HUGE storm-charged jet pterosaur. Its THUNDER STRIKE chains lightning through every foe!', thunder: true, roid: true,
+    hp: 170, speed: 16, laser: 11, rate: 0.12, missiles: 4, melee: 40, scale: 1.35, kind: 'ptero', fly: true,
+    body: 0x262a40, armor: 0x0e0e18, glow: 0xffe23a },
 ];
 ROBOS.forEach(d => { d.real = false; });
 
@@ -74,6 +78,22 @@ export const REALS = [
   { id: 'para', name: 'Parasaurolophus', price: 0, kind: 'para', desc: 'Its trumpet crest blasts a SONIC HONK that knocks everything back!',
     hp: 200, speed: 11, bite: 12, biteRate: 0.6, special: 'honk', specialName: 'SONIC<br>HONK', specialCD: 4.5, roar: 1.6, scale: 1.0, radius: 2.4,
     back: 0x2a5a4a, belly: 0xc0b890, stripe: 0x0e2a22, accent: 0xff7a2a, eye: 0xffd21a },
+  // ---- v5: OVER THE TOP. Huge, armored, spiked, glowing dinos (roid: glowing spikes + armor plates in the builder) ----
+  { id: 'spinotitan', name: 'Spino-Titan', price: 0, kind: 'spinos', swim: true, roid: true, desc: 'A towering armored Spinosaurus with a glowing sail. Its TIDAL WAVE blasts everything away!',
+    hp: 300, speed: 12, bite: 40, biteRate: 0.5, special: 'tsunami', specialName: 'TIDAL<br>WAVE', specialCD: 4, roar: 2.8, scale: 1.55, radius: 3.6,
+    back: 0x1c3a4a, belly: 0x9ab0a8, stripe: 0x08161c, accent: 0x2ad8ff, eye: 0x4af0ff },
+  { id: 'megatrike', name: 'Mega-Trike', price: 0, kind: 'trice', roid: true, desc: 'A super-sized Triceratops with ROCKET-POWERED horns. Rocket charge = KABOOM!',
+    hp: 360, speed: 11, bite: 30, biteRate: 0.6, special: 'rockethorn', specialName: 'ROCKET<br>HORNS', specialCD: 3.5, roar: 2.2, scale: 1.45, radius: 3.6,
+    back: 0x3a2a1a, belly: 0xb09070, stripe: 0x140c06, accent: 0xff5a10, eye: 0xffb21a },
+  { id: 'raptorpack', name: 'Raptor Pack Alpha', price: 0, kind: 'velo', roid: true, desc: 'The leader of the pack. PACK STRIKE pounces from foe to foe to foe!',
+    hp: 170, speed: 20, bite: 24, biteRate: 0.25, special: 'pack', specialName: 'PACK<br>STRIKE', specialCD: 3, roar: 1.8, scale: 0.95, radius: 1.8,
+    back: 0x2a1a3a, belly: 0xa890b0, stripe: 0x0e0816, accent: 0xb84aff, eye: 0xd88aff },
+  { id: 'brachiotank', name: 'Brachio-Tank', price: 0, kind: 'brachio', roid: true, desc: 'A colossal armored long-neck with a MEGA CANNON that rains shells on the enemy!',
+    hp: 480, speed: 9, bite: 22, biteRate: 0.6, special: 'cannon', specialName: 'MEGA<br>CANNON', specialCD: 3.5, roar: 2.4, scale: 1.6, radius: 4.4,
+    back: 0x3a4a3a, belly: 0xa8a890, stripe: 0x141a14, accent: 0x8aff3a, eye: 0xaaff4a },
+  { id: 'lavaanky', name: 'Lava Ankylo', price: 0, kind: 'ankys', roid: true, desc: 'Molten armor and a magma club. LAVA SLAM splashes a ring of fire!',
+    hp: 420, speed: 9, bite: 22, biteRate: 0.6, special: 'lavaslam', specialName: 'LAVA<br>SLAM', specialCD: 3.5, roar: 2.0, scale: 1.4, radius: 3.6,
+    back: 0x2a1410, belly: 0x6a4030, stripe: 0x0a0402, accent: 0xff4a0a, eye: 0xff8a1a },
 ];
 REALS.forEach(d => { d.real = true; d.melee = d.bite; });
 
@@ -95,7 +115,50 @@ export const DRAGONS = [
 DRAGONS.forEach(d => { d.dragon = true; d.fly = true; if (d.kind === 'dragon') { d.real = true; d.melee = d.bite; } else d.real = false; });
 // the Dragon Peak arena boss (not in the garage)
 export const DRAGON_KING = { ...DRAGONS[0], id: 'dking', name: 'DRAGON KING', element: 'king', back: 0x1c1410, belly: 0x9a7a3a, stripe: 0x060403, accent: 0xffb41a, eye: 0xffd23a, scale: 2.5, radius: 6.2, boss: true };
-export const DINOS = [...ROBOS, ...REALS, ...DRAGONS];
+// v5: the City boss (not in the garage): a kaiju-sized armored Giganotosaurus
+export const MEGA_REX = { ...REALS.find(d => d.id === 'giga'), id: 'megarex', name: 'MEGA-REX', roid: true, back: 0x2a2018, belly: 0x8a7050, stripe: 0x0a0604, accent: 0xff2a0a, eye: 0xff3a1a, scale: 2.7, radius: 6.6, boss: true, special: 'stomp' };
+// v5: Ricky & Bobby are playable (small, fast West Highland terriers: bite, bark blast, zoomies, big jump + flying hop)
+export const WESTIES = [
+  { id: 'ricky', name: 'Ricky', price: 0, kind: 'westie', westie: true, accent: 0xd82a2a, desc: 'A tiny terrier with a HUGE heart (red cape). Super fast, big jumps and a mighty BARK!',
+    hp: 150, speed: 20, bite: 22, biteRate: 0.22, special: 'bark', specialName: 'BARK<br>BLAST', specialCD: 1, roar: 1.5, scale: 0.85, radius: 1.3 },
+  { id: 'bobby', name: 'Bobby', price: 0, kind: 'westie', westie: true, accent: 0x2a6ad8, desc: "Ricky's partner (blue cape). Zoomies so fast he's a blur, and a bark that knocks dinos over!",
+    hp: 150, speed: 20.5, bite: 21, biteRate: 0.22, special: 'bark', specialName: 'BARK<br>BLAST', specialCD: 1, roar: 1.5, scale: 0.85, radius: 1.3 },
+];
+WESTIES.forEach(d => { d.real = true; d.melee = d.bite; });
+// v5 DEEP SEA SHOWDOWN: playable sea creatures (they SWIM: free 3D movement with the ▲/▼ buttons) + wild sea monsters
+export const SEA = [
+  { id: 'shark', name: 'Great White Shark', price: 0, kind: 'shark', desc: 'The fastest hunter in the sea! Snappy bites and a TORPEDO RAM that sends foes spinning.',
+    hp: 175, speed: 19, bite: 26, biteRate: 0.3, special: 'ram', specialName: 'TORPEDO<br>RAM', specialCD: 3, roar: 1.8, third: 'frenzy', thirdName: 'FEEDING<br>FRENZY', scale: 1.0, radius: 2.2,
+    back: 0x5d6e7c, belly: 0xeef2f2, accent: 0x2ad8ff, eye: 0x101010 },
+  { id: 'megalodon', name: 'Megalodon', price: 0, kind: 'shark', mega: true, desc: 'A prehistoric MEGA shark as big as a bus. Its CRUSHING CHOMP flattens anything!',
+    hp: 420, speed: 14.5, bite: 44, biteRate: 0.55, special: 'crush', specialName: 'CRUSHING<br>CHOMP', specialCD: 3.5, roar: 2.8, scale: 1.9, radius: 4.2,
+    back: 0x3a4048, belly: 0xb8bcb8, accent: 0xff3a1a, eye: 0xff2a1a },
+  { id: 'stingray', name: 'Thunder Stingray', price: 0, kind: 'ray', glide: true, desc: 'Glides super fast (hold SWIM FAST). Its tail STING poisons and its ZAP STRIKE chains lightning!',
+    hp: 150, speed: 18, bite: 18, biteRate: 0.28, special: 'zap', specialName: 'ZAP<br>STRIKE', specialCD: 2.5, roar: 1.6, sting: true, scale: 1.0, radius: 2.4,
+    back: 0x3a4a5a, belly: 0xe8e4dc, accent: 0x5ae8ff, spot: 0x9ad8ff },
+  { id: 'octopus', name: 'Giant Octopus', price: 0, kind: 'octo', desc: 'Eight arms! TENTACLE GRAB pulls a foe in and squeezes, and an INK CLOUD blinds every enemy around.',
+    hp: 210, speed: 13, bite: 22, biteRate: 0.4, special: 'grab', specialName: 'TENTACLE<br>GRAB', specialCD: 3, roar: 1.6, third: 'ink', thirdName: 'INK<br>CLOUD', scale: 1.0, radius: 2.2,
+    back: 0xb8402a, belly: 0xf0a888, accent: 0xff7a3a, spot: 0xffc0a0 },
+  { id: 'jellyfish', name: 'Mega Jellyfish', price: 0, kind: 'jelly', desc: 'A glowing giant. SHOCK AURA zaps everything around it, and STINGING TENDRILS whip out in every direction!',
+    hp: 165, speed: 11, bite: 18, biteRate: 0.3, special: 'shock', specialName: 'SHOCK<br>AURA', specialCD: 2.5, roar: 1.6, sting: true, third: 'tendrils', thirdName: 'STING<br>TENDRILS', scale: 1.0, radius: 2.2,
+    back: 0xff7ad8, belly: 0xffffff, accent: 0xd05aff },
+  // wild only (not in the garage)
+  { id: 'angler', name: 'Anglerfish', price: 0, kind: 'angler', wildOnly: true, desc: 'A deep-sea horror with a glowing lure.',
+    hp: 150, speed: 12, bite: 26, biteRate: 0.5, special: 'lure', specialName: 'LURE<br>FLASH', specialCD: 5, roar: 1.6, scale: 1.1, radius: 2.3,
+    back: 0x2a2018, belly: 0x5a4a3a, accent: 0x7affd8 },
+  { id: 'serpent', name: 'Sea Serpent', price: 0, kind: 'serpent', wildOnly: true, desc: 'A giant glowing sea snake.',
+    hp: 230, speed: 15, bite: 28, biteRate: 0.5, special: 'whip', specialName: 'TAIL<br>WHIP', specialCD: 4, roar: 2, scale: 1.15, radius: 2.4,
+    back: 0x1a4a3a, belly: 0x9ad8a0, accent: 0x3affb0 },
+  { id: 'crab', name: 'Giant Crab', price: 0, kind: 'crab', wildOnly: true, walker: true, desc: 'Armored claws that never let go.',
+    hp: 250, speed: 9, bite: 24, biteRate: 0.5, special: 'combo', specialName: 'CLAW<br>COMBO', specialCD: 4, roar: 1.6, scale: 1.1, radius: 2.8,
+    back: 0xc8401a, belly: 0xf0b070, accent: 0xffb03a },
+];
+SEA.forEach(d => { d.real = true; d.sea = true; d.melee = d.bite; if (!d.walker) { d.fly = true; d.swim = true; } });
+// the Deep Sea bosses (not in the garage): the KRAKEN and a monster mega-shark
+export const KRAKEN = { id: 'kraken', name: 'THE KRAKEN', price: 0, kind: 'kraken', real: true, sea: true, fly: true, swim: true, boss: true, hp: 900, speed: 11, bite: 30, biteRate: 0.8, special: 'kraken', specialName: 'KRAKEN', specialCD: 5, roar: 2.6,
+  scale: 3.0, radius: 7, back: 0x4a1030, belly: 0xc86a8a, accent: 0xff2a6a };
+export const MONSTER_MEG = { ...SEA[1], id: 'monstermeg', name: 'MONSTER MEGALODON', scale: 4.0, radius: 8.5, boss: true, back: 0x22262c, belly: 0x8a8e8a, accent: 0xff1a0a };
+export const DINOS = [...ROBOS, ...REALS, ...DRAGONS, ...WESTIES, ...SEA];
 
 export const UPGRADES = [
   { id: 'armor', name: 'Armor & Tough Hide', desc: '+15% health for every dino', icon: '🛡️' },
@@ -126,7 +189,7 @@ export function loadSave() {
     for (const k in up) up[k] = Math.max(0, Math.min(MAX_UP, up[k] | 0));
     const out = { ...f, ...s, up, owned, allUnlocked: true };
     if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex';
-    if (out.level !== 'peak') out.level = 'jungle';
+    if (!['peak', 'city', 'ocean'].includes(out.level)) out.level = 'jungle';
     out.voice = out.voice !== false;
     return out;
   } catch (e) { return fresh(); }

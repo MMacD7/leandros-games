@@ -1,7 +1,7 @@
 // Touch controls: floating joystick (left half), camera orbit drag (right half), action buttons. Keyboard/mouse fallback for desktop.
 export class Input {
   constructor(root) {
-    this.move = { x: 0, y: 0 }; this.look = { dx: 0, dy: 0 }; this.btn = { laser: false, missile: false, melee: false, boost: false };
+    this.move = { x: 0, y: 0 }; this.look = { dx: 0, dy: 0 }; this.btn = { laser: false, missile: false, melee: false, boost: false, up: false, down: false }; // v5: up/down = swim ▲▼ in the Deep Sea
     this.pressed = {}; this.taps = {}; this.lastLook = -1e9; this.enabled = false;
     this.joyBase = document.getElementById('joy-base'); this.joyKnob = document.getElementById('joy-knob'); this.zone = document.getElementById('touch-zone');
     this.joyId = null; this.lookId = null; this.joyC = { x: 0, y: 0 };
@@ -22,7 +22,7 @@ export class Input {
     });
     // keyboard
     this.keys = {};
-    const map = { KeyJ: 'laser', Space: 'laser', KeyK: 'missile', KeyL: 'melee', ShiftLeft: 'boost', ShiftRight: 'boost' };
+    const map = { KeyJ: 'laser', Space: 'laser', KeyK: 'missile', KeyL: 'melee', ShiftLeft: 'boost', ShiftRight: 'boost', KeyE: 'up', KeyR: 'up', PageUp: 'up', KeyQ: 'down', KeyF: 'down', PageDown: 'down' };
     window.addEventListener('keydown', e => { this.keys[e.code] = true; if (map[e.code]) { if (!this.btn[map[e.code]]) this.pressed[map[e.code]] = true; this.btn[map[e.code]] = true; } });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; if (map[e.code]) this.btn[map[e.code]] = false; });
     // mouse drag to orbit on desktop

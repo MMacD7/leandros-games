@@ -420,6 +420,11 @@ export class Mech {
   constructor(def, assets, wild = false) {
     const B = new Builder(def, assets, wild);
     this.info = SPECIES[def.kind](B);
+    if (def.roid) { // v5 "on steroids": glowing storm spikes + coils along the back, big crest
+      for (const bn of ['pelvis', 'chest', 'neck', 'head']) if (B.bones[bn]) for (let k = 0; k < 2; k++) {
+        B.part(bn, cone(0.16, 0.9, 6), 'frame', 0, 0.55 + k * 0.1, -0.3 + k * 0.5, -0.4); B.part(bn, cone(0.07, 1.05, 6), 'glow', 0, 0.6 + k * 0.1, -0.3 + k * 0.5, -0.4); }
+      for (const sd of [1, -1]) if (B.bones.chest) B.part('chest', cyl(0.14, 0.14, 1.2, 12), 'glow', sd * 0.55, 0.15, 0.2, Math.PI / 2, 0, 0);
+    }
     this.obj = new THREE.Group();
     this.rig = B.finish(); this.obj.add(this.rig);
     this.rig.scale.setScalar(def.scale);
