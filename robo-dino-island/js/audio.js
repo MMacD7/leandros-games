@@ -129,6 +129,11 @@ export const sfx = {
     if (k === 'machine') { for (let i = 0; i < 6; i++) fart(t + i * 0.13, i % 3 === 2 ? 'tiny' : 'short', v * (0.75 + Math.random() * 0.3)); return k; }
     const d = fart(t, k, v); if (d > 0.9) duck(0.45, d); return k; },
   // v5.2 silly extras
+  // v5.3 SUPER STINKY visitors: a whiny cartoon "EEEEWWW!" (pitch per visitor)
+  eww(p = 1, v = 1) { this.nEww = (this.nEww || 0) + 1; if (!ctx) return; const t = now(); voiceT(t, { f: [520 * p, 640 * p, 600 * p, 470 * p, 380 * p], dur: 0.75, v: 0.2 * v, a: 0.03, vib: 7, vibD: 14, form: [[350 * p, 4, 1.0], [2300 * p, 6, 0.7]] }); voiceT(t + 0.62, { f: [420 * p, 300 * p], dur: 0.35, v: 0.12 * v, a: 0.02, form: [[700, 4, 1], [1100, 5, 0.6]] }); },
+  // v5.3 bouncy castle: a rubbery vinyl squeak + a soft air 'whumpf'
+  squeakBounce(v = 1, p = 1) { this.nSqueak = (this.nSqueak || 0) + 1; if (!ctx) return; const t = now(); tone(t, 'triangle', 900 * p, 1500 * p, 0.09, 0.07 * v, 0.003); tone(t + 0.07, 'triangle', 1300 * p, 800 * p, 0.08, 0.05 * v, 0.003);
+    noise(t, 0.18, 'lowpass', 400, 120, 0.12 * v); },
   boing(v = 1, p = 1) { this.nBoing = (this.nBoing || 0) + 1; if (!ctx) return; const t = now(); const o = tone(t, 'sine', 180 * p, 520 * p, 0.32, 0.22 * v, 0.004); const l = ctx.createOscillator(); l.frequency.value = 18; const lg = ctx.createGain(); lg.gain.value = 60 * p; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + 0.4); },
   stars(v = 1) { if (!ctx) return; const t = now(); [1568, 2093, 2637, 2093].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f, 0.12, 0.06 * v)); },
   sparkle(v = 1) { if (!ctx) return; const t = now(); for (let i = 0; i < 6; i++) { const f = 1800 + Math.random() * 1800; tone(t + i * 0.05, 'sine', f, f * 1.05, 0.15, 0.05 * v); } },
@@ -158,6 +163,10 @@ export const sfx = {
     voiceT(t, { f: [520 * p, 980 * p, 900 * p], dur: 0.35, v: 0.3 * v, a: 0.03, vib: 15, vibD: 40, lp0: 3200, form: [[1400, 3, 1.3], [2600, 5, 0.6]] });
     voiceT(t + 0.33, { f: [900 * p, 640 * p, 420 * p], dur: 0.75, v: 0.3 * v, a: 0.02, trem: 17, vib: 9, vibD: 25, lp0: 2600, form: [[1200, 3, 1.3], [2400, 5, 0.6]] });
     noise(t + 1.0, 0.35, 'bandpass', 900, 500, 0.15 * v, 2); },
+  // v5.3 tractor: a chunky putt-putt engine thump and a silly MOO-horn
+  putt(v = 1, rev = 0) { if (!ctx) return; const t = now(); v = Math.min(1, v); this.nPutt = (this.nPutt || 0) + 1; tone(t, 'square', 62 + rev * 30, 40 + rev * 20, 0.09, 0.07 * v, 0.004); noise(t, 0.07, 'lowpass', 380 + rev * 200, 120, 0.22 * v, 1.5); tone(t, 'sine', 48 + rev * 20, 30, 0.12, 0.2 * v, 0.004); },
+  mooHorn(v = 1) { if (!ctx) return; const t = now(); this.nHonk2 = (this.nHonk2 || 0) + 1; v = Math.min(1, v);
+    tone(t, 'sawtooth', 210, 160, 0.55, 0.11 * v, 0.02); tone(t, 'square', 262, 200, 0.55, 0.05 * v, 0.02); tone(t + 0.6, 'sawtooth', 175, 120, 0.85, 0.12 * v, 0.03); tone(t + 0.6, 'square', 220, 150, 0.85, 0.05 * v, 0.03); noise(t + 0.6, 0.8, 'bandpass', 700, 380, 0.05 * v, 3); },
   clop(v = 1, p = 1) { if (!ctx) return; const t = now(); noise(t, 0.035, 'bandpass', 2300 * p, 1800, 0.3 * v, 4); tone(t, 'triangle', 430 * p, 300, 0.05, 0.12 * v); noise(t + 0.07, 0.03, 'bandpass', 2000 * p, 1600, 0.2 * v, 4); },
   giggle(v = 1) { this.nGiggle = (this.nGiggle || 0) + 1; if (!ctx) return; const t = now(); for (let i = 0; i < 4; i++) voiceT(t + i * 0.13, { f: [760 - i * 40, 820 - i * 50, 700 - i * 40], dur: 0.09, v: 0.22 * v, a: 0.01, form: [[2200, 5, 1.2], [900, 4, 0.6]] }); },
   sniff(v = 1) { if (!ctx) return; const t = now(); for (let i = 0; i < 3; i++) noise(t + i * 0.11, 0.06, 'highpass', 2500, 3500, 0.12 * v, 1); },

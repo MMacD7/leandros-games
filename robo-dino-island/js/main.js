@@ -190,9 +190,11 @@ function titleEnemies() {
 let titleRoarT = 1, titleWho = 0;
 
 // ---------------- HUD ----------------
-let toastT = 0, bannerT = 0;
+let toastT = 0, bannerT = 0, shoutT = 0;
 const hud = {
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); toastT = 1.8; },
+  // v5.3: a BIG bouncy wrapped shout across the middle-top of the screen (fits iPhone portrait too)
+  shout(t, dur = 4) { const el = $('shout'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); shoutT = dur; hud.shoutLog = (hud.shoutLog || []).concat(t).slice(-20); },
   hurt() { const el = $('hurt'); el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 120); },
   bolts() { $('bolts').textContent = save.bolts; $('g-bolts').textContent = save.bolts; },
   knockedOut(real) { $('ko-sub').textContent = real ? 'Catching your breath at the base…' : 'Rebooting at the base…'; $('ko-msg').classList.remove('hidden'); },
@@ -229,6 +231,7 @@ function updateHUD(dt) {
   $('mcd').style.setProperty('--p', Math.max(0, p.missileT / p.st.missileCD * 100) + '%');
   $('rcd').style.setProperty('--p', p.real ? Math.max(0, p.meleeT / p.st.roarCD * 100) + '%' : p.def.breath ? Math.max(0, p.meleeT / 3 * 100) + '%' : '0%');
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('show'); }
+  if (shoutT > 0) { shoutT -= dt; if (shoutT <= 0) $('shout').classList.remove('show'); }
   if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
   const gb = game.battle, boss = gb && gb.boss && gb.boss.alive ? gb.boss : null; $('boss').classList.toggle('hidden', !boss);
   if (boss) { $('boss-name').textContent = boss.def.name; $('boss-hp').style.width = (boss.hp / boss.maxHp * 100) + '%'; }
@@ -322,6 +325,10 @@ $('b-rb').addEventListener('click', e => e.preventDefault());
 function badDavid() { initAudio(); voice.prime(); if (screen !== 'play' || !game.farm || !game.player) return; game.farm.david.trigger(); }
 $('b-david').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); badDavid(); });
 $('b-david').addEventListener('click', e => e.preventDefault());
+// v5.3 🤢 SUPER STINKY button (farm only; ~4 s cooldown inside the farm)
+function superStinky() { initAudio(); voice.prime(); if (screen !== 'play' || !game.farm || !game.player) return; game.farm.superStink(); }
+$('b-stink').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); superStinky(); });
+$('b-stink').addEventListener('click', e => e.preventDefault());
 tap('fw-ok', () => $('farmwin').classList.add('hidden'));
 tap('p-resume', () => show('play'));
 tap('p-garage', () => { garageFrom = 'pause'; show('garage'); });

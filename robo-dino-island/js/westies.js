@@ -200,6 +200,10 @@ export class Westies {
   danger() { const g = this.g; for (const e of g.enemies) { if (!e.alive) continue; for (const d of this.dogs) if (e.pos.distanceTo(d.pos) < 6 + e.radius) return true; } return false; }
   intro() {
     const g = this.g; this.introduced = true;
+    if (g.farm) { // v5.3 (Mike's exact words): ONE big bouncy line on the farm, nothing else before or after it
+      const line = "Look it's Ricky and Bobby, they are going to POOOOPY!"; this.farmShouts = (this.farmShouts || 0) + 1;
+      if (g.hud.shout) g.hud.shout(line, 4.2); else g.hud.banner(line, 4, true); sfx.cheer && sfx.cheer(1);
+      voice.say("Look, it's Ricky and Bobby, they are going to poooopy!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true }); return; }
     const solo = this.activeDogs().length === 1 ? this.activeDogs()[0].name : null;
     g.hud.banner(solo ? '🐶 ' + solo + '! 🐶' : '🐶 RICKY & BOBBY! 🐶', 4, true); document.getElementById('banner').classList.add('rb'); // banner sits high so it doesn't cover the dogs
     sfx.cheer && sfx.cheer(1);
@@ -264,7 +268,7 @@ export class Westies {
       d.ph += dt * (speed > 1 ? 16 : 5); const run = Math.min(1, speed / 8), sw = Math.sin(d.ph);
       const legSw = flap ? 0.6 : 0.9 * run + (this.state === 'dance' ? 0.35 * Math.abs(Math.sin(T * 9 + i)) : 0);
       d.legs[0].rotation.x = sw * legSw; d.legs[1].rotation.x = sw * legSw; d.legs[2].rotation.x = -sw * legSw; d.legs[3].rotation.x = -sw * legSw;
-      d.pos.y = Math.max(this.ground(d.pos), d.stageY ?? -1e9);
+      d.pos.y = Math.max(this.ground(d.pos), d.stageY ?? -1e9) + (d.castleHop || 0); // v5.3 bouncy castle
       if (this.helper && this.state !== 'fly') { if (d.alt > 0 && d.goalAlt === undefined) d.alt = Math.max(0, d.alt - dt * 9); if (d.goalAlt !== undefined) d.alt += (d.goalAlt - d.alt) * Math.min(1, dt * 10); }
       d.root.position.copy(d.pos).addScaledVector(side, sideX); d.root.position.y += d.alt || 0; d.root.rotation.y = d.yaw + spin;
       d.body.position.y = 0.55 + hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.18 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
@@ -286,9 +290,9 @@ export class Westies {
     while (this.barkQ && this.barkQ.length && T >= this.barkQ[0].t) { const b = this.barkQ.shift(); if (!this.dogs[b.i].off) this.woof(b.i, b.n); }
     if (this.state === 'follow') {
       if (!this.introduced && T > 0.5) this.intro();
-      if (T > 3.2 && this.farmPig && g.farm && !this.zoomed) { this.zoomed = true; this.zooms = (this.zooms || 0) + 1; this.state = 'zoom'; this.t = 0; g.hud.toast('🐶 ZOOMIES! Ricky & Bobby are going CRAZY! 🌀😂'); sfx.whoosh && sfx.whoosh(1.2); this.bark2(3); }
-      else if (T > 3.2 && this.farmPig && g.farm) { this.zoomed = false; this.state = 'herd'; this.t = 0; g.farm.herd(this.farmPig); g.hud.toast('🐶 Ricky & Bobby are herding the piggy home! 🐷'); sfx.whoosh && sfx.whoosh(1); this.bark2(2); }
-      else if (T > 3.2) { this.target = this.pickTarget();
+      if (T > 4.4 && this.farmPig && g.farm && !this.zoomed) { this.zoomed = true; this.zooms = (this.zooms || 0) + 1; this.state = 'zoom'; this.t = 0; g.hud.toast('🐶 ZOOMIES! Ricky & Bobby are going CRAZY! 🌀😂'); sfx.whoosh && sfx.whoosh(1.2); this.bark2(3); }
+      else if (T > 4.4 && this.farmPig && g.farm) { this.zoomed = false; this.state = 'herd'; this.t = 0; g.farm.herd(this.farmPig); g.hud.toast('🐶 Ricky & Bobby are herding the piggy home! 🐷'); sfx.whoosh && sfx.whoosh(1); this.bark2(2); }
+      else if (T > 3.2 && !(this.farmPig && g.farm)) { this.target = this.pickTarget();
         if (this.target) { this.state = 'hunt'; this.t = 0; g.hud.toast('🐶 Ricky & Bobby are on the hunt! 🐾'); sfx.whoosh && sfx.whoosh(1); }
         else { this.setupStage('button'); this.dogs.forEach(d => { d.alt = 0; }); this.state = 'enter'; this.t = 0; this.barkQ = []; } } // nobody to fight: dance like before
     } else if (this.state === 'hunt') {
@@ -307,7 +311,7 @@ export class Westies {
         this.state = 'cheer'; this.t = 0; this.bark2(2); for (const d of this.activeDogs()) this.confetti(d.pos, 18); }
     } else if (this.state === 'cheer') { if (T > 1.3) { this.dogs.forEach(d => { d.goalAlt = undefined; }); this.flyAway(); } }
     // ---- v5.2 farm sillies: zoomies, mud slip, sock tug-of-war, a toot that scares them, fart-powered exit
-    else if (this.state === 'zoom') { if (Math.random() < dt * 5) this.woof((Math.random() * 2) | 0, 1); if (T > 2.6) { this.state = 'follow'; this.t = 3.3; } }
+    else if (this.state === 'zoom') { if (Math.random() < dt * 5) this.woof((Math.random() * 2) | 0, 1); if (T > 2.6) { this.state = 'follow'; this.t = 4.5; } }
     else if (this.state === 'tug') { const so = this.sockMesh(); so.visible = true; if (Math.random() < dt * 4) this.woof((Math.random() * 2) | 0, 1);
       if (T > 2.6 && !this.sockGone) { this.sockGone = true; this.tugs = (this.tugs || 0) + 1; sfx.boing && sfx.boing(0.9, 0.7); sfx.trip && sfx.trip(0.6); g.hud.toast('🧦 RIIIP! The sock went flying… both dogs fell on their bottoms! 😂'); this.sockV = V((Math.random() - 0.5) * 4, 9, (Math.random() - 0.5) * 4); }
       if (this.sockGone) { this.sockV.y -= 22 * dt; so.position.addScaledVector(this.sockV, dt); so.rotation.x += dt * 12; }

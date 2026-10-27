@@ -22,16 +22,13 @@ function bone(g, x, y, r) { // cartoon bone: shaft + knobby ends
 let MATS = null;
 function mats() {
   if (MATS) return MATS;
-  const shirtT = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#f4f3ee'; g.fillRect(0, 0, w, h); bone(g, 128, 150, 0.6); bone(g, 128, 150, -0.6);
-    g.fillStyle = '#ece6d6'; g.strokeStyle = '#3a3430'; g.lineWidth = 5; g.beginPath(); g.arc(128, 82, 34, 0, 7); g.fill(); g.stroke(); g.fillRect(108, 96, 40, 26); g.strokeRect(108, 96, 40, 26);
-    g.fillStyle = '#3a3430'; g.beginPath(); g.arc(115, 80, 9, 0, 7); g.arc(141, 80, 9, 0, 7); g.fill(); g.fillRect(126, 92, 4, 8); for (let i = 0; i < 3; i++) g.fillRect(114 + i * 11, 108, 3, 12); });
-  const strapT = canvasTex(64, 128, (g, w, h) => { g.fillStyle = '#1b2430'; g.fillRect(0, 0, w, h);
-    const cols = ['#6fd26a', '#ffb347', '#7ad3ff']; for (let i = 0; i < 6; i++) { g.fillStyle = cols[i % 3]; const y = 10 + i * 20, x = i % 2 ? 36 : 18; g.beginPath(); g.ellipse(x, y, 9, 5, 0, 0, 7); g.fill(); g.fillRect(x + 5, y - 9, 4, 8); g.fillRect(x - 12, y, 6, 3); } });
-  strapT.wrapS = strapT.wrapT = THREE.RepeatWrapping;
+  // v5.3 Celtic-style kit: green (#018749) and white horizontal hoops, NO crest / sponsor / logo; white shorts; hooped socks
+  const hoopT = canvasTex(64, 256, (g, w, h) => { const n = 7; for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? '#ffffff' : '#018749'; g.fillRect(0, Math.floor(i * h / n), w, Math.ceil(h / n) + 1); } });
+  const sockT = canvasTex(64, 64, (g, w, h) => { for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#ffffff' : '#018749'; g.fillRect(0, i * 16, w, 16); } });
   const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, metalness: 0, ...o });
   MATS = {
-    skin: M(0xb07d55, { roughness: 0.6 }), hair: M(0x2b1b12, { roughness: 0.9 }), shirt: M(0xffffff, { map: shirtT, roughness: 0.85 }), shirtPlain: M(0xf4f3ee, { roughness: 0.85 }),
-    shorts: M(0x9a8862), pack: M(0x1ea5aa, { roughness: 0.55 }), strap: M(0xffffff, { map: strapT }), shoe: M(0xe9eef2, { roughness: 0.5 }), sole: M(0x2a3138), sock: M(0xf6f6f6),
+    skin: M(0xb07d55, { roughness: 0.6 }), hair: M(0x2b1b12, { roughness: 0.9 }), shirt: M(0xffffff, { map: hoopT, roughness: 0.8 }), shirtPlain: M(0xffffff, { map: hoopT, roughness: 0.8 }), hoopSock: M(0xffffff, { map: sockT, roughness: 0.8 }),
+    shorts: M(0xf7f7f4, { roughness: 0.8 }), shoe: M(0xe9eef2, { roughness: 0.5 }), sole: M(0x2a3138), sock: M(0xf6f6f6),
     eye: M(0x15100c, { roughness: 0.2 }), white: new THREE.MeshBasicMaterial({ color: 0xffffff }), mouth: M(0x6a1f1f, { roughness: 0.6 }), cheek: M(0xe08f80, { roughness: 0.7, transparent: true, opacity: 0.55 }),
     saddle: M(0x7a4524, { roughness: 0.7 }), saddleTrim: M(0xd9a55a, { metalness: 0.6, roughness: 0.35 }),
     seat: M(0x2a2f36, { metalness: 0.7, roughness: 0.35 }), seatGlow: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 1.6, 2.0), toneMapped: false }),
@@ -54,18 +51,14 @@ export class Rider {
     this.legs = [];
     for (const s of [-1, 1]) { const hip = new THREE.Group(); hip.position.set(s * 0.11, 0, 0.02); hips.add(hip);
       add(hip, cap(0.085, 0.16), m.shorts, 0, -0.12, 0); const knee = new THREE.Group(); knee.position.y = -0.3; hip.add(knee);
-      add(knee, cap(0.06, 0.16), m.skin, 0, -0.12, 0); add(knee, new THREE.CylinderGeometry(0.064, 0.064, 0.07, 10), m.sock, 0, -0.27, 0);
+      add(knee, cap(0.06, 0.16), m.skin, 0, -0.12, 0); add(knee, new THREE.CylinderGeometry(0.066, 0.063, 0.2, 10), m.hoopSock, 0, -0.21, 0); // hooped football socks
       const foot = new THREE.Group(); foot.position.y = -0.31; knee.add(foot); add(foot, new THREE.BoxGeometry(0.13, 0.09, 0.24), m.shoe, 0, -0.03, 0.05); add(foot, new THREE.BoxGeometry(0.135, 0.035, 0.25), m.sole, 0, -0.08, 0.05);
       add(foot, new THREE.BoxGeometry(0.1, 0.02, 0.06), m.sole, 0, 0.005, 0.12);
       this.legs.push({ hip, knee, foot, s }); }
     // torso
     const torso = this.torso = new THREE.Group(); torso.position.y = 0.1; hips.add(torso);
     add(torso, new THREE.BoxGeometry(0.42, 0.42, 0.26), [m.shirtPlain, m.shirtPlain, m.shirtPlain, m.shirtPlain, m.shirt, m.shirtPlain], 0, 0.22, 0);
-    add(torso, new THREE.BoxGeometry(0.34, 0.38, 0.16), m.pack, 0, 0.24, -0.2); add(torso, new THREE.BoxGeometry(0.26, 0.16, 0.06), m.pack, 0, 0.13, -0.3);
-    add(torso, new THREE.BoxGeometry(0.3, 0.05, 0.1), m.strap, 0, 0.42, -0.21);
-    for (const s of [-1, 1]) { const st = add(torso, new THREE.BoxGeometry(0.07, 0.4, 0.03), m.strap, s * 0.12, 0.24, 0.14); st.rotation.z = s * 0.08;
-      add(torso, new THREE.BoxGeometry(0.07, 0.03, 0.3), m.strap, s * 0.12, 0.44, 0); }
-    add(torso, new THREE.BoxGeometry(0.28, 0.04, 0.035), m.strap, 0, 0.2, 0.155);
+    // (v5.3: no backpack any more, just the hooped kit)
     // head
     const head = this.head = new THREE.Group(); head.position.y = 0.5; torso.add(head);
     add(head, new THREE.CylinderGeometry(0.07, 0.08, 0.08, 10), m.skin, 0, -0.02, 0);
