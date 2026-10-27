@@ -21,7 +21,7 @@
 <div id="touch-zone"></div>
 <div id="hud" class="hidden">
   <div id="hud-tl">
-    <button id="b-pause" class="icon-btn" aria-label="Menu">❚❚</button><button id="b-map" class="icon-btn" aria-label="Change level">🗺️</button>
+    <button id="b-pause" class="icon-btn" aria-label="Pause menu: resume, restart or home">❚❚</button><button id="b-map" class="icon-btn" aria-label="Change level">🗺️</button>
     <div class="bars">
       <div class="bar hp"><i id="hp"></i><span id="hp-t">100</span></div>
       <div class="bar boost"><i id="boost"></i></div>
@@ -68,9 +68,10 @@
     <button id="b-roam" class="btn primary">▶ Explore the Island</button>
     <button id="b-battle" class="btn">⚔ Battle Arena</button>
     <button id="b-garage" class="btn">🦖 Dino Garage</button>
+    <button id="b-robo" class="btn small robo-tg" aria-pressed="true">🤖 Robo Dinos: ON</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
-  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Sea Turtle in Deep Sea Showdown! 🐢🌊</button><span id="ver" aria-label="Version">v5.5</span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Mega city smashes, pause menu, Robo Dinos ON/OFF &amp; silly new dinos! 🦖</button><span id="ver" aria-label="Version">v5.6</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
@@ -90,15 +91,15 @@
 
 <div id="pause" class="screen dim hidden">
   <div class="panel"><h2>Paused</h2>
-    <button id="p-resume" class="btn primary">▶ Keep playing</button>
+    <div class="p-main"><button id="p-resume" class="btn primary">▶ Resume</button><button id="p-restart" class="btn">🔄 Restart level</button><button id="p-home" class="btn">⌂ Home</button></div>
     <button id="p-map" class="btn">🗺️ Change level</button>
     <button id="p-garage" class="btn">🦖 Dino Garage</button>
     <button id="p-sound" class="btn">🔊 Sound on</button>
     <button id="p-music" class="btn">🎵 Music on</button>
     <button id="p-voice" class="btn">🗣️ Voice on</button>
     <button id="p-ride" class="btn small">🧒 Leandro rides: ON</button>
+    <button id="p-robo" class="btn small robo-tg" aria-pressed="true">🤖 Robo Dinos: ON</button>
     <button id="p-quality" class="btn small">Graphics: Auto</button>
-    <button id="p-home" class="btn small">⌂ Title screen</button>
   </div>
 </div>
 

@@ -73,6 +73,12 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * Friendly turtles now glide around the sea floor in the background.
   * Tap the NEW call-out on the title to jump straight to the Sea Turtle in the garage.
   * Small fix: on Jungle Island the "Find energy cores" hint steps aside while a SMASH!/MEGA!/DINO-MITE! callout shows, so they no longer overlap (most noticeable on iPhone).
+* **v5.6: mega city smashes, a pause menu, Robo Dinos ON/OFF and silly new dinos.**
+  * **Mega City Smash collapses are huge and easy to see.** The old chase camera sat low behind your dino, so the top of a tall tower never made it into the picture. Now the camera swings up into a crane shot with a clear view of the falling building (it picks an angle that no other building blocks) and keeps your dino in frame.
+  * Tall towers crack, burst into fireballs with a big BOOM, then topple over and smash into the street with a dust cloud, flying chunks, rubble and a strong screen shake. Squat blocks pancake floor by floor. The crash sound is short and punchy.
+  * **Pause button** at the top left on every level, on iPad and iPhone in both orientations. It never covers the other controls. The menu has **Resume**, **Restart level** and **Home** (P or Esc on a keyboard).
+  * **Robo Dinos: ON/OFF** switch on the title screen and in the pause menu. It starts ON and is remembered. When it's OFF, every robot dino (yours, the wild ones and the bosses) becomes a regular dino, and more of the new personality dinos show up.
+  * **Four new personality dinos** (see below) wander the land levels.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 
 ## Modes
@@ -161,6 +167,16 @@ Buttons: **BITE** (hold), **special** (with cooldown), **ROAR** (stuns enemies i
 | Pachycephalosaurus | HEAD-BUTT: dome-head ram with big knockback and dizzy stars | dome skull |
 | Parasaurolophus | HONK BLAST: trumpet-crest sound wave that stuns and pushes | tube crest |
 
+### Personality dinos (v5.6)
+Original, non-robot wild dinos with their own looks, behaviour, speech bubbles and sounds. They roam Jungle Island, Volcano Peak and Mega City (not the Deep Sea or the farm), and there are a lot more of them when Robo Dinos is OFF.
+
+| Dino | Personality | What it does |
+|---|---|---|
+| Grumbletop | grumpy | low and wide, with a unibrow and tusks. Huffs steam ("HMPH!"), stamps, charges you ("AND STAY OUT!") and stomps off grumbling |
+| Snoozadon | sleepy | chubby, with droopy eyelids and star spots. Snores with floating Zzz, yawns awake when bumped, shuffles about, then nods off again |
+| Strutasaurus | show-off | rainbow fan crest and tail. Struts up to you, spins, shouts "TA-DA!" with sparkles, and sulks if you hit its crest |
+| Quiverfoot | scaredy | skinny, with huge eyes and knobbly knees. Squeaks "EEP!" and runs away, trembles when hit, then peeks back ("…is it gone?") |
+
 ### Robot dinos
 Buttons: **Laser** (hold), **Missile**, **Bite/Stomp**, **Boost**.
 
@@ -207,6 +223,7 @@ The breath has a gentle aim-assist so younger players hit what they're facing.
   * Right side: drag to orbit the camera.
   * Buttons: **Laser** (hold), **Missile** (homing, with cooldown), **Bite/Stomp** (bites an enemy in front of you, otherwise a shockwave stomp), **Boost**.
 * **Keyboard/mouse**: WASD/arrows to move, mouse drag to look, J = laser, K = missile, L = bite/stomp (fire breath for Robo-Rex), Shift = boost. Underwater, E (or R / Page Up) swims up and Q (or F / Page Down) swims down. The pause button is at the top left.
+* **Pause menu** (top-left button, P or Esc): Resume, Restart level, Home, Robo Dinos ON/OFF, sound and graphics quality.
 * Sound is synthesized live with WebAudio. Use the speaker button on the title screen or the pause menu to mute.
 
 ## Graphics and performance

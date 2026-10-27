@@ -169,4 +169,14 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Title NEW call-out opens the garage on the Sea Turtle; the turtle has the NEW! badge.
 - [x] Fix: the hint toast hides while a Jungle Island combo callout shows (they overlapped on iPhone).
 - [x] Version v5.5, and sw.js regenerated.
-- [ ] Next: v5.6 city collapses, pause/home, Robo Dinos toggle and new dinos.
+- [x] Next: v5.6 city collapses, pause and home, Robo Dinos toggle and new dinos (done in v5.6 below).
+
+## v5.6 (Oct 27, 2026 ET): mega city smashes, pause menu, Robo Dinos ON/OFF, personality dinos
+- [x] Root cause of hard-to-see collapses (measured): the chase camera sat about 13 m behind the dino at a low pitch, so a 60+ m tower's middle and top were never in frame (only a sinking wall). Also, the crash sound was given the height in metres as its 0..1 length (about 100 s of smeared noise), collapse debris was dropped when the debris pool was full, and towers simply sank in under 2 s.
+  - Fix: a collapse crane shot (game.js `pickCollapseShot`) tries several yaw and pitch angles and picks one with a clear line of sight (city.js `losBlocked`) to the tower's middle, top, landing spot and the player. It frames the tower and the dino together.
+  - city.js: crack, then topple (tall towers) or pancake floor by floor (squat blocks); fireballs, a flash, a big BOOM, rumble, strong shake, 64 tumbling chunks, a rolling dust cloud, rubble and a short slow-mo on impact. Crash sounds use 0.2/0.6/0.9. fx.js `chunk(..., force)` recycles the oldest piece so collapse debris always shows.
+- [x] Pause menu: Resume, Restart level (city buildings stand back up, battles restart at wave 1) and Home. The button stays on top and never overlaps the controls (tested on all 5 levels, 4 viewports).
+- [x] Robo Dinos ON/OFF on the title and in the pause menu (localStorage, default ON). OFF swaps robots for regular dinos (player, wild dinos, bosses; Titan T-Rex instead of Mega Robo-Rex), hides the garage Robots tab, and raises the personality-dino spawn chance (12% to 35% of land roam spawns).
+- [x] Four original personality dinos (data.js `PERSONAS`, beast.js species, new persona.js): Grumbletop (grumpy), Snoozadon (sleepy), Strutasaurus (show-off) and Quiverfoot (scaredy), each with its own look, behaviour, speech bubbles and sounds (audio.js grumble, snore, yawn, tada, eep). Land levels only.
+- [x] Tests: the stale Deep Sea checks now expect the farm to be the newest level; version checks moved to v5.6.
+- [x] Version v5.6, and sw.js regenerated.
