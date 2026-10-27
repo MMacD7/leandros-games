@@ -39,6 +39,20 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * **😜 BAD DAVID** is an original cartoon troublemaker (messy hair, striped shirt). Each tap of his button starts one of 8 naughty but gentle pranks: running around in his undies, belly-flopping into the mud, riding a pig backwards, letting the chickens out, throwing cream pies (one hits the screen!), a MEGA fart that knocks a hay bale over, muddy footprints everywhere, and tickling a cow. A speech bubble shouts things like "DAVID, NOOO!". No animal ever gets hurt.
   * Every fart, plop, squish, splash and animal noise is made on the fly with WebAudio, in many varieties (short, long, squeaky, rumbly, wet, trumpet, tiny and mega). The music is a fast, silly hoedown with banjo, fiddle, cowbell, a washboard, a tuba and chugging metal guitars.
   * The farm has no battle arena. The other four levels are unchanged.
+  * **v5.2: wetter, funnier farm.**
+    * Farts are squelchier and sillier: bubbly, splashy and sputtery, with pitch slides, wobbly vibrato and squeaky endings. There are 14 kinds plus the toot machine, including bubbly, stutter (rapid-fire), encore (a pause, then a little "pfft"), trombone, squeak-up and raspberry. They're still made on the fly with WebAudio, kept at a gentle volume and never clip.
+    * Fart clouds are bigger, bouncier and bright green, with little rising bubbles. The animal squashes, stretches and does a tiny jump.
+    * Poop piles land with a **BOING** and have little buzzing flies. Stepping on one makes a star splat, and now and then Leandro slips and lands on his bottom. Golden poops sparkle.
+    * The animals each react in their own way:
+      * Cows' eyes bug out.
+      * Pigs do a happy wiggle and a fart-powered hop.
+      * Chickens puff feathers and lay a surprise egg.
+      * Sheep fluff up.
+      * Goats headbutt a hay bale.
+    * Leandro holds his nose and fans the air when a fart goes off next to him. TOOT gives him a little fart-jump, and he does a victory dance on FARM HERO.
+    * The horse does a goofy neigh-laugh, a buck-dance and a mane flip. A gallop fart gives a **fart-boost TURBO** with a puffy cloud trail.
+    * Ricky & Bobby get the zoomies, slip in the mud, play tug-of-war with a sock until it rips, and do a tiny poop. One of them does a toot that scares them both, and then they fart-rocket away.
+    * Bad David has bigger slapstick (somersaults, spins, the odd pratfall) and 2 new pranks, for 10 in all: a **fart-powered pogo stick**, and a **rope swing** into the duck pond (or into the nearest mud puddle when the pond is far away).
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 
 ## Modes
@@ -92,7 +106,7 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * every few minutes while roaming
   * at the start of some battles and boss waves
   * after victories
-* They get a wrestling-announcer intro: "In this corner... weighing in at fifteen pounds of pure fluff... Ricky! And his partner... Bobby! It's Ricky and Bobby!" It comes with crowd cheers, spotlights, confetti and a big **RICKY & BOBBY!** banner.
+* They get a wrestling-announcer intro: "In this corner... weighing in at fifteen pounds of pure fluff... Ricky! And... Bobby! It's Ricky and Bobby!" It comes with crowd cheers, spotlights, confetti and a big **RICKY & BOBBY!** banner.
 * Then they **dance** for about five seconds: alternating hops, a mirrored jump-spin, a side-to-side wiggle and tail wags, then paws in the air. After that, their little capes flap and they **fly away** into the sky with a sparkle trail. No fighting.
 * They're invincible and never targeted. If trouble gets close, they just take off early.
 * **🐶 Summon button (v5 helper mode):** tap the big RICKY & BOBBY button in the game (next to the attack buttons) and they swoop in with their intro and follow you. Then they hunt down the nearest enemy, pounce on it and always KO it (a boss just takes a big hit). They bark, and fly away. If nobody is around, they dance instead. The button has a 25-second rest ring, and tapping it while they're here throws more confetti. It works in all five levels. On the farm they herd a runaway pig instead of fighting.

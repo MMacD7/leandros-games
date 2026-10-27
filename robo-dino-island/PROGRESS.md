@@ -61,7 +61,7 @@ Started 8:40 PM ET Oct 23. A backup of v3 (same as the live site) was kept.
 - [x] Voice:
   - voice.speakable() normalizes every spoken line: & → and, no 3+ repeated letters, ALL-CAPS words → Capitalized, KO → knockout, T-Rex → T. rex, hyphens → spaces, emoji stripped.
   - Source literals are fixed too ('Leandro wins!', 'Leandro!', creature names as written, streak lines 'Double knockout!' …).
-  - Westie lines: "…Ricky!", "And his partner... Bobby!", "It's Ricky and Bobby!".
+  - Westie lines: "…Ricky!", "And... Bobby!", "It's Ricky and Bobby!".
   - Bug fix: a prio-3 line no longer cancels another prio-3 line that's mid-sentence.
 - [x] Attacks:
   - No player cooldowns; each tap fires, up to 4 per frame. Holding auto-repeats (laser at its fire rate, the others every 0.22 s).
@@ -122,3 +122,18 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
   - Leftover volcano smoke particles are cleared when you change level.
   - Voice/envelope gain ramps are clamped, so a 0 volume can't throw.
 - [x] Test v51-farm.js: 109/109 PASS on ipad / iphone / iphone-landscape, including regression travel through the other 4 levels, with zero console errors.
+
+## v5.2 (Oct 27, 2026 ET): wetter, funnier Farty Poop Farm
+- [x] Naming: Bobby no longer gets a label; the pair is simply "Ricky and Bobby" everywhere (westies intro line, Bobby's garage description, README, these notes).
+- [x] audio.js: a new fart engine with 14 variants plus the machine. It layers a wobbly tone, a resonant filter, wet splutter bursts, bubble pops and a splash/sputter tail, with pitch slides, squeak endings, stutters and encores. Peak gain is clamped. `renderFart()` renders a variant offline for the tests.
+- [x] New procedural sounds: boing, stars, sparkle, slip, trip and the neigh-laugh.
+- [x] farm.js:
+  - Big bouncy fart clouds with bubbles, and squash & stretch plus a fart-jump.
+  - Each animal reacts in its own way: cow bug-eyes, pig wiggle and fart-hop, chicken feather puff and surprise egg, sheep fluff, goat headbutts a hay bale.
+  - Poop: boing landing, flies, a star splat, and golden sparkles.
+  - Leandro: nose-hold and fan, a poop pratfall, the toot fart-jump and a victory dance.
+  - Horse: laugh, buck-dance, mane flip, and a fart-boost turbo with a cloud trail.
+  - Bad David: more slapstick, plus the new pogo and rope-swing pranks.
+- [x] westies.js (farm only): zoomies, mud slip, sock tug-of-war, a tiny dog poop, a toot that scares them, and a fart-rocket exit.
+- [x] Version v5.2, and sw.js regenerated.
+
