@@ -375,3 +375,17 @@ body.farm .stink-btn { display: flex; }
 @media (prefers-reduced-motion: reduce) { #callout.show { animation: none; opacity: 1; transform: translate(-50%, -50%) rotate(-8deg); } }
 /* v5.5: the hint toast ("Find energy cores…") sits where the combo callout pops, so it steps aside while a callout shows */
 body.callout-on #toast { opacity: 0; transition: opacity .12s; }
+/* v5.6 pause menu: Resume / Restart level / Home on top, the rest below; scrolls on short phone screens */
+#pause .panel { max-height: calc(100vh - var(--sat) - var(--sab) - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#pause .p-main { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; grid-column: 1 / -1; }
+#pause .p-main .btn { flex: 1 1 140px; }
+/* the pause button always sits above other HUD layers and keeps a big touch target */
+#hud-tl { z-index: 6; }
+#b-pause { position: relative; z-index: 7; touch-action: manipulation; }
+/* v5.6 Robo Dinos ON/OFF switch */
+.robo-tg { background: linear-gradient(180deg, #8a5aff, #4a2ad8); border-color: #e0d4ff; color: #fff; }
+.robo-tg.off { background: linear-gradient(180deg, #5ac84a, #2a8a2a); border-color: #d8ffd0; }
+.robo-tg.pulse { animation: roboPulse .65s ease-in-out 4; }
+@keyframes roboPulse { 50% { transform: scale(1.12); box-shadow: 0 0 22px rgba(255,255,255,.9); } }
+body.robos-off #t-robo { display: none; }
+@media (prefers-reduced-motion: reduce) { .robo-tg.pulse { animation: none; } }
