@@ -29,6 +29,7 @@
   </div>
   <div id="hud-tc" class="hidden"><div id="timer">01:30</div><div id="wave">Wave 1 · KOs 0</div></div>
   <div id="hud-tr"><div id="bolts-box"><span class="nut">⬢</span> <b id="bolts">0</b></div><canvas id="radar" width="220" height="220"></canvas></div>
+  <div id="citybar" class="hidden" aria-label="City destruction"><div class="cb"><i id="city-fill"></i></div><b id="city-t">🏙️ 0% SMASHED</b></div>
   <div id="boss" class="hidden"><b id="boss-name">BOSS</b><div class="bb"><i id="boss-hp"></i></div></div>
   <div id="ebars"></div>
   <div id="combo"></div>
@@ -42,7 +43,10 @@
     <button id="a-missile" class="act" data-btn="missile"><div id="mcd"></div><span>MISSILE</span></button>
     <button id="a-melee" class="act" data-btn="melee"><div id="rcd"></div><span>BITE<br>STOMP</span></button>
     <button id="a-boost" class="act" data-btn="boost"><span>BOOST</span></button>
+    <button id="a-up" class="act ud" data-btn="up" aria-label="Swim up"><span>▲<br><small>UP</small></span></button>
+    <button id="a-down" class="act ud" data-btn="down" aria-label="Swim down"><span>▼<br><small>DOWN</small></span></button>
   </div>
+  <div id="ink"></div>
   <div id="flash"></div>
   <div id="ko-msg" class="hidden"><h2>Knocked out!</h2><p id="ko-sub">Rebooting at the base…</p></div>
 </div>
@@ -51,21 +55,21 @@
 
 <div id="title" class="screen hidden">
   <div class="logo"><small>Leandro's</small><b>ROBO DINO</b><em>ISLAND</em><i>REAL&nbsp;&nbsp;VS&nbsp;&nbsp;ROBOT</i></div>
-  <div class="levels" role="group" aria-label="Choose a level"><button id="lv-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
+  <div class="levels" role="group" aria-label="Choose a level"><button id="lv-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-city" class="lv card city" data-lv="city" aria-label="Play Mega City Smash"><span class="art" aria-hidden="true">🏙️🦖</span><span class="txt"><b>MEGA CITY SMASH</b><small>Stomp the city &amp; the Mega-Rex</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-ocean" class="lv card ocean" data-lv="ocean" aria-label="Play Deep Sea Showdown"><span class="art" aria-hidden="true">🌊🦈</span><span class="txt"><b>DEEP SEA SHOWDOWN</b><small>Sharks, octopus &amp; the Kraken</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
   <div class="menu">
     <button id="b-roam" class="btn primary">▶ Explore the Island</button>
     <button id="b-battle" class="btn">⚔ Battle Arena</button>
     <button id="b-garage" class="btn">🦖 Dino Garage</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
-  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: 7 dinos + 4 dragons!</button><span id="ver" aria-label="Version">v4.4</span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Deep Sea + Mega City + Ricky &amp; Bobby!</button><span id="ver" aria-label="Version">v5.0</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
   <div class="g-top"><button id="g-back" class="btn small">◀ Back</button><button id="g-ride" class="btn small ride">🧒 Leandro rides: ON</button><div class="g-bolts"><span class="nut">⬢</span> <b id="g-bolts">0</b></div></div>
   <div class="g-nav"><button id="g-prev" class="arrow">‹</button><button id="g-next" class="arrow">›</button></div>
   <div class="g-panel">
-    <div class="g-tabs"><button id="t-real" class="tab">🦖 Real<sup class="tnew">NEW</sup></button><button id="t-robo" class="tab on">🤖 Robots<sup class="tnew">NEW</sup></button><button id="t-dragon" class="tab">🐉 Dragons<sup class="tnew">NEW</sup></button><button id="t-ups" class="tab">⚙️ Upgrades</button></div>
+    <div class="g-tabs"><button id="t-real" class="tab">🦖 Real<sup class="tnew">NEW</sup></button><button id="t-robo" class="tab on">🤖 Robots<sup class="tnew">NEW</sup></button><button id="t-dragon" class="tab">🐉 Dragons</button><button id="t-sea" class="tab">🦈 Sea<sup class="tnew">NEW</sup></button><button id="t-dogs" class="tab">🐶 Dogs<sup class="tnew">NEW</sup></button><button id="t-ups" class="tab">⚙️ Upgrades</button></div>
     <div id="g-dino">
       <h2 id="g-name">Robo-Rex</h2><p id="g-desc"></p><p id="g-abil"></p>
       <div id="g-stats"></div>
@@ -92,7 +96,7 @@
 
 <div id="levels" class="screen dim hidden">
   <div class="panel lv-panel"><h2>🗺️ Choose a level</h2>
-    <div class="levels" role="group" aria-label="Choose a level"><button id="lvd-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button></div>
+    <div class="levels" role="group" aria-label="Choose a level"><button id="lvd-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-city" class="lv card city" data-lv="city" aria-label="Play Mega City Smash"><span class="art" aria-hidden="true">🏙️🦖</span><span class="txt"><b>MEGA CITY SMASH</b><small>Stomp the city &amp; the Mega-Rex</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-ocean" class="lv card ocean" data-lv="ocean" aria-label="Play Deep Sea Showdown"><span class="art" aria-hidden="true">🌊🦈</span><span class="txt"><b>DEEP SEA SHOWDOWN</b><small>Sharks, octopus &amp; the Kraken</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
     <button id="lvd-close" class="btn small">◀ Back to the game</button>
   </div>
 </div>
