@@ -13,6 +13,7 @@ import { clamp, lerp, rng } from './noise.js';
 import { Mayhem } from './mayhem.js';
 import { Rider } from './rider.js';
 import { FarmLife, KidMech, KID } from './farm.js';
+import { JungleHype } from './hype.js';
 
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -132,7 +133,7 @@ export class Game {
     this.lockRing = new THREE.Mesh(lockGeo, new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.lockRing.visible = false; this.scene.add(this.lockRing);
     this.dummy = { pos: new THREE.Vector3(), alive: true, mech: { height: 0 }, radius: 1.5 };
-    this.shots = []; this.orbs = []; this.timers = []; this.slowmo = 0; this.level = 'jungle';
+    this.shots = []; this.orbs = []; this.timers = []; this.slowmo = 0; this.level = 'jungle'; this.hype = new JungleHype(this); this.swoop = null; this.koCam = null;
     this.mh = new Mayhem(this);
     this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
     this.westies = new Westies(this);
@@ -176,7 +177,7 @@ export class Game {
     const oc = this.level === 'ocean'; pickFrom = pickFrom.filter(d => !d.westie && (oc ? d.sea : !d.sea)); if (!pickFrom.length) pickFrom = DINOS.filter(d => d.real && !d.westie && !d.dragon && (oc ? d.sea : !d.sea));
     const def = defId ? DINOS.find(d => d.id === defId) : pickFrom[(this.r() * pickFrom.length) | 0];
     const e = new Dino(this, def, true, level); e.place(x, z, this.r() * 6.28); e.ai.home.set(x, 0, z); e.laserT = 1 + this.r(); e.missileT = 2 + this.r() * 3; e.meleeT = 2;
-    this.enemies.push(e); return e;
+    this.enemies.push(e); if (this.hype) this.hype.onSpawn(e); return e;
   }
   roamSpawnPoint() {
     for (let t = 0; t < 40; t++) {
@@ -218,7 +219,7 @@ export class Game {
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
 
   // ---------- modes ----------
-  startRoam() { this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
+  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
   startBattle() {
     if (this.world && this.world.farm) { this.hud.toast('🚜 No battles on the farm! Feed the animals instead 🐮'); return; }
     if (this.westies) { this.westies.reset(); if (this.r() < 0.3) this.later(2.5, () => this.westies.trigger('battle')); }
@@ -237,7 +238,7 @@ export class Game {
     for (let i = 0; i < 2; i++) { const m = this.spawnEnemy(ARENA.x + 24, ARENA.z + (i ? 16 : -16), 2); m.ai.state = 'chase'; m.ai.home.copy(ARENA); m.yaw = -Math.PI / 2; }
     b.boss = e; b.bosses++; b.t += 30;
     this.hud.banner('⚠️ BOSS WAVE ⚠️', 4); this.hud.say?.('Boss incoming!', { prio: 2 }); if (this.westies && this.r() < 0.5) this.later(5, () => this.westies.trigger('boss')); this.hud.toast(def.name + ' has arrived!  +30s');
-    sfx.bigRoar(0.55, 1.2, !real); sfx.bigBoom(1); this.fx.boom(new THREE.Vector3(e.pos.x, e.pos.y + 2, e.pos.z), 2.2, { groundY: e.pos.y, shake: 1.4 }); this.fx.ring(e.pos, 30, 0xff3020);
+    sfx.bigRoar(0.55, 1.2, !real); sfx.bigBoom(1); if (this.hype) this.hype.bossReveal(e); this.fx.boom(new THREE.Vector3(e.pos.x, e.pos.y + 2, e.pos.z), 2.2, { groundY: e.pos.y, shake: 1.4 }); this.fx.ring(e.pos, 30, 0xff3020);
   }
   // Dragon Peak boss: the giant DRAGON KING, hovering over the castle arena
   dragonKing() {
@@ -306,6 +307,7 @@ export class Game {
 
   // ---------- events ----------
   onHit(d, dmg, attacker, quiet) { if (d === this.player && !quiet) this.hud.hurt(); this.mh.onHit(d, attacker, quiet);
+    if (attacker === this.player && !quiet && this.hype) this.hype.onHit(d, dmg); // v5.4 Jungle Island hype (level one only)
     if (attacker === this.player && !quiet && dmg > 8) this.fx.shake = Math.max(this.fx.shake, Math.min(0.6, 0.12 + dmg * 0.01)); } // v5: punchier hits
   // v5 city: a building came down
   onBuildingDown(b, by) { this.buildingsDown = (this.buildingsDown || 0) + 1; if (by !== this.player) return; const c = this.world.city, n = c ? c.destroyed : 0;
@@ -328,7 +330,7 @@ export class Game {
       this.save.kos++; const n = 7 + d.level * 4 + (d.def.roid ? 6 : 0); this.dropBolts(d.pos, n);
       if (this.battle) { this.battle.kos++; }
       // dramatic KO: slow motion, white flash, big rumble
-      this.slowmo = 0.75; if (!this.flashT || this.world.time - this.flashT > 2) { this.flashT = this.world.time; this.hud.flash(); } this.fx.shake = Math.max(this.fx.shake, 1.25); this.fx.ring(d.pos, 14, 0xfff0c0); this.fx.ring(d.pos, 24, 0xffffff); sfx.slam();
+      this.slowmo = 0.75; if (this.hype) this.hype.onKO(d); if (!this.flashT || this.world.time - this.flashT > 2) { this.flashT = this.world.time; this.hud.flash(); } this.fx.shake = Math.max(this.fx.shake, 1.25); this.fx.ring(d.pos, 14, 0xfff0c0); this.fx.ring(d.pos, 24, 0xffffff); sfx.slam();
       const real = attacker.real;
       this.hud.toast((real ? ['CHOMP! Knocked out!', 'Roar-some!', 'Dino power!', 'Unstoppable!'] : ['Knocked out!', 'Great shot!', 'Robo power!', 'Awesome!'])[(this.r() * 4) | 0]);
     }
@@ -803,7 +805,8 @@ export class Game {
 
     // spawning
     if (this.mode === 'roam' && !this.farm) { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
-      if (this.spawnT <= 0 && alive < Math.min(this.maxEnemies(), this.quality.enemies)) { this.spawnT = 2.5; const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
+      if (this.spawnT <= 0 && alive < Math.min(this.maxEnemies(), this.quality.enemies)) { this.spawnT = this.hype && this.hype.on ? (alive < 4 ? 0.9 : 1.6) : 2.5; if (this.hype && this.hype.on) this.hype.n.quickSpawns++; // v5.4: shorter lulls on Jungle Island
+        const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
       this.stampT = (this.stampT ?? 70) - dt; if (this.stampT <= 0) { this.stampT = 75 + this.r() * 60; if (p.alive) this.stampede(); }
       // despawn very far enemies so the island stays lively near the player
       for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; if (e.alive && e.pos.distanceTo(p.pos) > 260) { e.remove(); this.enemies.splice(i, 1); } } }
@@ -811,6 +814,7 @@ export class Game {
       this.battle.t -= dt; if (music.setIntensity) music.setIntensity(clamp(this.enemies.filter(e => e.alive).length / 8 + (this.battle.boss ? 0.5 : 0), 0, 1)); if (this.enemies.length === 0) { if (this.battle.wave > 0) this.hud.leandroWins?.('Wave ' + this.battle.wave + ' cleared!'); this.nextWave(); }
       if (this.battle.t <= 0) this.endBattle();
     }
+    if (this.hype) this.hype.update(dt);
     this.mh.update(dt);
     this.updateShots(dt);
     this.updateOrbs(dt);
@@ -976,8 +980,9 @@ export class Game {
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
     if (sk) { dist = lerp(dist, Math.max(dist, W.stage.need), sk); if (!inp.looking) c.yaw += angDiff(c.yaw, W.stage.yaw) * Math.min(1, dt * 3) * sk; }
-    c.dist = lerp(c.dist, dist, Math.min(1, dt * 3));
     const tgt = tmp.set(p.pos.x, p.pos.y + h * 0.82, p.pos.z);
+    if (this.hype && (this.swoop || this.koCam)) dist = this.hype.camera(dt, dist, tgt, c, p, inp); // v5.4 KO punch-in + surprise / boss swoop
+    c.dist = lerp(c.dist, dist, Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : 3)));
     const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, tgt.y + Math.sin(c.pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
     const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
     if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
