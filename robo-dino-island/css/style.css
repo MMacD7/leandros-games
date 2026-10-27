@@ -185,21 +185,21 @@ body.breath #a-melee { background: radial-gradient(circle at 50% 40%, rgba(255,1
 .g-tabs .tab { font-size: 13px; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
 body.peak .logo i { color: #ffb08a; }
 #ver { position: absolute; right: calc(var(--sar) + 10px); bottom: calc(var(--sab) + 6px); font-size: 12px; font-weight: 800; color: rgba(255,255,255,.75); text-shadow: 0 1px 2px #000; pointer-events: none; }
-/* v5: MEGA CITY SMASH title card is the eye-catcher (v4.1b: was Dragon Peak): lava glow, pulse, gentle bounce, NEW! badge */
-#title #lv-ocean { filter: none; border: 4px solid #ffb35a; animation: lavaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; z-index: 1; }
-#title #lv-ocean:active { animation: none; transform: scale(.96); }
-#title #lv-ocean b { font-size: clamp(20px, 5vh, 38px); color: #fff3d0; }
-#title #lv-ocean .art { font-size: clamp(38px, 10vh, 84px); }
+/* v5.1: FARTY POOP FARM title card is the eye-catcher (v5: Deep Sea; v4.1b: Dragon Peak): lava glow, pulse, gentle bounce, NEW! badge */
+#title #lv-farm { filter: none; border: 4px solid #ffb35a; animation: lavaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; z-index: 1; }
+#title #lv-farm:active { animation: none; transform: scale(.96); }
+#title #lv-farm b { font-size: clamp(20px, 5vh, 38px); color: #fff3d0; }
+#title #lv-farm .art { font-size: clamp(38px, 10vh, 84px); }
 @keyframes lavaPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(255,90,20,.9), 0 0 18px 4px rgba(255,80,10,.7), inset 0 0 18px rgba(255,140,40,.5); border-color: #ff9a3a; } 50% { box-shadow: 0 0 0 5px rgba(255,200,60,1), 0 0 42px 12px rgba(255,60,0,.9), inset 0 0 28px rgba(255,180,60,.8); border-color: #ffe08a; } }
 @keyframes peakBounce { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.03); } }
 .lv.card .new { display: none; }
-#title #lv-ocean .new { display: block; position: absolute; top: 6px; left: 8px; padding: 3px 10px; border-radius: 999px; font-size: clamp(12px, 2.4vh, 16px); font-weight: 900; font-style: italic; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 12px rgba(255,40,40,.9); transform: rotate(-8deg); animation: newBlink 1s steps(2, start) infinite; }
+#title #lv-farm .new { display: block; position: absolute; top: 6px; left: 8px; padding: 3px 10px; border-radius: 999px; font-size: clamp(12px, 2.4vh, 16px); font-weight: 900; font-style: italic; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 12px rgba(255,40,40,.9); transform: rotate(-8deg); animation: newBlink 1s steps(2, start) infinite; }
 @keyframes newBlink { 50% { filter: brightness(1.35); } }
-#title #lv-ocean .txt { padding-top: 10px; }
-@media (orientation: landscape) { #title .levels .lv.card.jungle { flex: 0.8 1 0; } #title .levels #lv-ocean { flex: 1.2 1 0; } }
-@media (orientation: portrait) { #title #lv-ocean { height: clamp(96px, 14vh, 180px); order: -1; } }
-@media (max-height: 430px) { #title #lv-ocean { height: 84px; } #title #lv-ocean b { font-size: 22px; } #title #lv-ocean .art { font-size: 40px; } }
-@media (prefers-reduced-motion: reduce) { #title #lv-ocean, #title #lv-ocean .new { animation: none; } }
+#title #lv-farm .txt { padding-top: 10px; }
+@media (orientation: landscape) { #title .levels .lv.card.jungle { flex: 0.8 1 0; } #title .levels #lv-farm { flex: 1.2 1 0; } }
+@media (orientation: portrait) { #title #lv-farm { height: clamp(96px, 14vh, 180px); order: -1; } }
+@media (max-height: 430px) { #title #lv-farm { height: 84px; } #title #lv-farm b { font-size: 22px; } #title #lv-farm .art { font-size: 40px; } }
+@media (prefers-reduced-motion: reduce) { #title #lv-farm, #title #lv-farm .new { animation: none; } }
 /* v4.1c: NEW badges in the garage + title callout */
 .newb { display: inline-block; vertical-align: middle; font-size: .55em; font-weight: 900; font-style: italic; padding: 2px 8px; border-radius: 999px; color: #fff; background: linear-gradient(180deg, #ff3d3d, #c00018); border: 2px solid #fff; box-shadow: 0 0 10px rgba(255,40,40,.8); transform: rotate(-6deg) translateY(-2px); }
 #g-dots i.new { background: #ff5a2a; box-shadow: 0 0 6px #ff7a3a; } #g-dots i.new.own { background: radial-gradient(circle, #fff 0 25%, #ff5a2a 30%); }
@@ -225,7 +225,7 @@ body.peak .logo i { color: #ffb08a; }
 @media (max-height: 430px) { .g-tabs { margin-bottom: 6px; } .g-tabs .tab { padding-top: 8px; padding-bottom: 8px; font-size: 14px; } }
 .rb-btn.here #rb-cd { opacity: 0; }
 .lv.card .tag { top: auto; bottom: 6px; }
-@media (orientation: portrait) { #title #lv-ocean .art { font-size: clamp(30px, 5.2vh, 60px); } #title #lv-ocean b { font-size: clamp(22px, 3.5vh, 36px); } .lv.card .txt { flex: 1; } }
+@media (orientation: portrait) { #title #lv-farm .art { font-size: clamp(30px, 5.2vh, 60px); } #title #lv-farm b { font-size: clamp(22px, 3.5vh, 36px); } .lv.card .txt { flex: 1; } }
 #mcd, #rcd { display: none !important; } /* v4.2: no attack cooldowns, so no rings */
 .act { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 #banner.rb { top: 15%; } /* v4.3: Ricky & Bobby banner high, above the floating dance floors */
@@ -252,20 +252,18 @@ body.city #boss { top: calc(var(--sat) + 112px); }
 /* ---- v5: Deep Sea Showdown ---- */
 .lv.card.ocean { background: radial-gradient(ellipse at 30% -10%, rgba(200,250,255,.85), transparent 45%), linear-gradient(105deg, transparent 20%, rgba(190,250,255,.22) 26%, transparent 32%, transparent 52%, rgba(190,250,255,.18) 58%, transparent 64%), linear-gradient(180deg, #2bc0e8 0%, #0e7aa8 36%, #0a4a78 70%, #c8a868 86%, #8a6a3a 100%); }
 .lv.card.ocean.on { box-shadow: 0 0 0 3px rgba(90,230,255,.95), 0 0 30px rgba(40,200,255,.8); }
-#title #lv-ocean { border-color: #7ae8ff; animation: seaPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; }
-#title #lv-ocean b { color: #e8fdff; }
 @keyframes seaPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(40,180,255,.9), 0 0 18px 4px rgba(20,160,255,.7), inset 0 0 18px rgba(120,230,255,.5); border-color: #6adcff; } 50% { box-shadow: 0 0 0 5px rgba(140,250,255,1), 0 0 42px 12px rgba(0,170,255,.9), inset 0 0 28px rgba(160,240,255,.8); border-color: #e8ffff; } }
 body.ocean .logo i { color: #8ae8ff; }
-/* 4 level cards: keep them readable side by side in landscape */
+/* 5 level cards: keep them readable side by side in landscape */
 @media (orientation: landscape) { #title .levels, .lv-panel .levels { width: min(98vw, 1000px); gap: clamp(6px, 1.2vw, 14px); } .lv-panel { width: min(97vw, 1020px); }
-  #title .levels .lv.card, #title .levels #lv-ocean, #title .levels .lv.card.jungle, #title .levels .lv.card.peak, .lv-panel .lv.card { flex: 1 1 0; flex-direction: column; justify-content: center; text-align: center; padding: 6px 6px 8px; gap: 2px; }
-  .lv.card .txt { align-items: center; } .lv.card .art, #title #lv-ocean .art { letter-spacing: -4px; font-size: clamp(24px, 6.5vh, 56px); }
-  .lv.card b, #title #lv-ocean b { font-size: clamp(13px, 3.1vh, 25px); white-space: normal; line-height: 1; overflow-wrap: anywhere; } .lv.card small { font-size: clamp(10px, 1.7vh, 14px); }
-  #title #lv-ocean .txt { padding-top: 0; } }
-@media (orientation: landscape) and (max-height: 430px) { .lv.card small { display: none; } .lv.card .art, #title #lv-ocean .art { font-size: 28px; } .lv.card b, #title #lv-ocean b { font-size: 14px; } }
-@media (orientation: portrait) { .levels { gap: clamp(5px, 0.8vh, 12px); } .lv.card { height: clamp(56px, 7.6vh, 120px); } #title #lv-ocean { height: clamp(76px, 10vh, 150px); } #levels .lv.card { height: clamp(80px, 13vh, 170px); }
+  #title .levels .lv.card, #title .levels #lv-farm, #title .levels .lv.card.jungle, #title .levels .lv.card.peak, .lv-panel .lv.card { flex: 1 1 0; flex-direction: column; justify-content: center; text-align: center; padding: 6px 6px 8px; gap: 2px; }
+  .lv.card .txt { align-items: center; } .lv.card .art, #title #lv-farm .art { letter-spacing: -4px; font-size: clamp(24px, 6.5vh, 56px); }
+  .lv.card b, #title #lv-farm b { font-size: clamp(13px, 3.1vh, 25px); white-space: normal; line-height: 1; overflow-wrap: anywhere; } .lv.card small { font-size: clamp(10px, 1.7vh, 14px); }
+  #title #lv-farm .txt { padding-top: 0; } }
+@media (orientation: landscape) and (max-height: 430px) { .lv.card small { display: none; } .lv.card .art, #title #lv-farm .art { font-size: 28px; } .lv.card b, #title #lv-farm b { font-size: 14px; } }
+@media (orientation: portrait) { .levels { gap: clamp(5px, 0.8vh, 12px); } .lv.card { height: clamp(56px, 7.6vh, 120px); } #title #lv-farm { height: clamp(76px, 10vh, 150px); } #levels .lv.card { height: clamp(80px, 13vh, 170px); }
   .lv.card .art { font-size: clamp(28px, 4.6vh, 60px); } .lv.card b { font-size: clamp(18px, 2.9vh, 32px); } }
-@media (orientation: portrait) and (max-height: 900px) { #title .lv.card small { display: none; } #title .lv.card .tag { display: none; } #title .lv.card { height: 50px; } #title #lv-ocean { height: 66px; } #title .lv.card .art { font-size: 30px; } }
+@media (orientation: portrait) and (max-height: 900px) { #title .lv.card small { display: none; } #title .lv.card .tag { display: none; } #title .lv.card { height: 50px; } #title #lv-farm { height: 66px; } #title .lv.card .art { font-size: 30px; } }
 @media (orientation: landscape) and (max-height: 430px) { #title .lv.card .tag { display: none; } #title-bolts { display: none; } }
 /* swim ▲▼ buttons (only for sea creatures) */
 .act.ud { display: none; width: 58px; height: 58px; font-size: 18px; background: radial-gradient(circle at 35% 30%, #c8fbff, #1aa8c8 55%, #064a6a); border-color: #c8f6ff; }
@@ -282,3 +280,60 @@ body.swimmer #a-boost span, body.swimmer #a-laser span, body.swimmer #a-missile 
 .g-tabs { gap: 4px; } .g-tabs .tab { font-size: 12px; padding-left: 2px; padding-right: 2px; letter-spacing: -0.2px; }
 @media (max-width: 430px) { .g-tabs .tab { font-size: 11px; } }
 @media (orientation: portrait) { #title .menu { margin-bottom: calc(var(--sab) + 40px); } }
+
+/* ---- v5.1: Farty Poop Farm ---- */
+.lv.card.farm { background: radial-gradient(ellipse at 78% 8%, rgba(255,250,200,.95), rgba(255,240,140,.0) 30%), linear-gradient(180deg, #7fd0ff 0%, #b8e8ff 42%, #8ed05a 43%, #5aa83a 70%, #8a5a2a 100%); }
+.lv.card.farm b { color: #fff; text-shadow: 0 2px 0 #7a3a10, 0 0 8px rgba(0,0,0,.5); } .lv.card.farm small { color: #fffbe8; text-shadow: 0 1px 2px #3a2008; }
+.lv.card.farm.on { box-shadow: 0 0 0 3px rgba(255,220,90,.95), 0 0 30px rgba(140,230,60,.8); }
+#title #lv-farm { border-color: #ffe27a; animation: farmPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; }
+#title #lv-farm b { color: #fff8d8; }
+@keyframes farmPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(150,220,40,.9), 0 0 18px 4px rgba(255,170,60,.7), inset 0 0 18px rgba(255,240,150,.5); border-color: #ffd04a; } 50% { box-shadow: 0 0 0 5px rgba(255,240,120,1), 0 0 42px 12px rgba(120,220,40,.9), inset 0 0 28px rgba(255,250,190,.8); border-color: #fff6c0; } }
+body.farm .logo i { color: #ffe27a; }
+body.farm #b-battle { display: none; }
+body.farm #hud .bars { display: none; }
+/* farm progress bar: fed count, stars, poops, golden poops */
+#farmbar { position: absolute; top: calc(var(--sat) + 10px); left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; padding: 6px 14px; border-radius: 999px; background: rgba(60,30,8,.62); border: 2px solid rgba(255,230,140,.9); box-shadow: 0 0 14px rgba(120,220,40,.45); pointer-events: none; white-space: nowrap; }
+#farmbar b { font-size: 16px; font-weight: 900; color: #fff8dc; text-shadow: 0 1px 3px #000; }
+#farmbar #fb-stars { color: #ffd23a; font-size: 20px; letter-spacing: 1px; }
+body:has(#hud-tc:not(.hidden)) #farmbar { top: calc(var(--sat) + 62px); }
+@media (max-height: 430px) { #farmbar { gap: 6px; padding: 3px 10px; } #farmbar b { font-size: 13px; } #farmbar #fb-stars { font-size: 15px; } }
+@media (orientation: portrait) { #farmbar { top: calc(var(--sat) + 64px); gap: 7px; padding: 4px 10px; } #farmbar b { font-size: 14px; } }
+/* FEED / RIDE / TOOT buttons for Leandro */
+body.farmkid #a-laser { background: radial-gradient(circle at 35% 30%, #fff6b0, #f0b81a 50%, #8a5a08); border-color: #fff2a0; }
+body.farmkid #a-missile { background: radial-gradient(circle at 35% 30%, #ffe0c0, #b0702a 55%, #4a2a08); }
+body.farmkid #a-melee { background: radial-gradient(circle at 35% 30%, #e8ffb0, #7ab01a 55%, #2a4a04); }
+body.farmkid .act span { font-size: 14px; line-height: 1.05; } body.farmkid #a-laser span { font-size: 17px; }
+#a-missile.glow { animation: rideGlow .6s ease-in-out infinite alternate; }
+@keyframes rideGlow { from { box-shadow: 0 0 0 3px rgba(255,230,120,.9), 0 0 10px rgba(255,200,60,.7); transform: scale(1); } to { box-shadow: 0 0 0 6px rgba(255,250,190,1), 0 0 30px rgba(255,190,40,1); transform: scale(1.1); } }
+/* 😜 BAD DAVID button (farm only), next to Ricky & Bobby */
+.david-btn { display: none; position: absolute; z-index: 3; right: calc(var(--sar) + 384px); bottom: calc(var(--sab) + 16px); width: 96px; height: 96px; border-radius: 50%; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: #fff; border: 3px solid #fff3a0; background: radial-gradient(circle at 35% 30%, #ffe38a, #ff7a1a 50%, #b0200a); box-shadow: 0 4px 0 rgba(0,0,0,.35), 0 0 16px rgba(255,140,40,.7); touch-action: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; animation: davidWiggle 2.2s ease-in-out infinite; }
+body.farm .david-btn { display: flex; }
+#hud.hidden .david-btn { display: none; }
+.david-btn .dv-ic { font-size: 34px; line-height: 1; } .david-btn b { font-size: 11px; font-weight: 900; line-height: 1.05; text-align: center; text-shadow: 0 1px 2px #000; }
+.david-btn:active { transform: scale(.92) rotate(-6deg); animation: none; }
+@keyframes davidWiggle { 0%,80%,100% { transform: rotate(0); } 85% { transform: rotate(-9deg); } 90% { transform: rotate(9deg); } 95% { transform: rotate(-5deg); } }
+@media (max-height: 430px) { .david-btn { right: calc(var(--sar) + 330px); width: 84px; height: 84px; } .david-btn .dv-ic { font-size: 30px; } }
+@media (orientation: portrait) { .david-btn { right: calc(var(--sar) + 18px); bottom: calc(var(--sab) + 308px); width: 84px; height: 84px; } .david-btn .dv-ic { font-size: 30px; } }
+@media (min-width: 1000px) and (min-height: 700px) and (orientation: landscape) { .david-btn { right: calc(var(--sar) + 500px); bottom: calc(var(--sab) + 22px); width: 120px; height: 120px; } .david-btn .dv-ic { font-size: 44px; } .david-btn b { font-size: 14px; } }
+@media (min-width: 700px) and (orientation: portrait) { .david-btn { bottom: calc(var(--sab) + 384px); width: 110px; height: 110px; } .david-btn .dv-ic { font-size: 40px; } }
+@media (prefers-reduced-motion: reduce) { .david-btn, #a-missile.glow, #title #lv-farm { animation: none; } }
+/* comic speech bubble that follows David (and the grown-ups shouting at him) */
+#david-say { position: absolute; z-index: 4; transform: translate(-50%, calc(-100% - 14px)); max-width: min(70vw, 340px); padding: 8px 14px; border-radius: 18px; background: #fff; color: #2a1a08; border: 3px solid #2a1a08; font-weight: 900; font-size: clamp(16px, 2.6vh, 24px); text-align: center; pointer-events: none; transition: opacity .15s; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+#david-say::after { content: ''; position: absolute; left: 50%; bottom: -14px; margin-left: -10px; border: 10px solid transparent; border-top: 14px solid #2a1a08; border-bottom: 0; }
+#david-say.no { background: #ffe14a; color: #c0100a; font-size: clamp(20px, 3.4vh, 32px); letter-spacing: 1px; animation: nooShake .25s ease-in-out 3; }
+@keyframes nooShake { 0%,100% { margin-left: 0; } 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
+/* cream pie on the camera */
+#pie-splat { position: absolute; inset: 0; pointer-events: none; z-index: 5; opacity: 0; }
+#pie-splat i { position: absolute; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fffef6, #fff2d0 55%, #f0d8a0); box-shadow: 0 0 0 6px rgba(255,248,225,.75); }
+#pie-splat i:nth-child(1) { left: 22%; top: 18%; width: 46vmin; height: 40vmin; } #pie-splat i:nth-child(2) { left: 52%; top: 30%; width: 30vmin; height: 34vmin; } #pie-splat i:nth-child(3) { left: 12%; top: 52%; width: 26vmin; height: 22vmin; }
+#pie-splat i:nth-child(4) { left: 60%; top: 8%; width: 14vmin; height: 14vmin; } #pie-splat i:nth-child(5) { left: 40%; top: 62%; width: 18vmin; height: 16vmin; background: radial-gradient(circle, #ff3a4a 0 30%, #fff2d0 34%); }
+#pie-splat b { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) rotate(-8deg); font-size: clamp(40px, 9vmin, 90px); font-weight: 900; color: #ff4a7a; text-shadow: 0 3px 0 #fff, 0 0 12px #fff; }
+#pie-splat.go { animation: pieSplat 2.6s ease-out forwards; }
+@keyframes pieSplat { 0% { opacity: 0; transform: scale(1.4); } 6% { opacity: 1; transform: scale(1); } 60% { opacity: .95; transform: translateY(2vh); } 100% { opacity: 0; transform: translateY(12vh); } }
+/* FARM HERO win screen */
+#farmwin { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,240,150,.25), rgba(40,20,0,.55)); }
+#farmwin.hidden { display: none; }
+#farmwin .fw-card { padding: clamp(14px, 3vh, 30px) clamp(18px, 4vw, 40px); border-radius: 26px; text-align: center; color: #fff; background: linear-gradient(180deg, #8ad84a, #3a8a1a 60%, #7a4a1a); border: 5px solid #ffe27a; box-shadow: 0 0 40px rgba(255,220,80,.9); max-width: 92vw; animation: heroPop .5s cubic-bezier(.2,1.6,.4,1); }
+#farmwin .fw-stars { font-size: clamp(36px, 7vh, 64px); } #farmwin h2 { margin: 4px 0; font-size: clamp(34px, 7vh, 64px); font-weight: 900; color: #fff6c0; text-shadow: 0 4px 0 #7a3a10, 0 0 16px #ffb000; }
+#farmwin p { margin: 6px 0; font-size: clamp(15px, 2.4vh, 22px); font-weight: 800; text-shadow: 0 1px 3px #000; } #farmwin .btn { margin-top: 10px; pointer-events: auto; }
+@keyframes heroPop { from { transform: scale(.3) rotate(-10deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
