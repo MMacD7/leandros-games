@@ -159,5 +159,14 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
   - Sparkling pickups.
 - [x] game.js: small hooks (spawn, hit, KO, boss reveal, camera). Roam spawns arrive every 1.6 s, or 0.9 s when fewer than 4 dinos are left (was 2.5 s), on Jungle Island only.
 - [x] Version v5.4, and sw.js regenerated.
-- [ ] Next: v5.5 sea turtle, then v5.6 city collapses, pause/home, Robo Dinos toggle and new dinos.
+- [x] (v5.5 sea turtle shipped next; see below.)
 
+## v5.5 (Oct 27, 2026 ET): Sea Turtle (Deep Sea Showdown)
+- [x] Sea Turtle is the 6th playable sea creature (data.js `turtle`, sea.js `BUILD.turtle`): domed scute shell, belly plate, beaked head, 4 flippers, shield bubble.
+  - SHELL SPIN special (a spinning ram charge), SHELL SHIELD third move (2.6 s; blocks hits and bounces 80% back), SWIM FAST = FLIPPER DASH.
+  - Sounds in audio.js: shellSpin whirr, shellShield shimmer, clonk on a bounced hit, flipper whoosh, and a "wheee!" on the shell spin.
+- [x] 4 ambient turtles circle the Deep Sea floor (ocean.js); only animated near the camera.
+- [x] Title NEW call-out opens the garage on the Sea Turtle; the turtle has the NEW! badge.
+- [x] Fix: the hint toast hides while a Jungle Island combo callout shows (they overlapped on iPhone).
+- [x] Version v5.5, and sw.js regenerated.
+- [ ] Next: v5.6 city collapses, pause/home, Robo Dinos toggle and new dinos.

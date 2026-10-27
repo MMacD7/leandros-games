@@ -3,7 +3,7 @@
 An ad-free 3D browser game with five levels: a jungle island with a volcano, ruins and a sea; **Dragon Peak**, a volcanic mountain at dusk with a glowing lava sea, castle ruins and dragons; **Mega City Smash**, a sunset city full of buildings you can knock down; **Deep Sea Showdown**, an underwater level where you play as a sea creature; and **Farty Poop Farm**, a silly farm where Leandro feeds the animals and rides a horse. You play as either a **real dinosaur** (bite, roar, tail whip, horn charge, pounce) or a **robot mech dinosaur** (lasers, homing missiles, bite/stomp), or a **dragon** (fireballs, fire/frost/lightning breath, flight), and you battle a wild mix of both. A knocked-out robot falls over in a shower of sparks. A knocked-out real dino gets dizzy stars and limps off in a puff of dust. There is no gore or blood.
 
 * **No ads, purchases, external links, tracking or network calls.** Everything is static files from the same origin, and a CSP (`default-src 'self'`) enforces that.
-* **Everything is unlocked from the start**: all 40 playable creatures (18 real dinos, 11 robots, 4 dragons, Ricky & Bobby, and 5 sea creatures) and every upgrade at max level. Upgrade levels can be dialled up or down for free in the garage. Bolts are just a score now and don't gate anything. Older saves get everything unlocked when they load.
+* **Everything is unlocked from the start**: all 41 playable creatures (18 real dinos, 11 robots, 4 dragons, Ricky & Bobby, and 6 sea creatures) and every upgrade at max level. Upgrade levels can be dialled up or down for free in the garage. Bolts are just a score now and don't gate anything. Older saves get everything unlocked when they load.
 * It's an installable PWA and works fully offline after the first load.
 
 ## Play / host
@@ -23,7 +23,7 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * Waves of wild dinos and mechs roam the streets. The boss wave is the giant **MEGA-REX**.
   * It has its own industrial-metal music.
 * **Deep Sea Showdown** (v5) is underwater, with blue water fog, light rays from the surface, caustics rippling over the sandy floor, swaying kelp forests, coral reefs, rocks, bubbling vents, fish schools, drifting particles and a sunken pirate ship with a glowing treasure chest.
-  * You play as one of five **sea creatures** (see the table below) and **swim freely in 3D**: steer with the joystick and use the **▲ UP / ▼ DOWN** buttons (keys E / Q) to change depth. You can't leave the water.
+  * You play as one of six **sea creatures** (see the table below) and **swim freely in 3D**: steer with the joystick and use the **▲ UP / ▼ DOWN** buttons (keys E / Q) to change depth. You can't leave the water.
   * Wild sea creatures roam and swim at different depths: sharks, stingrays, octopuses, jellyfish, anglerfish with glowing lures, sea serpents and giant crabs. Now and then a rare megalodon shows up too. They get tougher with each wave.
   * The boss wave is **🐙 THE KRAKEN**, which uses tentacle slams on red warning circles, an ink storm and a whirlpool that drags you in. On alternate boss waves you get a **🦈 MONSTER MEGALODON** instead.
   * Instead of a stampede, the ocean has a **🦈 SHARK FRENZY**.
@@ -67,6 +67,12 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * Finishing a dino off brings a slow-motion KO with a camera punch-in and a star burst.
   * Mid-level surprise: the volcano rumbles and smokes, then a **STAMPEDE** thunders through while the camera swoops out to show the herd. In battles, the boss reveal gets a camera swoop too.
   * There are shorter lulls between new arrivals, the music builds as the action heats up, and pickups sparkle.
+* **v5.5: a SEA TURTLE in Deep Sea Showdown.**
+  * The **Sea Turtle** is the 6th playable sea creature, with its own look: a domed, plated shell, a pale belly, a beaked head and four paddling flippers.
+  * **SHELL SPIN** tucks in and spins through foes with a whirring sound and a happy "wheee!". **SHELL SHIELD** puts up a glowing bubble that bounces attacks right back (with a hollow shell CLONK). **SWIM FAST** is a bubbly **FLIPPER DASH**.
+  * Friendly turtles now glide around the sea floor in the background.
+  * Tap the NEW call-out on the title to jump straight to the Sea Turtle in the garage.
+  * Small fix: on Jungle Island the "Find energy cores" hint steps aside while a SMASH!/MEGA!/DINO-MITE! callout shows, so they no longer overlap (most noticeable on iPhone).
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 
 ## Modes
@@ -181,6 +187,7 @@ These are in the garage's 🦈 Sea tab. Buttons: **BITE** (or **STING**), the **
 | Thunder Stingray | ZAP STRIKE: lightning from its tail barb that chains through up to 5 foes | SONAR ROAR | its sting poisons, and it glides very fast with SWIM FAST |
 | Giant Octopus | TENTACLE GRAB: pulls a foe in and squeezes it | INK CLOUD: blinds every enemy around, and they wander off | eight bendy arms |
 | Mega Jellyfish | SHOCK AURA: an electric burst all around it | STINGING TENDRILS: whips all its tendrils out in a ring (poison) | glowing see-through bell |
+| Sea Turtle (v5.5) | SHELL SPIN: tucks into its shell and spins through foes (with a happy "wheee!") | SHELL SHIELD: a glowing bubble for a few seconds that bounces attacks right back | tough domed shell; SWIM FAST is a bubbly FLIPPER DASH |
 
 ### Dragons
 They fly with the Ptero controls: hold **CLIMB** to gain height and let go to glide down. The wings really flap. They have horns, spikes, glowing eyes and a big roar. Buttons: **element blast** (hold), **breath** (cooldown), **ROAR**, **CLIMB**.
