@@ -302,7 +302,7 @@ for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { vo
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : 'Find energy cores ⚡ and wild dinos!'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
-tap('newcall', () => { garageFrom = 'title'; show('garage'); });
+tap('newcall', () => { garageFrom = 'title'; show('garage'); const ti = G_SEA.findIndex(d => d.id === 'turtle'); if (ti >= 0) { gTab = gList = 'sea'; gIdx = ti; refreshGarage(); } }); // v5.5: jump straight to the new Sea Turtle
 tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean')); tap('lv-farm', () => travel('farm'));
 // v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
 let levelsFrom = 'play';
@@ -357,7 +357,7 @@ const gScene = new THREE.Scene(), gCam = new THREE.PerspectiveCamera(40, 1, 0.1,
 const GARAGE_YAW = 1.5; // ~3/4 front view (camera sits at yaw 0.67)
 let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo';
 // v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
-const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish']); // v5
+const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish', 'turtle']); // v5 (+ v5.5 sea turtle)
 const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
 const G_REALS = newFirst(REALS), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS), G_DOGS = WESTIES, G_SEA = SEA.filter(d => !d.wildOnly);
 const gListOf = () => gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;

@@ -287,3 +287,35 @@ const BUILD = {
 };
 BUILD.kraken = BUILD.octo;
 BUILD.mega = BUILD.shark;
+// ---------------- v5.5 SEA TURTLE (playable + friendly ambient turtles) ----------------
+// a domed shell made of plates (scutes), a pale belly plate, a beaked head on a short neck and four paddling flippers
+BUILD.turtle = (S, def) => {
+  S.pivot.position.y = 1.2; const shellC = new THREE.Color(def.shell || 0x6a4a22), plateC = new THREE.Color(def.back), rimC = new THREE.Color(def.rim || 0xc89a4a);
+  const dome = new THREE.SphereGeometry(1, 24, 14, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.55, 0.78, 1.85);
+  { const p = dome.attributes.position, col = new Float32Array(p.count * 3), c = new THREE.Color(); for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), rim = y < 0.12;
+      const cell = Math.floor((z + 2) / 0.95) * 7 + Math.floor((x + 2 + (Math.floor((z + 2) / 0.95) % 2) * 0.45) / 0.9), e = Math.abs(Math.sin(z * 3.3)) < 0.18 || Math.abs(Math.sin(x * 3.5 + Math.floor((z + 2) / 0.95))) < 0.15;
+      c.copy(rim ? rimC : e ? shellC : plateC.clone().offsetHSL(0, 0, ((cell * 37) % 7 - 3) * 0.012)); col.set([c.r, c.g, c.b], i * 3); } dome.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
+  S.add(dome, S.skin, S.pivot, 0, 0, 0);
+  S.add(shade(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(1.45, 0.3, 1.75), def.belly, def.belly), S.skin, S.pivot, 0, 0.02, 0); // plastron
+  const sk = std({ color: def.skin || 0x6a8a5a, roughness: 0.55 }); S.flesh = sk;
+  // head + beak + eyes on a short neck (the neck stretches out for a bite)
+  const head = new THREE.Group(); head.position.set(0, 0.15, 1.85); S.pivot.add(head); S.head = head;
+  S.add(new THREE.CylinderGeometry(0.32, 0.38, 0.6, 10).rotateX(Math.PI / 2), sk, head, 0, 0, -0.1);
+  S.add(new THREE.SphereGeometry(0.45, 14, 10).scale(1, 0.85, 1.15), sk, head, 0, 0.08, 0.35);
+  S.add(new THREE.ConeGeometry(0.2, 0.32, 8).rotateX(Math.PI / 2).scale(1.2, 0.8, 1), std({ color: 0xd8c070, roughness: 0.4 }), head, 0, -0.02, 0.82);
+  for (const s of [-1, 1]) { S.add(new THREE.SphereGeometry(0.12, 10, 8), S.white, head, s * 0.3, 0.2, 0.58); S.add(new THREE.SphereGeometry(0.07, 8, 6), S.dark, head, s * 0.34, 0.22, 0.66); }
+  S.socket('mouth', head, 0, -0.05, 0.95);
+  // flippers: long front paddles, short back ones
+  S.flips = []; for (const [sx, z, L, front] of [[-1, 0.95, 1.9, 1], [1, 0.95, 1.9, 1], [-1, -1.2, 0.95, 0], [1, -1.2, 0.95, 0]]) {
+    const g = new THREE.Group(); g.position.set(sx * 1.25, 0.02, z); S.pivot.add(g); const m = S.add(new THREE.SphereGeometry(1, 12, 8).scale(L * 0.5, 0.08, front ? 0.36 : 0.32), sk, g, sx * L * 0.45, 0, front ? -0.15 : 0); m.rotation.y = sx * (front ? -0.35 : 0.5); S.flips.push({ g, sx, front }); }
+  S.add(new THREE.ConeGeometry(0.16, 0.5, 6).rotateX(-Math.PI / 2), sk, S.pivot, 0, 0, -1.95); // little tail
+  // SHELL SHIELD bubble (shown while the shield is up)
+  S.bubble = S.add(new THREE.SphereGeometry(2.6, 20, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(def.accent || 0x6aff9a), transparent: true, opacity: 0.22, depthWrite: false, toneMapped: false }), S.pivot, 0, 0.3, 0); S.bubble.visible = false;
+  S.spinT = 0; S.shieldK = 0;
+  S.anim = (dt, speed, o) => { const run = Math.min(1, speed / 14); S.phase += dt * (1.4 + run * 2.6 + (o.charge || 0) * 2); const ph = S.phase;
+    for (const f of S.flips) { const a = f.front ? Math.sin(ph) * (0.45 + 0.35 * run) : Math.sin(ph + 1.2) * 0.3; f.g.rotation.z = f.sx * a; f.g.rotation.y = f.sx * (f.front ? Math.cos(ph) * 0.35 : 0); }
+    S.head.position.z = 1.85 + Math.min(1, Math.max(o.bite || 0, (o.jaw || 0) * 0.5)) * 0.45; S.head.rotation.y = Math.sin(S.t * 0.8) * 0.12;
+    S.spinT = Math.max(0, S.spinT - dt); S.pivot.rotation.y = S.spinT > 0 ? S.pivot.rotation.y + dt * 22 : S.pivot.rotation.y * Math.max(0, 1 - dt * 10);
+    S.pivot.rotation.x = -S.climbS * 0.35 + Math.sin(ph * 0.5) * 0.03; S.pivot.rotation.z = -S.turnS * 0.3;
+    S.bubble.visible = S.shieldK > 0; if (S.bubble.visible) { S.bubble.scale.setScalar(1 + Math.sin(S.t * 9) * 0.05); S.bubble.material.opacity = 0.16 + 0.1 * Math.sin(S.t * 6) ** 2; } };
+};

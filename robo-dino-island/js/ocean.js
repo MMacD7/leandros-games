@@ -7,6 +7,7 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { fbm, noise2, rng, smooth, clamp, lerp } from './noise.js';
 import { BASE, ARENA, VOLC, TITLE, triplanar } from './world.js';
+import { SeaBeast } from './sea.js';
 
 export const SURF = 66; // the water surface (seen from below)
 // (lazy: world.js and ocean.js import each other, so the shared constants are only read at run time)
@@ -122,6 +123,10 @@ export function buildOcean(w) {
   const FC = [0xd0e0f0, 0xffd040, 0x40a0ff, 0xff7040, 0xc0f0ff].map(c => new THREE.Color(c)); for (let i = 0; i < NF * NSch; i++) w.fish.setColorAt(i, FC[Math.floor(i / NF)].clone().offsetHSL((r() - 0.5) * 0.04, 0, (r() - 0.5) * 0.1));
   w.schools = []; for (let s = 0; s < NSch; s++) { const a = s / NSch * 6.28, d = 60 + r() * 150; w.schools.push({ cx: Math.cos(a) * d, cz: Math.sin(a) * d, R: 18 + r() * 20, y: 8 + r() * 18, sp: (0.15 + r() * 0.12) * (r() < 0.5 ? 1 : -1), off: Array.from({ length: NF }, () => [(r() - 0.5) * 9, (r() - 0.5) * 4, (r() - 0.5) * 9, r() * 6]) }); }
   w.fishM = new THREE.Matrix4(); w.fishQ = new THREE.Quaternion(); w.fishE = new THREE.Euler();
+  // v5.5 friendly sea turtles gliding around (scenery, not enemies)
+  const TC = [[0x5a8a3a, 0x3a2a12, 0xd8b060], [0x7a6a3a, 0x2a1a0a, 0xe0c080], [0x4a7a6a, 0x1a2a22, 0xb8d0a0], [0x8a7a4a, 0x3a2410, 0xf0d090]];
+  w.turtles = []; for (let i = 0; i < 4; i++) { const c = TC[i], m = new SeaBeast({ id: 'turtle-amb' + i, kind: 'turtle', scale: 0.7 + r() * 0.35, back: c[0], shell: c[1], rim: c[2], belly: 0xf0e2b0, accent: 0x6aff9a, skin: 0x7a9a5a });
+    root.add(m.obj); const a = i / 4 * 6.28 + r(); w.turtles.push({ m, cx: BASE.x + Math.cos(a) * (40 + r() * 70), cz: BASE.z + Math.sin(a) * (40 + r() * 70), R: 14 + r() * 16, y: 6 + r() * 10, sp: (0.08 + r() * 0.06) * (r() < 0.5 ? -1 : 1), a: r() * 6.28 }); }
 }
 
 // a sunken pirate ship lying on its side in the sand, mast snapped, with a torn sail, cannons and a glowing treasure chest
@@ -172,6 +177,9 @@ export function updateOcean(w, dt, cam) {
   if (w.snow) { const P = w.snow.geometry.attributes.position.array, B = w.snowBase, k = 70; for (let i = 0; i < P.length; i += 3) {
       P[i] = cam.x + ((B[i] + t * 0.3 - cam.x) % k + k * 1.5) % k - k / 2; P[i + 1] = cam.y + ((B[i + 1] - t * 0.25 - cam.y) % k + k * 1.5) % k - k / 2; P[i + 2] = cam.z + ((B[i + 2] + Math.sin(t * 0.2 + i) * 0.5 - cam.z) % k + k * 1.5) % k - k / 2; }
     w.snow.geometry.attributes.position.needsUpdate = true; }
+  // v5.5 ambient turtles: slow circles with a gentle bob (only animated near the camera)
+  for (const T of w.turtles || []) { T.a += dt * T.sp; const x = T.cx + Math.cos(T.a) * T.R, z = T.cz + Math.sin(T.a) * T.R, y = Math.max(w.height(x, z), 0) + T.y + Math.sin(t * 0.7 + T.R) * 1.2, near = Math.hypot(x - cam.x, z - cam.z) < 160;
+    T.m.obj.visible = near; if (!near) continue; T.m.obj.position.set(x, y, z); T.m.obj.rotation.y = Math.atan2(-Math.sin(T.a) * T.sp, Math.cos(T.a) * T.sp); T.m.animate(dt, 5, { turn: T.sp > 0 ? 0.3 : -0.3 }); }
   // fish schools (only the ones near the camera get updated)
   if (w.fish) { let n = 0; const M = w.fishM, Q = w.fishQ, E = w.fishE, p = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1);
     for (const S of w.schools) { const a = t * S.sp, cx = S.cx + Math.cos(a) * S.R, cz = S.cz + Math.sin(a) * S.R; if (Math.hypot(cx - cam.x, cz - cam.z) > 170) continue; 

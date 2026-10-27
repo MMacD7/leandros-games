@@ -131,6 +131,12 @@ export const sfx = {
   // v5.2 silly extras
   // v5.3 SUPER STINKY visitors: a whiny cartoon "EEEEWWW!" (pitch per visitor)
   eww(p = 1, v = 1) { this.nEww = (this.nEww || 0) + 1; if (!ctx) return; const t = now(); voiceT(t, { f: [520 * p, 640 * p, 600 * p, 470 * p, 380 * p], dur: 0.75, v: 0.2 * v, a: 0.03, vib: 7, vibD: 14, form: [[350 * p, 4, 1.0], [2300 * p, 6, 0.7]] }); voiceT(t + 0.62, { f: [420 * p, 300 * p], dur: 0.35, v: 0.12 * v, a: 0.02, form: [[700, 4, 1], [1100, 5, 0.6]] }); },
+  // v5.5 sea turtle: a whirring spin, a hollow shell CLONK + shimmer for the shield, a bubbly flipper whoosh
+  shellSpin(v = 1) { if (!ctx) return; const t = now(); this.nShell = (this.nShell || 0) + 1; for (let i = 0; i < 6; i++) noise(t + i * 0.12, 0.12, 'bandpass', 500 + i * 140, 900, 0.22 * v, 3); tone(t, 'triangle', 180, 520, 0.8, 0.12 * v, 0.02); },
+  shellShield(v = 1) { if (!ctx) return; const t = now(); this.nShell = (this.nShell || 0) + 1; tone(t, 'sine', 240, 180, 0.25, 0.3 * v, 0.003); noise(t, 0.08, 'bandpass', 900, 600, 0.25 * v, 4); tone(t + 0.05, 'sine', 1200, 1800, 0.6, 0.06 * v, 0.05); tone(t + 0.1, 'sine', 1600, 2400, 0.5, 0.05 * v, 0.05); },
+  clonk(v = 1) { if (!ctx) return; const t = now(); tone(t, 'sine', 300, 210, 0.18, 0.28 * v, 0.002); noise(t, 0.06, 'bandpass', 1200, 800, 0.2 * v, 5); },
+  flipper(v = 1) { if (!ctx) return; const t = now(); this.nFlip = (this.nFlip || 0) + 1; noise(t, 0.45, 'bandpass', 600, 2200, 0.25 * v, 1.2); for (let i = 0; i < 5; i++) tone(t + 0.05 + i * 0.06, 'sine', 500 + Math.random() * 500, 900 + Math.random() * 600, 0.07, 0.07 * v, 0.004); },
+  wheee(v = 1) { if (!ctx) return; const t = now(); this.nWheee = (this.nWheee || 0) + 1; voiceT(t + 0.05, { f: [380, 520, 760, 980, 900], dur: 0.7, v: 0.16 * v, a: 0.03, vib: 6, vibD: 18, form: [[600, 4, 1.0], [2600, 6, 0.6]] }); }, // a happy little turtle "wheee!"
   // v5.3 bouncy castle: a rubbery vinyl squeak + a soft air 'whumpf'
   squeakBounce(v = 1, p = 1) { this.nSqueak = (this.nSqueak || 0) + 1; if (!ctx) return; const t = now(); tone(t, 'triangle', 900 * p, 1500 * p, 0.09, 0.07 * v, 0.003); tone(t + 0.07, 'triangle', 1300 * p, 800 * p, 0.08, 0.05 * v, 0.003);
     noise(t, 0.18, 'lowpass', 400, 120, 0.12 * v); },

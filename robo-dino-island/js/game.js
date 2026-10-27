@@ -52,6 +52,9 @@ class Dino {
   hit(dmg, from, attacker, quiet) {
     if (!this.alive) return;
     if (this.shieldT > 0) { this.mech.flash = 0.4; return; }
+    if (this.shellT > 0) { // v5.5 SHELL SHIELD: blocks the hit and bounces it back at the attacker
+      this.g.reflects = (this.g.reflects || 0) + 1; sfx.clonk && sfx.clonk(0.9); this.g.fx.ring(this.center.clone(), 5, 0x6aff9a);
+      if (attacker && attacker !== this && attacker.alive && attacker.hit) { attacker.hit(dmg * 0.8, this.pos, this, true); if (attacker.knock && from) attacker.knock.addScaledVector(tmp.subVectors(attacker.pos, this.pos).setY(0).normalize(), 8); } return; }
     this.hp -= dmg; this.mech.flash = quiet ? Math.max(this.mech.flash, 0.5) : 1; this.g.onHit(this, dmg, attacker, quiet);
     if (from) { tmp.subVectors(this.pos, from).setY(0).normalize(); this.knock.addScaledVector(tmp, Math.min(8, dmg * 0.25) * (this.boss ? 0.15 : 1)); }
     if (this.wild && this.ai.state === 'patrol') this.ai.state = 'chase';
@@ -406,6 +409,7 @@ export class Game {
     else if (k === 'zap') { this.stingZap(d, target); return; }
     else if (k === 'grab') { this.tentacleGrab(d, target); return; }
     else if (k === 'shock') { this.shockAura(d); return; }
+    else if (k === 'shellspin') { d.act = { type: 'charge', t: 0, dur: 1.0, dir: fwd.clone(), speed: Math.max(26, d.st.speed * 2.0), hit: new Set(), ram: true }; if (d.mech.spinT !== undefined) d.mech.spinT = 1.0; this.shellSpins = (this.shellSpins || 0) + 1; sfx.shellSpin && sfx.shellSpin(1); if (d === this.player && sfx.wheee) sfx.wheee(1); this.bubbles(d.center.clone(), 16, 3, 5); this.fx.ring(d.pos, 8, 0x6aff9a); if (d === this.player) this.hud.toast('🐢 SHELL SPIN!'); return; }
     else if (k === 'lure') { this.lureFlash(d, target); return; }
     else if (k === 'kraken') { this.krakenAttack(d, target); return; }
     sfx.whoosh(k === 'charge' || k === 'stomp' ? 0.6 : 1);
@@ -445,7 +449,7 @@ export class Game {
     if (isP) this.hud.toast('🪼 STINGING TENDRILS!'); }
   // Great White: FEEDING FRENZY (faster + harder bites for a while)
   frenzy(d) { d.rageT = 6.5; d.roar = 1.2; sfx.rage(); this.fx.ring(d.pos, 12, 0xff3020); this.bubbles(d.center.clone(), 24, 4, 6); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.2); if (d === this.player) this.hud.toast('🦈 FEEDING FRENZY! Faster + harder bites!'); }
-  seaThird(d) { const t = d.def.third; if (t === 'ink') this.inkCloud(d); else if (t === 'tendrils') this.tendrilWhip(d); else if (t === 'frenzy') this.frenzy(d); else { this.roarAt(d); this.bubbles(this.mouthPos(d), 18, 2, 7); } }
+  seaThird(d) { const t = d.def.third; if (t === 'shellshield') { d.shellT = 2.6; this.shellShields = (this.shellShields || 0) + 1; sfx.shellShield && sfx.shellShield(1); this.bubbles(d.center.clone(), 20, 4, 4); if (d === this.player) this.hud.toast('🐢 SHELL SHIELD! Attacks bounce right back!'); return; } if (t === 'ink') this.inkCloud(d); else if (t === 'tendrils') this.tendrilWhip(d); else if (t === 'frenzy') this.frenzy(d); else { this.roarAt(d); this.bubbles(this.mouthPos(d), 18, 2, 7); } }
   // Anglerfish: a blinding LURE FLASH, then a lunge
   lureFlash(d, target) { const c = d.mech.socketPos('lure', new THREE.Vector3()); d.mech.zapK = 1.5; this.fx.glow.spawn({ pos: c, size: 14, size1: 2, life: 0.5, r: 1.6, g: 3, b: 2.6, alpha: 1 }); sfx.zap(0.4);
     const p = this.player; if (p && p.alive && p.pos.distanceTo(d.pos) < 26 && d.wild) { p.slowT = Math.max(p.slowT || 0, 1.2); if (this.hud.flash) this.hud.flash(); }
@@ -732,6 +736,8 @@ export class Game {
       p.boosting = !p.def.westie && inp.btn.boost && p.boostE > 0.05;
       if (p.def.westie) this.pupJump(p, inp, dt);
       if (p.boosting) { p.boostE = Math.max(0, p.boostE - dt); if (inp.pressed.boost && !p.def.farmKid) sfx.boost(); this.jetFlame(p); } else p.boostE = Math.min(p.st.boost, p.boostE + dt * 0.45);
+      if (p.def.dash && inp.pressed.boost && !(p.dashCD > 0)) { p.dashCD = 0.7; const dv = mag > 0.05 ? dir.clone().normalize() : p.forward(new THREE.Vector3()); p.act = { type: 'charge', t: 0, dur: 0.55, dir: dv, speed: Math.max(42, p.st.speed * 3.2), hit: new Set(), ram: true }; this.flipperDashes = (this.flipperDashes || 0) + 1; sfx.flipper && sfx.flipper(1); this.bubbles(p.center.clone(), 18, 3, 3); if (!this._dashTold) { this._dashTold = true; this.hud.toast('🐢 FLIPPER DASH!'); } } // v5.5 turtle
+      if (p.dashCD > 0) p.dashCD -= dt; if (p.shellT > 0) { p.shellT -= dt; } if (p.mech.shieldK !== undefined) p.mech.shieldK = p.shellT > 0 ? 1 : 0;
       if (p.def.sea && p.fly) { const v = (inp.btn.up ? 1 : 0) - (inp.btn.down ? 1 : 0) + (inp.pressed.up ? 0.5 : 0) - (inp.pressed.down ? 0.5 : 0); p.climb = clamp(v, -1, 1); p.alt = clamp(p.alt + v * 15 * dt, 0, 48); if (v) this.swimUD = (this.swimUD || 0) + 1; } // v5: free 3D swimming (▲/▼)
       else if (p.fly) { p.climb = p.boosting ? 1 : 0; p.alt = clamp(p.alt + (p.boosting ? 9 : -2.5) * dt, 5, 40); }
       if (!this.updateAct(p, dt)) p.move(dt, mag > 0.05 ? dir.normalize() : dir, mag, p.boosting && !p.fly ? true : p.boosting);

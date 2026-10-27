@@ -142,6 +142,9 @@ export const SEA = [
   { id: 'jellyfish', name: 'Mega Jellyfish', price: 0, kind: 'jelly', desc: 'A glowing giant. SHOCK AURA zaps everything around it, and STINGING TENDRILS whip out in every direction!',
     hp: 165, speed: 11, bite: 18, biteRate: 0.3, special: 'shock', specialName: 'SHOCK<br>AURA', specialCD: 2.5, roar: 1.6, sting: true, third: 'tendrils', thirdName: 'STING<br>TENDRILS', scale: 1.0, radius: 2.2,
     back: 0xff7ad8, belly: 0xffffff, accent: 0xd05aff },
+  { id: 'turtle', name: 'Sea Turtle', price: 0, kind: 'turtle', desc: 'A tough old sea turtle! SHELL SPIN bashes everything around, SHELL SHIELD bounces attacks right back, and SWIM FAST is a FLIPPER DASH.',
+    hp: 240, speed: 13, bite: 20, biteRate: 0.4, special: 'shellspin', specialName: 'SHELL<br>SPIN', specialCD: 3, roar: 1.6, third: 'shellshield', thirdName: 'SHELL<br>SHIELD', dash: true, scale: 1.0, radius: 2.3,
+    back: 0x5a8a3a, belly: 0xf0e2b0, accent: 0x6aff9a, shell: 0x3a2a12, rim: 0xd8b060, skin: 0x7a9a5a },
   // wild only (not in the garage)
   { id: 'angler', name: 'Anglerfish', price: 0, kind: 'angler', wildOnly: true, desc: 'A deep-sea horror with a glowing lure.',
     hp: 150, speed: 12, bite: 26, biteRate: 0.5, special: 'lure', specialName: 'LURE<br>FLASH', specialCD: 5, roar: 1.6, scale: 1.1, radius: 2.3,

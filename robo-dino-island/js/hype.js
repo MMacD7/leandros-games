@@ -36,7 +36,7 @@ export class JungleHype {
     this.checkCall(); }
   checkCall() { const c = this.combo; let txt = null; for (const [k, t] of CALLS) if (c === k) txt = t; if (!txt && c > 10 && (c - 10) % 8 === 0) txt = 'DINO-MITE!'; if (txt) this.callout(txt); }
   callout(txt) { const el = $('callout'); this.n.callouts++; this.calls.push(txt); if (this.calls.length > 30) this.calls.shift(); sfx.callout && sfx.callout(1); voice.say(txt.replace('-', ' '), { prio: 1, cd: 1200, rate: 1.15, pitch: 1.2 });
-    if (el) { el.textContent = txt; el.className = ''; void el.offsetWidth; el.className = 'show c' + (txt === 'SMASH!' ? 1 : txt === 'MEGA!' ? 2 : 3); clearTimeout(this._cTO); this._cTO = setTimeout(() => { el.className = ''; }, 1300); } }
+    if (el) { el.textContent = txt; el.className = ''; void el.offsetWidth; el.className = 'show c' + (txt === 'SMASH!' ? 1 : txt === 'MEGA!' ? 2 : 3); document.body.classList.add('callout-on'); clearTimeout(this._cTO); this._cTO = setTimeout(() => { el.className = ''; document.body.classList.remove('callout-on'); }, 1300); } } // v5.5: the hint toast steps aside while a callout shows
   // ---- slow-mo finishing KO with a camera punch-in and a star burst
   onKO(d) { if (!this.on || d === this.g.player) return; const g = this.g, fx = g.fx, c = d.center.clone(); this.n.finishers++;
     g.slowmo = Math.max(g.slowmo, 1.15); g.koCam = { t: 0, dur: 1.25, at: c.clone(), h: Math.max(4, (d.mech.height || 4)) };
