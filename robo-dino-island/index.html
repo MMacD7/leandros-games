@@ -30,6 +30,7 @@
   <div id="hud-tc" class="hidden"><div id="timer">01:30</div><div id="wave">Wave 1 · KOs 0</div></div>
   <div id="hud-tr"><div id="bolts-box"><span class="nut">⬢</span> <b id="bolts">0</b></div><canvas id="radar" width="220" height="220"></canvas></div>
   <div id="citybar" class="hidden" aria-label="City destruction"><div class="cb"><i id="city-fill"></i></div><b id="city-t">🏙️ 0% SMASHED</b></div>
+  <div id="farmbar" class="hidden" aria-label="Farm progress"><b>🌾 FED <span id="fb-fed">0/12</span></b><b id="fb-stars" aria-label="Stars">☆☆☆</b><b>💩 <span id="fb-poop">0</span></b><b>✨ <span id="fb-gold">0</span></b></div>
   <div id="boss" class="hidden"><b id="boss-name">BOSS</b><div class="bb"><i id="boss-hp"></i></div></div>
   <div id="ebars"></div>
   <div id="combo"></div>
@@ -38,6 +39,8 @@
   <div id="hurt"></div>
   <div id="joy-base"><div id="joy-knob"></div></div>
   <button id="b-rb" class="rb-btn" aria-label="Summon Ricky and Bobby"><i id="rb-cd"></i><span class="rb-ic">🐶</span><b>RICKY &amp;<br>BOBBY</b><em id="rb-t"></em></button>
+  <button id="b-david" class="david-btn" aria-label="Bad David"><span class="dv-ic" aria-hidden="true">😜</span><b>BAD<br>DAVID</b></button>
+  <div id="david-say" class="hidden" aria-live="polite"></div>
   <div id="actions">
     <button id="a-laser" class="act big" data-btn="laser"><span>LASER</span></button>
     <button id="a-missile" class="act" data-btn="missile"><div id="mcd"></div><span>MISSILE</span></button>
@@ -47,6 +50,8 @@
     <button id="a-down" class="act ud" data-btn="down" aria-label="Swim down"><span>▼<br><small>DOWN</small></span></button>
   </div>
   <div id="ink"></div>
+  <div id="pie-splat" class="hidden" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><b>SPLAT!</b></div>
+  <div id="farmwin" class="hidden" role="dialog" aria-label="Farm Hero"><div class="fw-card"><div class="fw-stars">⭐⭐⭐</div><h2>FARM HERO!</h2><p id="fw-sub">You fed all the hungry animals!</p><p class="fw-poop">💨💩💨 The animals are SO happy (and SO stinky)! 💨💩💨</p><button id="fw-ok" class="btn primary">🚜 Keep farming!</button></div></div>
   <div id="flash"></div>
   <div id="ko-msg" class="hidden"><h2>Knocked out!</h2><p id="ko-sub">Rebooting at the base…</p></div>
 </div>
@@ -55,14 +60,14 @@
 
 <div id="title" class="screen hidden">
   <div class="logo"><small>Leandro's</small><b>ROBO DINO</b><em>ISLAND</em><i>REAL&nbsp;&nbsp;VS&nbsp;&nbsp;ROBOT</i></div>
-  <div class="levels" role="group" aria-label="Choose a level"><button id="lv-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-city" class="lv card city" data-lv="city" aria-label="Play Mega City Smash"><span class="art" aria-hidden="true">🏙️🦖</span><span class="txt"><b>MEGA CITY SMASH</b><small>Stomp the city &amp; the Mega-Rex</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-ocean" class="lv card ocean" data-lv="ocean" aria-label="Play Deep Sea Showdown"><span class="art" aria-hidden="true">🌊🦈</span><span class="txt"><b>DEEP SEA SHOWDOWN</b><small>Sharks, octopus &amp; the Kraken</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
+  <div class="levels" role="group" aria-label="Choose a level"><button id="lv-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-city" class="lv card city" data-lv="city" aria-label="Play Mega City Smash"><span class="art" aria-hidden="true">🏙️🦖</span><span class="txt"><b>MEGA CITY SMASH</b><small>Stomp the city &amp; the Mega-Rex</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-ocean" class="lv card ocean" data-lv="ocean" aria-label="Play Deep Sea Showdown"><span class="art" aria-hidden="true">🌊🦈</span><span class="txt"><b>DEEP SEA SHOWDOWN</b><small>Sharks, octopus &amp; the Kraken</small></span><span class="tag">✓ PLAYING</span></button><button id="lv-farm" class="lv card farm" data-lv="farm" aria-label="Play Farty Poop Farm"><span class="art" aria-hidden="true">🐷💩</span><span class="txt"><b>FARTY POOP FARM</b><small>Feed, ride &amp; toot!</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
   <div class="menu">
     <button id="b-roam" class="btn primary">▶ Explore the Island</button>
     <button id="b-battle" class="btn">⚔ Battle Arena</button>
     <button id="b-garage" class="btn">🦖 Dino Garage</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
-  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Deep Sea + Mega City + Ricky &amp; Bobby!</button><span id="ver" aria-label="Version">v5.0</span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Farty Poop Farm! 🐷💩</button><span id="ver" aria-label="Version">v5.1</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
@@ -96,7 +101,7 @@
 
 <div id="levels" class="screen dim hidden">
   <div class="panel lv-panel"><h2>🗺️ Choose a level</h2>
-    <div class="levels" role="group" aria-label="Choose a level"><button id="lvd-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-city" class="lv card city" data-lv="city" aria-label="Play Mega City Smash"><span class="art" aria-hidden="true">🏙️🦖</span><span class="txt"><b>MEGA CITY SMASH</b><small>Stomp the city &amp; the Mega-Rex</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-ocean" class="lv card ocean" data-lv="ocean" aria-label="Play Deep Sea Showdown"><span class="art" aria-hidden="true">🌊🦈</span><span class="txt"><b>DEEP SEA SHOWDOWN</b><small>Sharks, octopus &amp; the Kraken</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
+    <div class="levels" role="group" aria-label="Choose a level"><button id="lvd-jungle" class="lv card jungle" data-lv="jungle" aria-label="Play Jungle Island"><span class="art" aria-hidden="true">🌴🦖</span><span class="txt"><b>JUNGLE ISLAND</b><small>Real vs robot dinos</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-peak" class="lv card peak" data-lv="peak" aria-label="Play Dragon Peak"><span class="art" aria-hidden="true">🌋🐉</span><span class="txt"><b>DRAGON PEAK</b><small>Dragons, lava &amp; the Dragon King</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-city" class="lv card city" data-lv="city" aria-label="Play Mega City Smash"><span class="art" aria-hidden="true">🏙️🦖</span><span class="txt"><b>MEGA CITY SMASH</b><small>Stomp the city &amp; the Mega-Rex</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-ocean" class="lv card ocean" data-lv="ocean" aria-label="Play Deep Sea Showdown"><span class="art" aria-hidden="true">🌊🦈</span><span class="txt"><b>DEEP SEA SHOWDOWN</b><small>Sharks, octopus &amp; the Kraken</small></span><span class="tag">✓ PLAYING</span></button><button id="lvd-farm" class="lv card farm" data-lv="farm" aria-label="Play Farty Poop Farm"><span class="art" aria-hidden="true">🐷💩</span><span class="txt"><b>FARTY POOP FARM</b><small>Feed, ride &amp; toot!</small></span><span class="new" aria-hidden="true">NEW!</span><span class="tag">✓ PLAYING</span></button></div>
     <button id="lvd-close" class="btn small">◀ Back to the game</button>
   </div>
 </div>
