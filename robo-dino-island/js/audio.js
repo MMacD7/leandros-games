@@ -27,7 +27,7 @@ export function duck(amount = 0.6, dur = 1) { if (!ctx || !musicBus) return; con
 export function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.7, now(), 0.05); }
 export function isMuted() { return muted; }
 
-function env(g, t, a, peak, dec) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
+function env(g, t, a, peak, dec) { peak = Math.max(0.0002, peak || 0); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
 function noise(t, dur, type, f0, f1, peak, q = 1) {
   const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.playbackRate.value = 1;
   const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
@@ -53,9 +53,73 @@ function yip(t, p, v) {
 function cheer(t, v) { noise(t, 2.6, 'bandpass', 900, 1400, 0.38 * v, 0.6); noise(t + 0.1, 2.4, 'bandpass', 2400, 1800, 0.18 * v, 0.8);
   for (let i = 0; i < 9; i++) { const s = t + 0.1 + Math.random() * 1.6, f = 380 + Math.random() * 420; const o = tone(s, 'triangle', f, f * (1.3 + Math.random() * 0.4), 0.45, 0.04 * v, 0.06); o.detune.value = (Math.random() - 0.5) * 40; }
   for (let i = 0; i < 14; i++) noise(t + 0.3 + Math.random() * 1.8, 0.03, 'highpass', 2500, 2400, 0.1 * v, 1); }
+// ---- v5.1 FARTY POOP FARM: procedural farts, plops, squishes and farm-animal voices (all synthesized, no samples) ----
+// A fart = a low buzzing oscillator (the "lips") with a pitch glide + wobble, chopped by a square-wave flutter (the
+// "brrrp"), through a resonant low-pass; "wet" ones add a band-passed noise splutter. Every call randomizes a bit.
+const FARTS = {
+  short:   { f0: 115, f1: 80, dur: 0.24, flut: 42, flutEnd: 0.8, wob: 0.18, lp: 900, type: 'sawtooth' },
+  long:    { f0: 98, f1: 66, dur: 1.35, flut: 30, flutEnd: 0.65, wob: 0.22, lp: 800, type: 'sawtooth' },
+  squeaky: { f0: 390, f1: 290, dur: 0.6, flut: 56, flutEnd: 1.3, wob: 0.12, lp: 2600, type: 'square' },
+  rumbly:  { f0: 58, f1: 40, dur: 1.15, flut: 17, flutEnd: 0.7, wob: 0.3, lp: 420, type: 'sawtooth', sub: true },
+  wet:     { f0: 92, f1: 60, dur: 0.75, flut: 34, flutEnd: 0.6, wob: 0.28, lp: 1000, type: 'sawtooth', wet: true },
+  trumpet: { f0: 125, f1: 270, dur: 0.7, flut: 38, flutEnd: 1.4, wob: 0.1, lp: 1500, type: 'sawtooth' },
+  tiny:    { f0: 300, f1: 235, dur: 0.17, flut: 60, flutEnd: 1, wob: 0.1, lp: 2400, type: 'square' },
+  mega:    { f0: 62, f1: 38, dur: 2.3, flut: 21, flutEnd: 0.55, wob: 0.35, lp: 650, type: 'sawtooth', sub: true, wet: true },
+};
+function fart(t, k, v) {
+  const o = FARTS[k] || FARTS.short, r = 0.85 + Math.random() * 0.35, dur = o.dur * (0.85 + Math.random() * 0.3), f0 = o.f0 * r, f1 = o.f1 * r;
+  const src = ctx.createOscillator(); src.type = o.type; src.frequency.setValueAtTime(f0, t); src.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+  const lfo = ctx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.setValueAtTime(o.flut * 0.37, t); const lg = ctx.createGain(); lg.gain.value = f0 * o.wob; lfo.connect(lg); lg.connect(src.frequency);
+  const am = ctx.createOscillator(); am.type = 'square'; am.frequency.setValueAtTime(o.flut * r, t); am.frequency.linearRampToValueAtTime(o.flut * r * o.flutEnd, t + dur);
+  const vca = ctx.createGain(); vca.gain.value = 0.55; const amg = ctx.createGain(); amg.gain.value = 0.45; am.connect(amg); amg.connect(vca.gain);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 4; lp.frequency.setValueAtTime(o.lp * 1.3, t); lp.frequency.exponentialRampToValueAtTime(o.lp * 0.7, t + dur);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.42 * v), t + 0.015); g.gain.setValueAtTime(Math.max(0.0002, 0.42 * v), t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(vca); vca.connect(lp); lp.connect(g); g.connect(master);
+  for (const n of [src, lfo, am]) { n.start(t); n.stop(t + dur + 0.05); }
+  if (o.sub) tone(t, 'sine', f0 * 0.8, Math.max(20, f1 * 0.7), dur, 0.32 * v, 0.03);
+  if (o.wet) { noise(t, dur * 0.9, 'bandpass', 700, 260, 0.2 * v, 2.5); for (let i = 0; i < 5; i++) noise(t + dur * (0.55 + Math.random() * 0.45), 0.04, 'bandpass', 500 + Math.random() * 600, 300, 0.16 * v, 3); }
+  noise(t, Math.min(0.25, dur), 'lowpass', 500, 150, 0.08 * v, 1); // a little air
+  return dur;
+}
+// mammal "voice": a buzzy source through two formant band-pass filters (vowel), with vibrato / tremolo
+function voiceT(t, o) {
+  const s = ctx.createOscillator(); s.type = o.type || 'sawtooth'; s.frequency.setValueAtTime(o.f[0], t); for (let i = 1; i < o.f.length; i++) s.frequency.linearRampToValueAtTime(o.f[i], t + o.dur * i / (o.f.length - 1));
+  if (o.vib) { const l = ctx.createOscillator(); l.frequency.value = o.vib; const lg = ctx.createGain(); lg.gain.value = o.vibD || 6; l.connect(lg); lg.connect(s.frequency); l.start(t); l.stop(t + o.dur + 0.1); }
+  const v = Math.max(0.0002, o.v || 0); const out = ctx.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(v, t + (o.a || 0.06)); out.gain.setValueAtTime(v, t + o.dur * 0.75); out.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+  if (o.trem) { const tr = ctx.createOscillator(); tr.frequency.value = o.trem; const tg = ctx.createGain(); tg.gain.value = 0.5; const vca = ctx.createGain(); vca.gain.value = 0.55; tr.connect(tg); tg.connect(vca.gain); vca.connect(out); tr.start(t); tr.stop(t + o.dur + 0.1); out._in = vca; }
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(o.lp0 || 2500, t); lp.frequency.linearRampToValueAtTime(o.lp1 || o.lp0 || 2500, t + o.dur * 0.5); lp.frequency.linearRampToValueAtTime(o.lp0 || 2500, t + o.dur);
+  s.connect(lp); for (const [f, q, gn] of o.form) { const b = ctx.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = f; b.Q.value = q; const bg = ctx.createGain(); bg.gain.value = gn; lp.connect(b); b.connect(bg); bg.connect(out._in || out); }
+  out.connect(master); s.start(t); s.stop(t + o.dur + 0.05);
+}
 export const sfx = {
   // v4.4: n quick yips ('yip-yip'); p = pitch (Bobby is a bit higher), v = volume. Silent until the first tap unlocks audio.
   bark(p = 1, v = 1, n = 2) { if (!ctx) return; const t = now(); for (let i = 0; i < n; i++) yip(t + i * 0.16, p * (1 + i * 0.06), v * (1 - i * 0.15)); },
+  // ---- v5.1 Farty Poop Farm ----
+  fart(kind = 'random', v = 1) { const K = Object.keys(FARTS).filter(k => k !== 'mega' && k !== 'tiny'); const k = kind === 'random' ? K[(Math.random() * K.length) | 0] : kind; this.nFarts = (this.nFarts || 0) + 1; this.lastFart = k; if (!ctx) return k; const t = now();
+    if (k === 'machine') { for (let i = 0; i < 5; i++) fart(t + i * 0.13, 'short', v * (0.8 + Math.random() * 0.3)); return k; }
+    const d = fart(t, k, v); if (k === 'mega' || k === 'long' || k === 'rumbly') duck(0.45, d); return k; },
+  plop(v = 1) { this.nPlops = (this.nPlops || 0) + 1; if (!ctx) return; const t = now(); tone(t, 'sine', 560, 85, 0.13, 0.32 * v); noise(t + 0.02, 0.16, 'lowpass', 500, 120, 0.25 * v, 1.2); tone(t + 0.14, 'sine', 420, 120, 0.08, 0.12 * v); },
+  squish(v = 1) { this.nSquish = (this.nSquish || 0) + 1; if (!ctx) return; const t = now(); noise(t, 0.3, 'bandpass', 900, 260, 0.38 * v, 2.2); tone(t, 'sine', 230, 70, 0.22, 0.22 * v); for (let i = 0; i < 4; i++) tone(t + 0.05 + Math.random() * 0.2, 'sine', 300 + Math.random() * 400, 120, 0.05, 0.08 * v); },
+  squelch(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.16, 'lowpass', 900, 200, 0.22 * v, 2); tone(t, 'sine', 180 + Math.random() * 60, 90, 0.1, 0.1 * v); },
+  splash(v = 1) { this.nSplash = (this.nSplash || 0) + 1; if (!ctx) return; const t = now(); noise(t, 0.7, 'lowpass', 1600, 140, 0.5 * v, 0.8); noise(t, 0.25, 'highpass', 2500, 1200, 0.15 * v, 0.7); for (let i = 0; i < 8; i++) tone(t + Math.random() * 0.5, 'sine', 250 + Math.random() * 500, 100, 0.06, 0.08 * v); },
+  pie(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.35, 'bandpass', 1400, 400, 0.45 * v, 1.2); tone(t, 'sine', 300, 90, 0.2, 0.25 * v); noise(t + 0.05, 0.25, 'highpass', 3000, 1500, 0.12 * v, 1); },
+  munch(v = 1) { if (!ctx) return; const t = now(); for (let i = 0; i < 4; i++) { noise(t + i * 0.16, 0.07, 'bandpass', 1500 + Math.random() * 900, 900, 0.22 * v, 1.2); tone(t + i * 0.16, 'square', 140, 90, 0.05, 0.04 * v); } },
+  moo(p = 1, v = 1) { this.nAnimal = (this.nAnimal || 0) + 1; if (!ctx) return; voiceT(now(), { f: [100 * p, 128 * p, 118 * p, 92 * p], dur: 1.3, v: 0.5 * v, a: 0.15, vib: 5, vibD: 3, lp0: 380, lp1: 1700, form: [[620, 3, 1.4], [1050, 5, 0.6], [240, 2, 0.8]] }); },
+  oink(p = 1, v = 1) { this.nAnimal = (this.nAnimal || 0) + 1; if (!ctx) return; const t = now(); for (let i = 0; i < 2; i++) { voiceT(t + i * 0.19, { type: 'square', f: [240 * p, 200 * p, 170 * p], dur: 0.15, v: 0.35 * v, a: 0.01, lp0: 1800, form: [[950, 3, 1.4], [1900, 6, 0.4]] }); noise(t + i * 0.19, 0.12, 'bandpass', 700, 400, 0.2 * v, 3); } },
+  cluck(p = 1, v = 1) { this.nAnimal = (this.nAnimal || 0) + 1; if (!ctx) return; const t = now(); const n = 3 + ((Math.random() * 2) | 0);
+    for (let i = 0; i < n; i++) voiceT(t + i * 0.12, { type: 'triangle', f: [700 * p, 920 * p, 640 * p], dur: 0.07, v: 0.22 * v, a: 0.005, form: [[1300, 4, 1.4], [2600, 6, 0.5]] });
+    voiceT(t + n * 0.12 + 0.05, { type: 'sawtooth', f: [620 * p, 1150 * p, 900 * p], dur: 0.28, v: 0.2 * v, a: 0.01, form: [[1400, 4, 1.2], [2800, 6, 0.4]] }); },
+  baa(p = 1, v = 1) { this.nAnimal = (this.nAnimal || 0) + 1; if (!ctx) return; voiceT(now(), { f: [340 * p, 360 * p, 300 * p], dur: 0.85, v: 0.36 * v, a: 0.04, trem: 8, lp0: 2600, form: [[1100, 4, 1.4], [2400, 6, 0.5], [600, 3, 0.4]] }); },
+  maa(p = 1, v = 1) { this.nAnimal = (this.nAnimal || 0) + 1; if (!ctx) return; voiceT(now(), { f: [470 * p, 520 * p, 410 * p], dur: 0.7, v: 0.32 * v, a: 0.03, trem: 11, lp0: 3000, form: [[1500, 5, 1.4], [2900, 6, 0.6]] }); },
+  neigh(p = 1, v = 1) { this.nAnimal = (this.nAnimal || 0) + 1; if (!ctx) return; const t = now();
+    voiceT(t, { f: [520 * p, 980 * p, 900 * p], dur: 0.35, v: 0.3 * v, a: 0.03, vib: 15, vibD: 40, lp0: 3200, form: [[1400, 3, 1.3], [2600, 5, 0.6]] });
+    voiceT(t + 0.33, { f: [900 * p, 640 * p, 420 * p], dur: 0.75, v: 0.3 * v, a: 0.02, trem: 17, vib: 9, vibD: 25, lp0: 2600, form: [[1200, 3, 1.3], [2400, 5, 0.6]] });
+    noise(t + 1.0, 0.35, 'bandpass', 900, 500, 0.15 * v, 2); },
+  clop(v = 1, p = 1) { if (!ctx) return; const t = now(); noise(t, 0.035, 'bandpass', 2300 * p, 1800, 0.3 * v, 4); tone(t, 'triangle', 430 * p, 300, 0.05, 0.12 * v); noise(t + 0.07, 0.03, 'bandpass', 2000 * p, 1600, 0.2 * v, 4); },
+  giggle(v = 1) { this.nGiggle = (this.nGiggle || 0) + 1; if (!ctx) return; const t = now(); for (let i = 0; i < 4; i++) voiceT(t + i * 0.13, { f: [760 - i * 40, 820 - i * 50, 700 - i * 40], dur: 0.09, v: 0.22 * v, a: 0.01, form: [[2200, 5, 1.2], [900, 4, 0.6]] }); },
+  sniff(v = 1) { if (!ctx) return; const t = now(); for (let i = 0; i < 3; i++) noise(t + i * 0.11, 0.06, 'highpass', 2500, 3500, 0.12 * v, 1); },
+  rooster(v = 1) { if (!ctx) return; const t = now(); [[0, 0.14, 650, 820], [0.17, 0.14, 700, 880], [0.36, 0.18, 760, 940], [0.6, 0.6, 980, 700]].forEach(([d, l, a, b]) => voiceT(t + d, { f: [a, b, b * 0.97], dur: l, v: 0.22 * v, a: 0.02, vib: 7, vibD: 15, form: [[1400, 4, 1.3], [2700, 6, 0.5]] })); },
+  tada(v = 1) { if (!ctx) return; const t = now(); [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(t + i * 0.08, 'triangle', f, f, 0.25, 0.14 * v)); },
   // v5 Deep Sea: a cluster of bubbly blips (n bubbles over ~0.4 s), a squishy INK splurt, and a sonar ping
   bubbles(v = 1, n = 6) { this.nBubbles = (this.nBubbles || 0) + 1; if (!ctx) return; const t = now(); for (let i = 0; i < n; i++) { const s = t + Math.random() * 0.4, f = 300 + Math.random() * 700; tone(s, 'sine', f, f * (2 + Math.random()), 0.05 + Math.random() * 0.04, 0.07 * v); } },
   ink(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.55, 'lowpass', 900, 120, 0.4 * v, 1.2); tone(t, 'sine', 140, 50, 0.4, 0.3 * v); this.bubbles(v * 0.7, 8); },

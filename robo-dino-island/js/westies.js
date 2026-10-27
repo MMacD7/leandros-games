@@ -132,7 +132,7 @@ export class Pup {
 
 export class Westies {
   constructor(game) {
-    this.g = game; this.state = 'off'; this.t = 0; this.cool = 70 + Math.random() * 60; this.lastEnd = -1e9; this.count = 0; this.clock = 0;
+    this.g = game; this.S = DOG_S; this.state = 'off'; this.t = 0; this.cool = 70 + Math.random() * 60; this.lastEnd = -1e9; this.count = 0; this.clock = 0;
     this.dogs = [{ name: 'RICKY', ...buildWestie('ricky', 0xd82a2a) }, { name: 'BOBBY', ...buildWestie('bobby', 0x2a6ad8) }];
     for (const d of this.dogs) { d.root.scale.setScalar(DOG_S); d.root.visible = false; d.pos = V(); d.yaw = 0; d.ph = Math.random() * 6; d.bark = 0; d.hop = 0; game.scene.add(d.root); }
     // spotlight beams + glowing floor discs (cheap additive meshes, no real lights)
@@ -158,11 +158,12 @@ export class Westies {
     for (const d of this.dogs) d.off = !!(P.def.westie && d.name.toLowerCase() === P.def.id);
     this.reason = reason; this.count++; this.introduced = false; this.barkQ = []; this.danced = 0; this.flew = false; this.log.push(reason); this.target = null; this.helped = 0;
     this.sea = !!(g.world && g.world.ocean); // v5 Deep Sea: SCUBA DOGS
-    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(DOG_S); d.bark = 0; d.hop = 0; d.spin = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
+    this.S = g.farm ? 1.15 : DOG_S; // v5.1: farm-dog size next to Leandro (2.5 is dino scale)
+    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(this.S); d.bark = 0; d.hop = 0; d.spin = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
     if (reason === 'button') { // v5 HELPER MODE: swoop in beside the player and follow
       this.helper = true; this.stage = null; const f = P.forward(V()), side = V(-f.z, 0, f.x);
       this.dogs.forEach((d, i) => { const s = i ? 1 : -1; d.stageY = null; d.pos.set(P.pos.x, 0, P.pos.z).addScaledVector(side, s * 26).addScaledVector(f, -12); d.alt = 9; d.yaw = P.yaw; });
-      this.state = 'follow'; this.t = 0; return true;
+      this.state = 'follow'; this.t = 0; this.farmPig = g.farm ? g.farm.startRunaway() : null; return true; // v5.1 farm: a piggy escapes and the dogs herd it home
     }
     this.helper = false; this.setupStage(reason); this.state = 'enter'; this.t = 0; return true;
   }
@@ -176,7 +177,7 @@ export class Westies {
     const yaw = g.cam.yaw, f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), side = new THREE.Vector3(-f.z, 0, f.x);
     const corners = Westies.footprint(P).map(o => ({ lat: Math.abs(o.dot(side)), fw: o.dot(f) }));
     const pitch = g.cam.pitch || 0.3, cp = Math.max(0.5, Math.cos(pitch)), aspect = (g.camera && g.camera.aspect) || 1.6;
-    const tanLim = Math.tan((g.camera ? g.camera.fov : 58) * Math.PI / 360) * aspect * 0.55, dogHalf = DOG_S * 0.8;
+    const tanLim = Math.tan((g.camera ? g.camera.fov : 58) * Math.PI / 360) * aspect * 0.55, dogHalf = this.S * 0.8;
     const aheads = [4, 4]; let D = Math.max(6, (g.cam.dist || 12) * cp), Ls = [0, 0];
     for (let k = 0; k < 40; k++, D += 1.5) { let need = 0; for (const c of corners) if (D + c.fw > 1) need = Math.max(need, (c.lat + 1.5) * 1.15 / (D + c.fw));
       Ls = aheads.map(a => need * (D + a) + dogHalf); if (Ls.every((L, i) => L / (D + aheads[i]) <= tanLim)) break; }
@@ -186,7 +187,7 @@ export class Westies {
     const eyeY = P.pos.y + P.mech.height * 0.82;
     this.stage = { yaw, lat: Math.max(...Ls), lats: Ls, aheads, need: D / cp, half: Math.max(...corners.map(c => c.lat)) };
     this.dogs.forEach((d, i) => { const s = i ? 1 : -1;
-      d.goal = base.clone().addScaledVector(f, aheads[i]).addScaledVector(side, s * Ls[i]); d.stageY = Math.max(eyeY - DOG_S * 0.5, this.ground(d.goal) + 0.6); const far = reason === 'victory' ? 16 : 30; d.start = d.goal.clone().addScaledVector(side, s * far).addScaledVector(f, far * 0.4);
+      d.goal = base.clone().addScaledVector(f, aheads[i]).addScaledVector(side, s * Ls[i]); d.stageY = Math.max(eyeY - this.S * 0.5, this.ground(d.goal) + 0.6); const far = reason === 'victory' ? 16 : 30; d.start = d.goal.clone().addScaledVector(side, s * far).addScaledVector(f, far * 0.4);
       if (!this.helper) d.pos.copy(d.start); d.bark = 0; d.hop = 0; d.spin = 0; });
   }
   // v5: nearest living enemy (prefer regular dinos over a boss) within reach of the player
@@ -240,8 +241,8 @@ export class Westies {
     if (this.helper) this.helperLogic(dt, T);
     for (const [i, d] of this.dogs.entries()) {
       if (d.off) continue;
-      let speed = 0, hopY = 0, spin = 0, rear = 0, wig = 0, sideX = 0, tailSp = 22, flap = 0;
-      if (this.helper && this.state !== 'enter' && this.state !== 'dance' && this.state !== 'fly') { const a = this.anim(d, i, dt, T); speed = a.speed; hopY = a.hopY; flap = a.flap; rear = a.rear; spin = a.spin; tailSp = a.tailSp; }
+      let speed = 0, hopY = 0, spin = 0, rear = 0, wig = 0, sideX = 0, tailSp = 22, flap = 0, sniff = 0;
+      if (this.helper && this.state !== 'enter' && this.state !== 'dance' && this.state !== 'fly') { const a = this.anim(d, i, dt, T); speed = a.speed; hopY = a.hopY; flap = a.flap; rear = a.rear; spin = a.spin; tailSp = a.tailSp; wig = a.wig || 0; sniff = a.sniff || 0; }
       else if (this.state === 'enter') { flap = 1; if (Math.random() < 0.6) this.sparkle(d); const to = V().subVectors(d.goal, d.pos).setY(0), L = to.length(); // capes out: they fly in
         if (L > 0.4) { speed = Math.min(20, L / dt); d.pos.addScaledVector(to.normalize(), Math.min(L, 20 * dt)); d.yaw = Math.atan2(to.x, to.z); } }
       else if (this.state === 'dance') {
@@ -255,7 +256,7 @@ export class Westies {
       } else if (this.state === 'fly') {
         d.vy += dt * (this.sea ? 9 + i * 2 : 14 + i * 3); d.alt += d.vy * dt; flap = 1; tailSp = 40; spin = Math.sin(T * 3 + i) * 0.4; rear = 0.5; if (this.sea && Math.random() < 0.5) this.g.bubbles(d.head.getWorldPosition(V()), 2, 0.4, 4);
         if (Math.random() < 0.9) this.sparkle(d);
-        const sc = DOG_S * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
+        const sc = this.S * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
       }
       const side = V(Math.cos(d.yaw), 0, -Math.sin(d.yaw));
       d.ph += dt * (speed > 1 ? 16 : 5); const run = Math.min(1, speed / 8), sw = Math.sin(d.ph);
@@ -265,7 +266,7 @@ export class Westies {
       if (this.helper && this.state !== 'fly') { if (d.alt > 0 && d.goalAlt === undefined) d.alt = Math.max(0, d.alt - dt * 9); if (d.goalAlt !== undefined) d.alt += (d.goalAlt - d.alt) * Math.min(1, dt * 10); }
       d.root.position.copy(d.pos).addScaledVector(side, sideX); d.root.position.y += d.alt || 0; d.root.rotation.y = d.yaw + spin;
       d.body.position.y = 0.55 + hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.18 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
-      d.bark = Math.max(0, d.bark - dt); d.head.rotation.x = d.bark > 0 ? -0.25 * Math.sin(d.bark / 0.3 * Math.PI) : 0; d.jaw.position.y = -0.16 - (this.state === 'dance' ? 0.05 : 0) - (d.bark > 0 ? 0.06 : 0);
+      d.bark = Math.max(0, d.bark - dt); d.head.rotation.x = d.bark > 0 ? -0.25 * Math.sin(d.bark / 0.3 * Math.PI) : sniff; d.jaw.position.y = -0.16 - (this.state === 'dance' ? 0.05 : 0) - (d.bark > 0 ? 0.06 : 0);
       d.tail.rotation.z = Math.sin(this.clock * tailSp + i) * (this.state === 'dance' ? 0.75 : 0.5);
       d.cape.rotation.x = flap ? 1.0 + Math.sin(this.clock * 30 + i) * 0.45 : 1.3 + run * 0.22 + Math.sin(this.clock * 9 + i) * 0.1;
       this.spots[i].position.set(d.pos.x, d.pos.y, d.pos.z);
@@ -283,7 +284,8 @@ export class Westies {
     while (this.barkQ && this.barkQ.length && T >= this.barkQ[0].t) { const b = this.barkQ.shift(); if (!this.dogs[b.i].off) this.woof(b.i, b.n); }
     if (this.state === 'follow') {
       if (!this.introduced && T > 0.5) this.intro();
-      if (T > 3.2) { this.target = this.pickTarget();
+      if (T > 3.2 && this.farmPig && g.farm) { this.state = 'herd'; this.t = 0; g.farm.herd(this.farmPig); g.hud.toast('🐶 Ricky & Bobby are herding the piggy home! 🐷'); sfx.whoosh && sfx.whoosh(1); this.bark2(2); }
+      else if (T > 3.2) { this.target = this.pickTarget();
         if (this.target) { this.state = 'hunt'; this.t = 0; g.hud.toast('🐶 Ricky & Bobby are on the hunt! 🐾'); sfx.whoosh && sfx.whoosh(1); }
         else { this.setupStage('button'); this.dogs.forEach(d => { d.alt = 0; }); this.state = 'enter'; this.t = 0; this.barkQ = []; } } // nobody to fight: dance like before
     } else if (this.state === 'hunt') {
@@ -301,6 +303,22 @@ export class Westies {
         g.hud.toast('🐶 RICKY & BOBBY GOT ONE! 💥'); voice.say('Good dogs!', { prio: 2, cd: 4000, pitch: 1.1, rate: 1.1 });
         this.state = 'cheer'; this.t = 0; this.bark2(2); for (const d of this.activeDogs()) this.confetti(d.pos, 18); }
     } else if (this.state === 'cheer') { if (T > 1.3) { this.dogs.forEach(d => { d.goalAlt = undefined; }); this.flyAway(); } }
+    // ---- v5.1 Farty Poop Farm: herd the runaway piggy → sniff the poop / roll in the mud → one dog toots → cheer → fly away
+    else if (this.state === 'herd') { const pig = this.farmPig, F = g.farm;
+      if (Math.random() < dt * 2.2) this.woof(this.dogs[0].off ? 1 : this.dogs[1].off ? 0 : (Math.random() * 2) | 0, 1);
+      if (pig.state !== 'herded' || T > 16) { if (pig.state === 'herded') { pig.place(pig.pen.x, pig.pen.z); pig.path = null; F.herdDone(pig); g.fx.dust(pig.pos, 10, 1.2, 4); }
+        this.herded = (this.herded || 0) + 1; this.spot = F.nearestPoopOrMud(this.activeDogs()[0].pos) || { x: P.pos.x + 4, z: P.pos.z + 4, poop: false }; this.state = 'sniff'; this.t = 0; this.bark2(2); } }
+    else if (this.state === 'sniff') { const sp = this.spot, near = this.activeDogs().every(d => Math.hypot(d.pos.x - sp.x, d.pos.z - sp.z) < 2.6);
+      if (near && !this.sniffAt) { this.sniffAt = T; g.hud.toast('🐶 Sniff sniff… what is THIS? 👃'); }
+      if (this.sniffAt && Math.random() < dt * 3) sfx.sniff && sfx.sniff(0.8);
+      if ((this.sniffAt && T - this.sniffAt > 1.3) || T > 6) { this.sniffAt = 0; this.state = 'roll'; this.t = 0; this.rolled = (this.rolled || 0) + 1; sfx.squish && sfx.squish(0.7);
+        g.hud.toast(sp.poop ? '🐶 EWWW! Ricky & Bobby rolled in the POOP! 💩😂' : '🐶 Ricky & Bobby rolled in the MUD! 🟤😂'); } }
+    else if (this.state === 'roll') { if (Math.random() < dt * 8) for (const d of this.activeDogs()) g.farm && g.farm.splat(d.pos, 2, 0.7);
+      if (T > 1.7) { this.state = 'toot'; this.t = 0; } }
+    else if (this.state === 'toot') { if (!this.tooted && T > 0.25) { this.tooted = true; this.dogToots = (this.dogToots || 0) + 1; const i = this.dogs[1].off ? 0 : 1, d = this.dogs[i]; sfx.fart && sfx.fart('tiny', 1);
+        if (g.farm) g.farm.cloud(V(d.pos.x - Math.sin(d.yaw) * 1.2, d.pos.y + 1, d.pos.z - Math.cos(d.yaw) * 1.2), V(-Math.sin(d.yaw), 0, -Math.cos(d.yaw)), 8, 0.8);
+        g.hud.toast(i ? '💨 Bobby tooted! Excuse you, Bobby! 😂' : '💨 Ricky tooted! Excuse you, Ricky! 😂'); }
+      if (T > 1.5) { this.tooted = false; this.state = 'cheer'; this.t = 0; this.bark2(2); for (const d of this.activeDogs()) this.confetti(d.pos, 18); } }
   }
   anim(d, i, dt, T) {
     const g = this.g, P = g.player, s = i ? 1 : -1, out = { speed: 0, hopY: 0, flap: 0, rear: 0, spin: 0, tailSp: 26 };
@@ -318,6 +336,12 @@ export class Westies {
         const want = Math.atan2(e.pos.x - d.pos.x, e.pos.z - d.pos.z); d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 14);
         if (T > 0.35) { out.hopY = Math.abs(Math.sin(T * 22 + i)) * 0.3; out.rear = 0.25 + 0.2 * Math.sin(T * 22 + i); d.bark = Math.max(d.bark, 0.12); } out.tailSp = 44; } }
     else if (this.state === 'cheer') { d.goalAlt = 0; out.hopY = Math.max(0, Math.sin(T * 10 + i * 1.6)) * 0.8 * HOP; out.rear = 0.35; out.tailSp = 40; }
+    else if (this.state === 'herd') { const pig = this.farmPig, wp = (pig.path && pig.path[0]) || pig.pos, to = V(wp.x - pig.pos.x, 0, wp.z - pig.pos.z); if (to.lengthSq() < 0.01) to.set(0, 0, 1); to.normalize();
+      const side = V(-to.z, 0, to.x), gx = pig.pos.x - to.x * 3.4 + side.x * s * 1.9, gz = pig.pos.z - to.z * 3.4 + side.z * s * 1.9, far = Math.hypot(gx - d.pos.x, gz - d.pos.z) > 12;
+      mv(gx, gz, far ? 60 : 30); out.flap = far ? 1 : 0; out.tailSp = 40; if (Math.random() < 0.4) this.g.fx.dust(d.pos, 1, 1, 4); }
+    else if (this.state === 'sniff') { const sp = this.spot; mv(sp.x + s * 1.2, sp.z + 0.6, 34); out.tailSp = 44; if (this.sniffAt) { out.sniff = 0.55 + Math.sin(T * 14 + i) * 0.08; const want = Math.atan2(sp.x - d.pos.x, sp.z - d.pos.z); d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 6); } }
+    else if (this.state === 'roll') { out.wig = (T * 9 + i * 1.3); out.hopY = Math.abs(Math.sin(T * 9)) * 0.1; out.tailSp = 50; }
+    else if (this.state === 'toot') { const k = (this.dogs[1].off ? 0 : 1) === i; out.hopY = T > 0.25 && T < 0.8 ? Math.sin((T - 0.25) / 0.55 * Math.PI) * (k ? 0.5 : 0.9) * HOP : 0; out.rear = T > 0.25 ? 0.3 : 0; out.tailSp = 50; }
     if (this.sea) { // v5 Deep Sea: they SWIM at the action's height (paddling flippers), a regulator bubble now and then
       const gd = this.ground(d.pos), bob = Math.sin(T * 2.4 + i * 2) * 0.5, e = this.target;
       if (this.state === 'follow' || this.state === 'cheer') d.goalAlt = Math.max(0.3, P.pos.y + P.mech.height * 0.35 - gd + bob + (this.state === 'cheer' ? 1.5 : 0));

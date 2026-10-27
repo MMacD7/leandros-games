@@ -189,7 +189,7 @@ export function loadSave() {
     for (const k in up) up[k] = Math.max(0, Math.min(MAX_UP, up[k] | 0));
     const out = { ...f, ...s, up, owned, allUnlocked: true };
     if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex';
-    if (!['peak', 'city', 'ocean'].includes(out.level)) out.level = 'jungle';
+    if (!['peak', 'city', 'ocean', 'farm'].includes(out.level)) out.level = 'jungle';
     out.voice = out.voice !== false;
     return out;
   } catch (e) { return fresh(); }

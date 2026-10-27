@@ -6,6 +6,7 @@ import { leafTexture, broadLeafTexture, barkTexture, waterNormal } from './proct
 import { rawHeightPeak, buildLavaSea, buildPeakVegetation, buildCastle, buildPeakExtras, updatePeak } from './peak.js';
 import { rawHeightCity, cityGroundGLSL, buildCity, updateCity } from './city.js';
 import { rawHeightOcean, oceanGLSL, buildOcean, updateOcean } from './ocean.js';
+import { rawHeightFarm, farmDirt, buildFarm, updateFarmWorld } from './farm.js';
 
 export const S = 820, N = 256, R_ISLAND = 300;
 export const BASE = new THREE.Vector3(15, 0, 212);
@@ -38,7 +39,7 @@ function rawHeight(x, z) {
 export class World {
   constructor(scene, assets, quality, level = 'jungle') {
     this.scene = scene; this.assets = assets; this.q = quality; this.time = 0;
-    this.level = level; this.peak = level === 'peak'; this.lava = this.peak; this.isCity = level === 'city'; this.city = null; this.ocean = level === 'ocean';
+    this.level = level; this.peak = level === 'peak'; this.lava = this.peak; this.isCity = level === 'city'; this.city = null; this.ocean = level === 'ocean'; this.farm = level === 'farm';
     this.root = new THREE.Group(); this.root.name = 'world-' + level; scene.add(this.root);
     this.colliders = []; this.grid = new Map(); this.braziers = []; this.flashT = 0;
     this.buildHeight();
@@ -47,9 +48,10 @@ export class World {
     this.buildVolcano();
     if (this.isCity) { this.windU = { uTime: { value: 0 } }; this.lodSets = []; this.lodTimer = 0; buildCity(this); } // v5: Mega City Smash
     else if (this.ocean) { buildOcean(this); this.buildRuins(); } // v5: Deep Sea Showdown (sunken Atlantis ruins in the arena)
+    else if (this.farm) { this.windU = { uTime: { value: 0 } }; this.lodSets = []; buildFarm(this); } // v5.1: Farty Poop Farm
     else { if (this.peak) buildPeakVegetation(this); else this.buildVegetation();
       if (this.peak) buildCastle(this); else this.buildRuins(); }
-    this.buildBase();
+    this.buildBase(); if (this.farm) { this.baseGroup.visible = false; this.beam = null; this.smokeOrigin = this.farmData.chimney.clone(); }
     this.buildGrass();
     if (this.peak) buildPeakExtras(this);
   }
@@ -58,7 +60,7 @@ export class World {
   // ---------- height field ----------
   buildHeight() {
     const n = N + 1; this.H = new Float32Array(n * n); this.splat = new Float32Array(n * n * 4); this.dens = new Float32Array(n * n * 2);
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) this.H[j * n + i] = (this.peak ? rawHeightPeak : this.isCity ? rawHeightCity : this.ocean ? rawHeightOcean : rawHeight)(-S / 2 + i * S / N, -S / 2 + j * S / N);
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) this.H[j * n + i] = (this.peak ? rawHeightPeak : this.isCity ? rawHeightCity : this.ocean ? rawHeightOcean : this.farm ? rawHeightFarm : rawHeight)(-S / 2 + i * S / N, -S / 2 + j * S / N);
     const hm = new Uint16Array(n * n * 4); const toH = THREE.DataUtils.toHalfFloat;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
       const k = j * n + i, x = -S / 2 + i * S / N, z = -S / 2 + j * S / N, h = this.H[k];
@@ -75,10 +77,13 @@ export class World {
         rock = clamp(smooth(0.9, 0.7, ny) + smooth(15, 32, h) * 0.75 + smooth(80, 35, dv) * 0.6, 0, 1);
         grass = smooth(0.08, 0.32, fbm(x * 0.02 + 3, z * 0.02 - 7, 3)) * (1 - rock) * 0.95 * smooth(16, 28, db) * smooth(42, 56, da);
         dirt = clamp(smooth(0.15, 0.5, fbm(x * 0.03, z * 0.03, 2)) * 0.45, 0, 1) * (1 - rock) * (1 - grass); sand = Math.max(0, 1 - rock - grass - dirt); }
+      if (this.farm) { // v5.1 farm: lush grass everywhere, bare earth on the yard / paths / pens / crop rows, sand at the shore + pond
+        rock = clamp(smooth(0.86, 0.7, ny) * 0.8 + smooth(18, 34, h) * 0.5, 0, 1); sand = clamp(1 - smooth(1.2, 2.8, h), 0, 1) * (1 - rock);
+        dirt = farmDirt(x, z) * (1 - sand) * (1 - rock); grass = Math.max(0, 1 - sand - rock - dirt); }
       this.splat.set([grass, sand, rock, dirt], k * 4);
       if (this.peak) { rock = clamp(rock + smooth(0.95, 0.8, ny) * 0.5 + smooth(14, 28, h) * 0.4, 0, 1); }
       let g = grass * smooth(1.8, 3.4, h) * (0.75 + 0.25 * smooth(-0.3, 0.3, fbm(x * 0.03, z * 0.03, 3))) * smooth(13, 20, db);
-      g = clamp(g * (this.peak ? 0.9 : 1.5), 0, 1); if (this.isCity) g = 0; if (this.ocean) g = clamp(grass * 1.3, 0, 1);
+      g = clamp(g * (this.peak ? 0.9 : 1.5), 0, 1); if (this.isCity) g = 0; if (this.farm) g = clamp(g * smooth(0.3, 0.7, grass) * 0.75, 0, 1); // v5.1 farm: bare yard / paths, shorter 'grazed' grass so poops stay visible if (this.ocean) g = clamp(grass * 1.3, 0, 1);
       const fl = g * smooth(-0.02, 0.28, fbm(x * 0.022 + 11, z * 0.022 + 5, 3));
       this.dens[k * 2] = g; this.dens[k * 2 + 1] = fl;
       hm[k * 4] = toH(h); hm[k * 4 + 1] = toH(g); hm[k * 4 + 2] = toH(fl); hm[k * 4 + 3] = toH(rock);
@@ -119,6 +124,7 @@ export class World {
     if (this.peak) { mat.defines = { PEAK: '' }; mat.customProgramCacheKey = () => 'terrain-peak'; }
     if (this.isCity) { mat.defines = { CITY: '' }; mat.customProgramCacheKey = () => 'terrain-city'; }
     if (this.ocean) { mat.defines = { OCEAN: '' }; mat.customProgramCacheKey = () => 'terrain-ocean'; }
+    if (this.farm) { mat.defines = { FARM: '' }; mat.customProgramCacheKey = () => 'terrain-farm'; }
     const cityGLSL = this.isCity ? cityGroundGLSL() : this.ocean ? oceanGLSL() : '';
     mat.onBeforeCompile = sh => {
       sh.uniforms.uTime = this.terrainU.uTime;
@@ -152,6 +158,9 @@ float vcd = length(vWP.xz - vec2(${VOLC.x.toFixed(1)}, ${VOLC.z.toFixed(1)}));
 heat = max(heat, smoothstep(150.0, 60.0, vcd) * 0.9);
 float pulse = 0.8 + 0.2 * sin(vWP.x * 0.07 + vWP.z * 0.05 + uTime * 1.3);
 vec3 lavaE = vec3(2.2, 0.42, 0.05) * max(vein * heat, (1.0 - smoothstep(-0.6, 0.9, vWP.y)) * 0.85) * pulse;
+#endif
+#ifdef FARM
+cg = gl * vec3(0.62, 1.12, 0.26) * 1.42; cd *= vec3(1.15, 0.95, 0.72);
 #endif
 #ifdef OCEAN
 cg = gl * vec3(0.20, 0.42, 0.28) * 1.15; cs *= vec3(1.02, 0.98, 0.86); cr *= vec3(0.6, 0.68, 0.74); cd = cs * vec3(0.74, 0.7, 0.62);
@@ -209,7 +218,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     this.lavaGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.assets.glow, color: 0xff6a20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false }));
     this.lavaGlow.scale.set(60, 40, 1); if (this.peak) this.lavaGlow.material.color.set(0xff4a10); this.lavaGlow.position.set(VOLC.x, this.craterY + 8, VOLC.z); this.root.add(this.lavaGlow);
     this.smokeOrigin = new THREE.Vector3(VOLC.x, this.craterY + 4, VOLC.z);
-    if (this.isCity) { lava.visible = false; this.lavaGlow.visible = false; }
+    if (this.isCity || this.farm) { lava.visible = false; this.lavaGlow.visible = false; }
   }
 
   // ---------- colliders ----------
@@ -379,8 +388,8 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
       for (let i = 0; i < MAX; i++) { inst[i * 4] = r() * tile; inst[i * 4 + 1] = r() * tile; inst[i * 4 + 2] = r() * 6.283; inst[i * 4 + 3] = 0.75 + r() * 0.6; }
       ig.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4)); ig.instanceCount = MAX;
       const u = this.hmUniforms({ uTime: this.windU.uTime, uCenter: { value: new THREE.Vector3() }, uTile: { value: tile }, uRadius: { value: 60 }, uPlayer: { value: new THREE.Vector4(0, 0, 0, 3) } });
-      const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }); const peak = this.peak, ocean = this.ocean;
-      mat.customProgramCacheKey = () => (peak ? 'grass-peak-' : ocean ? 'grass-ocean-' : 'grass-jungle-') + isFlower;
+      const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }); const peak = this.peak, ocean = this.ocean, farm = this.farm;
+      mat.customProgramCacheKey = () => (peak ? 'grass-peak-' : ocean ? 'grass-ocean-' : farm ? 'grass-farm-' : 'grass-jungle-') + isFlower;
       mat.onBeforeCompile = sh => {
         Object.assign(sh.uniforms, u);
         sh.vertexShader = sh.vertexShader.replace('#include <common>', `#include <common>
@@ -419,6 +428,11 @@ vec4 diffuseColor = vec4(fc, 1.0);` :
             `vec3 tip = mix(vec3(0.30,0.12,0.05), vec3(0.52,0.30,0.12), vVar);
 vec4 diffuseColor = vec4(mix(vec3(0.05,0.025,0.02), tip, smoothstep(0.0, 1.0, vY)), 1.0);`)
           .replace('#include <emissivemap_fragment>', isFlower ? '#include <emissivemap_fragment>\nif (vY > 0.55) totalEmissiveRadiance += vec3(0.9, 0.16, 0.02) * (0.45 + 0.4 * vVar);' : '#include <emissivemap_fragment>'); return; }
+        if (farm) { sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vY; varying float vVar;')
+          .replace('vec4 diffuseColor = vec4( diffuse, opacity );', isFlower ? // daisies, buttercups and poppies
+            `vec3 fc = vY > 0.55 ? (vVar < 0.4 ? vec3(1.0,0.86,0.12) : vVar < 0.75 ? vec3(0.98,0.97,0.92) : vec3(0.92,0.16,0.1)) : vec3(0.08,0.2,0.03);
+vec4 diffuseColor = vec4(fc, 1.0);` : `vec3 tip = mix(vec3(0.26,0.6,0.06), vec3(0.52,0.78,0.16), vVar);
+vec4 diffuseColor = vec4(mix(vec3(0.04,0.12,0.02), tip, smoothstep(0.0, 1.0, vY)), 1.0);`); return; }
         sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vY; varying float vVar;')
           .replace('vec4 diffuseColor = vec4( diffuse, opacity );', isFlower ?
             `vec3 fc = vY > 0.55 ? mix(vec3(0.28,0.07,0.55), vec3(0.75,0.42,1.0), clamp((vY-0.6)*2.0 + vVar*0.4, 0.0, 1.0)) : vec3(0.05,0.12,0.02);
@@ -449,6 +463,7 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
     if (this.peak) updatePeak(this, dt, cam);
     if (this.isCity) updateCity(this, dt);
     if (this.ocean) updateOcean(this, dt, cam);
+    if (this.farm) updateFarmWorld(this, dt);
     // grass center slightly ahead of camera toward player so the field fills the view
     const cx = lerp(cam.x, player.x, 0.7), cz = lerp(cam.z, player.z, 0.7);
     for (const g of [this.grass, this.flowers]) { g.u.uCenter.value.set(cx, 0, cz); g.u.uPlayer.value.set(player.x, 0, player.z, 3.2 * (player.scale || 1)); }

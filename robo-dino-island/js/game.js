@@ -12,11 +12,12 @@ import { sfx } from './audio.js';
 import { clamp, lerp, rng } from './noise.js';
 import { Mayhem } from './mayhem.js';
 import { Rider } from './rider.js';
+import { FarmLife, KidMech, KID } from './farm.js';
 
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const pool = new Map();
-export const makeDino = (def, assets, wild) => def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+export const makeDino = (def, assets, wild) => def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
 const ROID = ['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero']; // v5 "on steroids" dinos (every level)
 const STAMPEDERS = ['raptorpack', 'velo', 'megatrike', 'trice', 'pachy', 'para', 'raptor'];
 function getMech(def, assets, wild) { const k = def.id + (wild ? '!' : ''); const p = pool.get(k); if (p && p.length) return p.pop(); return makeDino(def, assets, wild); }
@@ -135,8 +136,11 @@ export class Game {
     this.mh = new Mayhem(this);
     this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
     this.westies = new Westies(this);
+    this.bindFarm();
   }
-  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && this.save.ride !== false && !p.def.westie && !p.def.sea && !(this.world && this.world.ocean)) R.mount(p.mech); } // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
+  // v5.1 Farty Poop Farm: the living farm (animals, poop, horse, Bad David) belongs to the farm world
+  bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
+  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean)) R.mount(p.mech); } // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }
 
@@ -145,7 +149,8 @@ export class Game {
     if (this.player) this.player.remove();
     let def = DINOS.find(d => d.id === this.save.selected) || DINOS[0]; const oc = this.world && this.world.ocean, by = id => DINOS.find(d => d.id === id);
     if (oc && !def.sea && !def.westie) def = by(this.save.seaSel) || by('shark'); else if (!oc && def.sea) def = by(this.save.landSel) || by('rex'); // v5: sea creatures swim in the Deep Sea, land dinos stomp on land
-    const p = new Dino(this, def, false); this.player = p; if (def.westie) setScuba(p.mech.w, oc); // Ricky / Bobby dive in scuba gear this.mountRider();
+    if (this.world && this.world.farm) { def = KID; if (this.farm) { this.farm.riding = false; this.farm.kidSpeed = null; } } // v5.1: on the farm you ARE Leandro
+    const p = new Dino(this, def, false); this.player = p; if (def.farmKid) { p.mech.setRide(false); p.mech.mud = 0; } if (def.westie) setScuba(p.mech.w, oc); // Ricky / Bobby dive in scuba gear this.mountRider();
     if (atArena) p.place(ARENA.x - 30, ARENA.z, Math.PI / 2); else p.place(BASE.x, BASE.z - 6, Math.PI);
     this.cam.yaw = p.yaw + Math.PI; this.snapCam = true;
     if (this.hud.actions) this.hud.actions(def);
@@ -197,7 +202,7 @@ export class Game {
     this.placePickups();
   }
   placePickups() {
-    this.pickups = [];
+    this.pickups = []; if (this.world.farm) return; // v5.1: no robot parts lying around the farm
     const r = rng(this.world.peak ? 4321 : 1234);
     for (let i = 0; i < 90; i++) {
       const a = r() * Math.PI * 2, d = 20 + r() * 260, x = Math.cos(a) * d, z = Math.sin(a) * d, h = this.world.height(x, z);
@@ -208,13 +213,14 @@ export class Game {
   // switch level (Jungle Island <-> Dragon Peak)
   setWorld(w) {
     if (this.westies) this.westies.reset();
-    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = [];
+    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm();
   }
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
 
   // ---------- modes ----------
-  startRoam() { this.mode = 'roam'; this.clearEnemies(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
+  startRoam() { this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
   startBattle() {
+    if (this.world && this.world.farm) { this.hud.toast('🚜 No battles on the farm! Feed the animals instead 🐮'); return; }
     if (this.westies) { this.westies.reset(); if (this.r() < 0.3) this.later(2.5, () => this.westies.trigger('battle')); }
     this.mode = 'battle'; this.clearEnemies(); this.spawnPlayer(true);
     this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false, boss: null, bosses: 0 }; this.mh.resetArena(); this.nextWave();
@@ -328,6 +334,7 @@ export class Game {
     }
   }
   footstep(d, foot) {
+    if (d.def.farmKid) { if (this.farm) this.farm.step(d, foot); return; } // little feet (or clip-clop hooves), no camera rumble
     const m = d.mech, s = d.def.scale, heavy = (d.real || m.quad || ['rex', 'bronto', 'spino', 'ankylo', 'tri'].includes(d.def.kind)) ? s * s : s * s * 0.5;
     const cp = this.camera.position, dist = Math.hypot(d.pos.x - cp.x, d.pos.z - cp.z), near = clamp(1 - dist / 70, 0, 1);
     if (near <= 0) return;
@@ -722,7 +729,7 @@ export class Game {
       const mag = Math.min(1, Math.hypot(inp.x, inp.y));
       p.boosting = !p.def.westie && inp.btn.boost && p.boostE > 0.05;
       if (p.def.westie) this.pupJump(p, inp, dt);
-      if (p.boosting) { p.boostE = Math.max(0, p.boostE - dt); if (inp.pressed.boost) sfx.boost(); this.jetFlame(p); } else p.boostE = Math.min(p.st.boost, p.boostE + dt * 0.45);
+      if (p.boosting) { p.boostE = Math.max(0, p.boostE - dt); if (inp.pressed.boost && !p.def.farmKid) sfx.boost(); this.jetFlame(p); } else p.boostE = Math.min(p.st.boost, p.boostE + dt * 0.45);
       if (p.def.sea && p.fly) { const v = (inp.btn.up ? 1 : 0) - (inp.btn.down ? 1 : 0) + (inp.pressed.up ? 0.5 : 0) - (inp.pressed.down ? 0.5 : 0); p.climb = clamp(v, -1, 1); p.alt = clamp(p.alt + v * 15 * dt, 0, 48); if (v) this.swimUD = (this.swimUD || 0) + 1; } // v5: free 3D swimming (▲/▼)
       else if (p.fly) { p.climb = p.boosting ? 1 : 0; p.alt = clamp(p.alt + (p.boosting ? 9 : -2.5) * dt, 5, 40); }
       if (!this.updateAct(p, dt)) p.move(dt, mag > 0.05 ? dir.normalize() : dir, mag, p.boosting && !p.fly ? true : p.boosting);
@@ -737,7 +744,8 @@ export class Game {
       const taps = k => Math.min(4, +inp.pressed[k] || 0) || (inp.btn[k] && p[k + 'T'] <= 0 ? 1 : 0); // every tap counts (even several between two frames)
       const nL = taps('laser'), nM = taps('missile'), nB = taps('melee'), L = nL > 0, M = nM > 0, B = nB > 0;
       if (L) p.laserT = p.st.rate; if (M) p.missileT = REP; if (B) p.meleeT = REP;
-      if (p.def.westie) { // v5: Ricky / Bobby: BITE, BARK BLAST, ZOOMIES (jump is on the 4th button)
+      if (p.def.farmKid) { if (this.farm) this.farm.controls(p, inp, nL, nM, nB); } // v5.1 farm: FEED / RIDE / TOOT / RUN
+      else if (p.def.westie) { // v5: Ricky / Bobby: BITE, BARK BLAST, ZOOMIES (jump is on the 4th button)
         if (L) { if (p.act && p.act.type !== 'zoomies') p.act = null; this.bite(p, this.lock); }
         if (M) this.barkBlast(p);
         if (B && !(p.act && p.act.type === 'zoomies')) { const dir = this.lock && this.lock.alive && this.lock.pos.distanceTo(p.pos) < 40 ? new THREE.Vector3().subVectors(this.lock.pos, p.pos).setY(0).normalize() : p.forward(new THREE.Vector3()); p.act = { type: 'zoomies', t: 0, dur: 0.95, dir, speed: 44, hit: new Set() }; this.zooms = (this.zooms || 0) + 1; sfx.whoosh(1.3); sfx.bark(p.def.id === 'bobby' ? 1.15 : 1, 0.6, 1); }
@@ -771,6 +779,7 @@ export class Game {
     }
     for (let i = this.timers.length - 1; i >= 0; i--) { const T = this.timers[i]; T.t -= dt; if (T.t <= 0) { this.timers.splice(i, 1); T.fn(); } }
     p.updateVisual(dt); this.rider.update(dt, p);
+    if (this.farm) this.farm.update(dt);
     if (p.shieldT > 0) { p.shieldT -= dt; if (Math.random() < 0.5) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 5, p.pos.y + Math.random() * p.mech.height, p.pos.z + (Math.random() - 0.5) * 5), vel: { x: 0, y: 1.5, z: 0 }, size: 0.5, life: 0.6, r: 0.3, g: 1.8, b: 2.6, alpha: 1 }); }
     if (!p.alive && this.player !== p) return;
 
@@ -793,7 +802,7 @@ export class Game {
       if (d < m && d > 1e-3 && !(a.fly && a.alt > 4) && !(b.fly && b.alt > 4)) { const push = (m - d) / 2 / d; a.pos.x -= dx * push; a.pos.z -= dz * push; b.pos.x += dx * push; b.pos.z += dz * push; } }
 
     // spawning
-    if (this.mode === 'roam') { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
+    if (this.mode === 'roam' && !this.farm) { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
       if (this.spawnT <= 0 && alive < Math.min(this.maxEnemies(), this.quality.enemies)) { this.spawnT = 2.5; const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
       this.stampT = (this.stampT ?? 70) - dt; if (this.stampT <= 0) { this.stampT = 75 + this.r() * 60; if (p.alive) this.stampede(); }
       // despawn very far enemies so the island stays lively near the player
@@ -962,7 +971,7 @@ export class Game {
     const p = this.player, c = this.cam, h = p.mech.height;
     // auto-follow behind the dino while moving (unless the player is steering the camera)
     if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI; c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
-    let dist = 4 + h * 1.55 + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
+    let dist = 4 + h * 1.55 + (p.def.farmKid ? 1.8 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
     // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;

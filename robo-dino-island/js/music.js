@@ -53,6 +53,12 @@ const I = {
   sonar: (b, t, m = 86, v = 1) => { for (let k = 0; k < 3; k++) { const tk = t + k * 0.38, a = Math.pow(0.42, k); osc(b, tk, 'sine', mtof(m), mtof(m) * 0.995, 0.004, 0.13 * v * a, 1.3); osc(b, tk, 'sine', mtof(m + 12), mtof(m + 12), 0.002, 0.03 * v * a, 0.35); } },
   whale: (b, t, m, d, v = 1) => { const f = mtof(m); osc(b, t, 'triangle', f, f * 1.5, d * 0.45, 0.07 * v, d * 0.55, [900, 500, 2]); osc(b, t + d * 0.5, 'sine', f * 1.5, f * 0.9, d * 0.2, 0.05 * v, d * 0.5); },
   bubble: (b, t, v = 1) => { const f = 500 + Math.random() * 900; osc(b, t, 'sine', f, f * 2.6, 0.003, 0.05 * v, 0.06); },
+  // v5.1 farm hoedown kit: plucky banjo, sawing fiddle (with vibrato), cowbell, washboard scrape and a silly tuba "toot"
+  banjo: (b, t, m, v = 1) => { osc(b, t, 'triangle', mtof(m), mtof(m), 0.001, 0.14 * v, 0.16); osc(b, t, 'square', mtof(m) * 2, mtof(m) * 2, 0.001, 0.03 * v, 0.07, [4200, 1200, 1]); nz(b, t, 'highpass', 3200, 1, 0.001, 0.035 * v, 0.012); },
+  fiddle: (b, t, m, d, v = 1) => { const o = osc(b, t, 'sawtooth', mtof(m), mtof(m), 0.025, 0.075 * v, d, [3000, 1900, 2]); const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.8; lg.gain.value = 14; lfo.connect(lg); lg.connect(o.detune); lfo.start(t + 0.05); lfo.stop(t + d + 0.1); },
+  cowbell: (b, t, v = 1) => { osc(b, t, 'square', 545, 545, 0.001, 0.06 * v, 0.2, [2600, 900, 6]); osc(b, t, 'square', 815, 815, 0.001, 0.045 * v, 0.16, [2600, 900, 6]); },
+  wash: (b, t, v = 1) => nz(b, t, 'highpass', 5200, 1.5, 0.002, 0.13 * v, 0.045, 7000),
+  tuba: (b, t, m, d, v = 1) => { const o = osc(b, t, 'sawtooth', mtof(m), mtof(m) * 0.8, 0.01, 0.2 * v, d, [700, 260, 3]); const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.type = 'square'; lfo.frequency.value = 28; lg.gain.value = 60; lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(t + d + 0.1); },
   swell: (b, t, m, d, v = 1) => { for (const det of [-10, 10]) { const o = osc(b, t, 'sawtooth', mtof(m), mtof(m), d * 0.4, 0.05 * v, d * 0.6, [300, 700, 1.5]); o.detune.value = det; } },
 };
 
@@ -91,6 +97,29 @@ function metal(b, t, s, bar, d, o) {
 const MEL_PEAK = [[76, -1, -1, 77, 76, -1, 74, -1, 71, -1, -1, -1, 72, -1, 71, -1], [77, -1, -1, 79, 77, -1, 76, -1, 72, -1, -1, -1, 74, -1, 72, -1], [76, -1, 79, -1, 83, -1, 81, 79, 77, -1, 76, -1, 74, -1, 76, -1], [74, -1, -1, 72, 71, -1, -1, -1, 69, -1, 71, -1, 72, -1, 74, -1]];
 const LEAD_D = [[74, -1, 77, -1, 76, -1, 74, -1, 72, -1, 74, -1, 75, -1, 74, -1], [72, -1, 70, -1, 69, -1, 70, -1, 72, -1, 74, -1, 77, -1, 79, -1], [81, -1, 79, -1, 77, -1, 76, -1, 77, -1, 79, -1, 81, -1, 82, -1], [81, -1, -1, -1, 79, -1, -1, -1, 77, 76, 74, 73, 74, -1, -1, -1]];
 const LEAD_E = LEAD_D.map(r => r.map(m => m > 0 ? m + 2 : m)), LEAD_A = LEAD_D.map(r => r.map(m => m > 0 ? m - 5 : m));
+// v5.1 Farty Poop Farm: a fast country-metal HOEDOWN (an original tune in G: G-C-D-G). Train-beat drums with a
+// four-on-the-floor kick, banjo forward-rolls, a sawing fiddle melody, boom-chick bass, distorted power-chord
+// off-beat stabs, cowbell + washboard, and a silly tuba "toot" at the end of every 4 bars.
+const MEL_FARM = [[67, -1, 71, -1, 74, -1, 71, -1, 72, -1, 71, -1, 69, -1, 67, -1], [72, -1, 76, -1, 79, -1, 76, -1, 74, 72, 71, -1, 72, -1, -1, -1],
+  [74, -1, 78, -1, 81, -1, 78, -1, 79, -1, 78, -1, 76, -1, 74, -1], [71, -1, 74, -1, 79, -1, 74, 71, 67, -1, 71, -1, 67, -1, -1, -1]];
+const ROLL = [0, 4, 7, 12, 4, 7, 12, 16, 7, 12, 16, 12, 7, 4, 7, 12];
+function hoedown(b, t, s, bar, d, o) {
+  const R = [43, 48, 50, 43][bar], third = 4;
+  // drums: kick every beat, big snare backbeat, 16th train-beat hats/washboard
+  if (s % 4 === 0) I.kick(b, t, 1); if (s === 4 || s === 12) I.snare(b, t, 1.15); I.hat(b, t, s % 2 ? 0.5 : 0.8, s === 14);
+  if (s % 4 === 2) I.wash(b, t, 1); if (s === 0 && bar === 0) I.crash(b, t, 1); if ((s === 0 || s === 8) && bar % 2 === 1) I.cowbell(b, t, 1);
+  if (bar === 3 && s >= 12) I.tom(b, t, 0.8, 260 - (s - 12) * 40);
+  // boom-chick bass: root on the beat, fifth on the "and" of 2 and 4
+  if (s % 8 === 0) I.bass(b, t, R, d * 1.6, 1); if (s % 8 === 4) I.bass(b, t, R + 7, d * 1.6, 0.9);
+  // country-metal guitar: open power chord on the downbeat, off-beat chugs ("chick")
+  if (s === 0) I.pc(b, t, R + 12, d * 3, 1); else if (s % 4 === 2) I.chug(b, t, R + 12, 0.85);
+  // banjo forward roll over the chord (major triad), every 16th
+  const rr = ROLL[s]; I.banjo(b, t, R + 24 + (rr === 4 ? third : rr === 16 ? 12 + third : rr), 0.9);
+  // fiddle melody (bars alternate with the tuba line on the last bar)
+  const m = MEL_FARM[bar][s]; if (m > 0) I.fiddle(b, t, m, d * 1.9, 1);
+  if (bar === 3 && s === 14) I.tuba(b, t, 31, d * 2.2, 1); // the "toot"
+  if (o && o.layer) { const lay = L(b); I.kick(lay, t, 0.6); if (s === 0) I.crash(lay, t, 0.7); if (m > 0) I.lead(lay, t, m + 12, d * 1.6, 0.8); }
+}
 const TRACKS = {
   // title: epic half-time metal intro (D minor)
   title: { bpm: 150, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [38, 34, 36, 33], riff: [0, -99, -99, -99, -99, -99, -99, -99, 0, -99, -99, 0, -99, -99, 0, -99], open: [0, 8], kick: 'half', taiko: true, flavour: 'epic', mel: MEL_PEAK.map(r => r.map(m => m > 0 ? m - 2 : m)) }) },
@@ -109,6 +138,8 @@ const TRACKS = {
   ocean: { bpm: 140, muffle: 1500, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [37, 37, 33, 35], riff: [0, -99, -99, 0, -99, -99, 0, -99, 3, -99, 0, -99, -99, 1, -99, -99], open: [0, 8], kick: 'half', flavour: 'deep', ping: 85, mel: MEL_PEAK.map(r => r.map(m => m > 0 ? m - 3 : m)) }) },
   oceanbattle: { bpm: 160, muffle: 2300, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [37, 38, 35, 33], riff: RIFF_A, open: [0, 8], kick: 'gallop', flavour: 'deep', ping: 85, layer: true, lead: LEAD_D.map(r => r.map(m => m > 0 ? m - 1 : m)) }) },
   oceanboss: { bpm: 168, muffle: 2800, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [37, 38, 36, 34], riff: RIFF_B, open: [0, 8], kick: 'blast', taiko: true, flavour: 'deep', ping: 80, layer: true, lead: LEAD_D.map(r => r.map(m => m > 0 ? m - 1 : m)), chord: true }) },
+  farm: { bpm: 150, fn: (b, t, s, bar, d) => hoedown(b, t, s, bar, d) },
+  farmtitle: { bpm: 146, fn: (b, t, s, bar, d) => hoedown(b, t, s, bar, d) },
   cityboss: { bpm: 170, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [45, 46, 44, 43], riff: RIFF_A, open: [0, 8], kick: 'blast', flavour: 'industrial', layer: true, lead: LEAD_A, chord: true }) },
 };
 

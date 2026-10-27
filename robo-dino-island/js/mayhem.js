@@ -63,6 +63,7 @@ export class Mayhem {
     for (let i = 0; i < 120; i++) this.mesh.car.setColorAt(i, new THREE.Color(1, 1, 1));
   }
   placeProps() {
+    if (this.world.farm) { this.dirty = true; return; } // v5.1: no explosive barrels on the farm
     const W = this.world, ok = (x, z, r) => { const h = W.height(x, z); if (h < 1.2 || h > 38 || W.normalAtY(x, z) < 0.93) return false; if (W.city && W.city.blocked(x, z, r + 1)) return false;
       for (const c of W.colliders) if ((c.x - x) ** 2 + (c.z - z) ** 2 < (c.r + r + 1.5) ** 2) return false; for (const it of this.items) if ((it.x - x) ** 2 + (it.z - z) ** 2 < (it.r + r + 0.4) ** 2) return false; return true; };
     const add = (type, x, z, zone, rot) => { const T = TYPES[type]; if (!ok(x, z, T.r)) return false; this.items.push({ type, x, z, y: W.height(x, z), r: T.r, h: T.h, hp: T.hp, alive: true, t: 0, zone, rot: rot ?? Math.random() * 6, col: new THREE.Color(CAR_COLS[(Math.random() * CAR_COLS.length) | 0]) }); return true; };
@@ -219,7 +220,7 @@ export class Mayhem {
   buildLavaRivers() {
     const W = this.world, mat = this.lavaRiverMat;
     this.lavaPts = []; const pos = [], uv = [], idx = []; const r = rng(31);
-    for (let f = 0; f < 6; f++) {
+    for (let f = 0; f < (W.farm ? 0 : 6); f++) { // v5.1: no lava on the farm
       const a0 = f / 6 * Math.PI * 2 + r() * 0.6; let x = VOLC.x + Math.cos(a0) * 25, z = VOLC.z + Math.sin(a0) * 25; const pts = [];
       for (let i = 0; i < 90; i++) { const h = W.height(x, z); pts.push([x, z]); if (h < 4) break; const e = 2, gx = W.height(x + e, z) - W.height(x - e, z), gz = W.height(x, z + e) - W.height(x, z - e), gl = Math.hypot(gx, gz) || 1;
         const rx = x - VOLC.x, rz = z - VOLC.z, rl = Math.hypot(rx, rz) || 1, wob = Math.sin(i * 0.35 + f * 2) * 0.35;
@@ -230,7 +231,7 @@ export class Mayhem {
         for (const sd of [-1, 1]) { const vx = px - tz * w * sd, vz = pz + tx * w * sd; pos.push(vx, W.height(vx, vz) + 0.35, vz); uv.push(sd < 0 ? 0 : 1, vAcc / 9); }
         if (i) { const k = base + i * 2; idx.push(k - 2, k, k - 1, k - 1, k, k + 1); } this.lavaPts.push([px, W.height(px, pz), pz, w * 0.8]); }
     }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeBoundingSphere();
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); if (pos.length) geo.computeBoundingSphere(); else geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1);
     this.lavaMesh = new THREE.Mesh(geo, mat); this.lavaMesh.renderOrder = 1; this.scene.add(this.lavaMesh);
     // soft glow halos along the rivers
     const gm = new THREE.SpriteMaterial({ map: this.g.assets.glow, color: 0xff5a18, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.55 });
@@ -244,7 +245,7 @@ export class Mayhem {
   }
   updateVolcano(dt, title) {
     const Vc = this.volc, W = this.world, fx = this.fx, cp = this.g.camera.position;
-    this.lavaTex.offset.y -= dt * 0.22; if (W.isCity) return; // no volcano in the city
+    this.lavaTex.offset.y -= dt * 0.22; if (W.isCity || W.farm) return; // no volcano in the city (or on the farm)
     const pulse = 0.5 + 0.15 * Math.sin(W.time * 3.1);
     for (const s of this.lavaGlows) s.material.opacity = pulse + Vc.glow * 0.3;
     if (Vc.on > 0) { Vc.on -= dt; Vc.glow = Math.min(1, Vc.glow + dt * 2);
@@ -335,6 +336,7 @@ export class Mayhem {
   titleEnter() { this.volc.t = Math.min(this.volc.t, 3); this.titleBoomT = 1.2; }
   updateTitle(dt) {
     this.safe = true; this.updateVolcano(dt, true); this.updateFalls(dt); this.updateFire(dt); this.syncProps();
+    if (this.world.farm) return; // v5.1: a calm, sunny farm title (no booms or embers)
     const cam = this.g.camera, cp = cam.position; this.titleBoomT -= dt;
     if (this.titleBoomT <= 0) { this.titleBoomT = 3.2 + Math.random() * 1.8; const side = (this.titleSide = -(this.titleSide || 1)), x = TITLE.x + side * (2 + Math.random() * 7), z = TITLE.z - 38 - Math.random() * 14, gy = this.world.height(x, z);
       this.fx.boom(V.set(x, gy + 2.5, z), 2.0, { groundY: gy, shake: 0.35, column: true }); sfx.boom(0.45); this.g.hud.logoBoom && this.g.hud.logoBoom(); }
