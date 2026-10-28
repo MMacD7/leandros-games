@@ -180,3 +180,19 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Four original personality dinos (data.js `PERSONAS`, beast.js species, new persona.js): Grumbletop (grumpy), Snoozadon (sleepy), Strutasaurus (show-off) and Quiverfoot (scaredy), each with its own look, behaviour, speech bubbles and sounds (audio.js grumble, snore, yawn, tada, eep). Land levels only.
 - [x] Tests: the stale Deep Sea checks now expect the farm to be the newest level; version checks moved to v5.6.
 - [x] Version v5.6, and sw.js regenerated.
+
+## v5.6.1 (Oct 27, 2026 ET): bouncy castle fix ("Issues with jumping on bouncy castle", iPad touch)
+- [x] Reproduced with real touch input (floating joystick + the JUMP button) in iPad portrait and landscape.
+  - Root cause: the castle was only an invisible square trigger. Its walls were decoration with no collision, and the bounce was purely visual. Holding the joystick (what a kid does), Leandro ran across the 11 m castle in about a second, got only 2 small bounces, and walked straight through the far wall and off. A JUMP tap only queued a flip for the next landing, which often came after he had already left. A horse or tractor parked within about 5 m turned JUMP into RIDE or DRIVE.
+  - Also found: holding RIDE / HOP OFF auto-repeated every 0.22 s, so a kid keeping a finger on HOP OFF got off the horse or tractor and straight back on. These buttons now act only on a fresh press, with a 0.6 s cooldown.
+- [x] Fix (farm.js `castlePhys`, `castleLand`, `castleJump`, `startCastleHop`, `resetKid`):
+  - Real walls: walk in through the doorway, or walk into any wall and spring over it (hop-in arc). Inside, the walls hold him with a soft squeak and boing, and the floor slows his steps to 60%.
+  - Getting off: walk out of the doorway, or push against a wall for about 1.6 s and he hops over it.
+  - Bigger bounces: 10.5 m/s for a normal bounce, 13 for a fart-bounce, and a big jump that always peaks at 5.7 m above the floor. There's a squash on each landing.
+  - JUMP fires at once, one big jump per bounce, so mashing or holding it can't stack into a launch. On the castle, JUMP has priority over RIDE and DRIVE.
+  - The horse and tractor are bumped back from the castle, with a hint.
+  - The camera rises a little with big bounces.
+  - `spawnPlayer` calls `farm.resetKid()` (hardening): no riding, driving, hop or bounce left over after Restart level, and the horse is freed.
+- [x] Regression test: the bouncy-castle suite, 4 viewports, real touch input. Covers walking on via the doorway and over a wall, standing bounces, JUMP tap, mash and hold, a horse parked by the wall, getting off by door and by wall, horse, tractor, camera, pause, Robo toggle, and restart mid-bounce, on the horse and on the tractor.
+- [x] Version v5.6.1, and sw.js regenerated.
+

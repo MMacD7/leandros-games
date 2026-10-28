@@ -79,6 +79,12 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
   * **Pause button** at the top left on every level, on iPad and iPhone in both orientations. It never covers the other controls. The menu has **Resume**, **Restart level** and **Home** (P or Esc on a keyboard).
   * **Robo Dinos: ON/OFF** switch on the title screen and in the pause menu. It starts ON and is remembered. When it's OFF, every robot dino (yours, the wild ones and the bosses) becomes a regular dino, and more of the new personality dinos show up.
   * **Four new personality dinos** (see below) wander the land levels.
+* **v5.6.1: bouncy castle fix (Farty Poop Farm).**
+  * Leandro now stays on the bouncy castle. Its inflatable walls are real: walk into a wall and he springs over it onto the castle, or walk in through the doorway. Inside, the walls keep him on with a soft boing, and the bouncy floor slows his steps, so he gets lots of bounces.
+  * The bounces are bigger and springier (with a squash on every landing), and **JUMP** fires a big flip right away. Mashing or holding JUMP keeps the big bounces coming, but never sends him flying off.
+  * To get off, walk out of the doorway or keep pushing against a wall and he hops over it.
+  * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
+  * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 
 ## Modes
