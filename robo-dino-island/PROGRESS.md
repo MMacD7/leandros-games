@@ -196,3 +196,7 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Regression test: the bouncy-castle suite, 4 viewports, real touch input. Covers walking on via the doorway and over a wall, standing bounces, JUMP tap, mash and hold, a horse parked by the wall, getting off by door and by wall, horse, tractor, camera, pause, Robo toggle, and restart mid-bounce, on the horse and on the tractor.
 - [x] Version v5.6.1, and sw.js regenerated.
 
+## v5.6.2 (Oct 28, 2026 ET): "POOP" wording on the farm
+- [x] Ricky and Bobby's farm intro now reads exactly "Look it's Ricky and Bobby, they are going to POOP!" (on-screen shout, and the spoken line says "poop"). It used to say "POOOOPY". Other poop jokes and Bad David's lines are unchanged.
+- [x] Farm test expectation updated (shout text plus the spoken line). Version v5.6.2, and sw.js regenerated.
+

@@ -58,7 +58,7 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
     * **A big bouncy castle**, colorful and inflatable, with wobbly turrets. Walk onto it and Leandro bounces high with a boing and a squeak. **JUMP** gives bigger bounces with flips. Animals, Ricky and Bobby and Bad David hop on too, with the odd fart-bounce.
     * **A bigger chicken coop** that Leandro can walk into to collect eggs, with a golden egg now and then. The chickens flap out in a panic with feathers and clucks.
     * **SUPER STINKY** button (🤢): a wind-up wobble and rumble, then a long, wet blast with a camera shake and a big brown cloud with stink lines and buzzing flies. Nearby animals faint and pop back up. Then 2 to 4 cartoon visitors (a farmer, a lady in a big hat, a kid, a mail carrier, a gardener) walk up, shout "EEEEWWW!", hold their nose and run away. There's a short cooldown of about 4 seconds.
-    * Ricky and Bobby's farm arrival line is "Look it's Ricky and Bobby, they are going to POOOOPY!", big, bouncy and spoken.
+    * Ricky and Bobby's farm arrival line is "Look it's Ricky and Bobby, they are going to POOP!", big, bouncy and spoken.
     * Bad David arrives shouting "NOOO DAVIDD!" then "THATS NOT FUNNY DAVID!!", and runs 2 or 3 quick goofy laps around Leandro (or the horse or tractor he's on) before every prank.
     * Leandro now wears a green-and-white hooped football kit with white shorts and hooped socks, with no crest or logo. The backpack is gone everywhere.
 * **v5.4: Jungle Island goes WILD (level one only; the core gameplay is unchanged).**
