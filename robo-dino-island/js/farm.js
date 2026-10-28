@@ -525,7 +525,7 @@ export class FarmLife {
     if (this.turboT > 0) { this.turboT -= dt; if (this.riding) { p.speedNow = Math.max(p.speedNow, p.st.speed * 1.6); this.turboPuffT = (this.turboPuffT || 0) - dt; if (this.turboPuffT <= 0) { this.turboPuffT = 0.09; const b = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); this.cloud(V(p.pos.x + b.x * 1.4, p.pos.y + 1.6, p.pos.z + b.z * 1.4), b, 3, 0.8); } } }
     // button labels
     const near = this.nearFood(p), fl = near ? FOOD_EMOJI[near.K.food] : '🌽'; if (fl !== this._fl) { this._fl = fl; const b = document.querySelector('#a-laser span'); if (b) b.innerHTML = fl + '<br>FEED'; }
-    const ride = this.riding ? 'off' : this.driving ? 'toff' : this.horseNear(p) ? 'near' : this.tractorNear(p) ? 'tnear' : this.onCastle(p.pos.x, p.pos.z) ? 'jump' : 'far'; if (ride !== this._rl) { this._rl = ride; const b = document.querySelector('#a-missile span'), el = $('a-missile');
+    const ride = this.riding ? 'off' : this.driving ? 'toff' : (this.onCastle(p.pos.x, p.pos.z) || this.castleHop) ? 'jump' : this.horseNear(p) ? 'near' : this.tractorNear(p) ? 'tnear' : 'far'; if (ride !== this._rl) { this._rl = ride; const b = document.querySelector('#a-missile span'), el = $('a-missile');
       if (b) b.innerHTML = ride === 'off' ? '🐴<br>HOP OFF' : ride === 'toff' ? '🚜<br>HOP OFF' : ride === 'tnear' ? '🚜<br>DRIVE' : ride === 'jump' ? '🤸<br>JUMP' : '🐴<br>RIDE'; if (el) el.classList.toggle('glow', ride === 'near' || ride === 'tnear' || ride === 'jump'); const bb = document.querySelector('#a-boost span'); if (bb) bb.innerHTML = this.riding ? 'GALLOP' : this.driving ? 'FAST' : 'RUN';
       const tb = document.querySelector('#a-melee span'); if (tb) tb.innerHTML = this.driving ? '📯<br>HONK' : '💨<br>TOOT'; }
     if (this.hintT > 0) this.hintT -= dt;
@@ -537,8 +537,11 @@ export class FarmLife {
   // ---------- controls (called from Game.update on the farm) ----------
   controls(p, inp, nL, nM, nB) {
     p.boostE = p.st.boost; // Leandro never runs out of puff
-    if (nL) this.feed(p); if (nM && !this.riding && !this.driving && this.onCastle(p.pos.x, p.pos.z) && !this.horseNear(p) && !this.tractorNear(p)) { this.castleJumpQ = true; nM = 0; }
-    if (nM) { if (this.riding) this.dismount(); else if (this.driving) this.hopOffTractor(); else if (this.tractorNear(p) && !this.horseNear(p)) this.driveTractor(p); else this.tryMount(p); } if (nB) { if (this.driving) this.honk(); else this.toot(p); }
+    if (nL) this.feed(p); if (nM && !this.riding && !this.driving && (this.onCastle(p.pos.x, p.pos.z) || this.castleHop)) { this.castleJump(p); nM = 0; } // v5.6.1: on the castle JUMP always wins (a horse or tractor parked nearby used to steal it)
+    // v5.6.1: RIDE / HOP OFF / DRIVE only on a fresh press (plus a short cooldown). Holding the button used to auto-repeat every
+    // 0.22 s, so a kid keeping a finger on HOP OFF got off and straight back on the horse (or tractor) and could never get down.
+    if (nM && (!(inp && inp.pressed && inp.pressed.missile) || this.t < (this.rideCdT || 0))) nM = 0;
+    if (nM) { this.rideCdT = this.t + 0.6; if (this.riding) this.dismount(); else if (this.driving) this.hopOffTractor(); else if (this.tractorNear(p) && !this.horseNear(p)) this.driveTractor(p); else this.tryMount(p); } if (nB) { if (this.driving) this.honk(); else this.toot(p); }
   }
   feed(p = this.kid) {
     if (!p) return false; const a = this.nearFood(p);
@@ -675,25 +678,74 @@ export class FarmLife {
       const body = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, K.h - 1.2, 14), M(c)); body.position.y = (K.h - 1.2) / 2; body.castShadow = true; t.add(body);
       const roof = new THREE.Mesh(new THREE.ConeGeometry(1.35, 1.9, 14), M(cols[(i * 2 + 1) % cols.length])); roof.position.y = K.h - 0.2; t.add(roof); const ball = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), M(0xffffff)); ball.position.y = K.h + 0.9; t.add(ball);
       this.turrets.push({ t, ph: i * 1.7 }); });
-    const arch = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.5, 8, 16, Math.PI), M(0xff7ac8)); arch.position.set(-S, 1.0, 0); arch.rotation.y = Math.PI / 2; floor.add(arch);
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.5, 8, 16, Math.PI), M(0xff7ac8)); arch.position.set(-S, 1.0, 0); arch.rotation.y = Math.PI / 2; floor.add(arch); this.castleWalls.push(arch); // v5.6.1: the doorway arch goes see-through too when the camera is right behind it
     g.traverse(o => { if (o.isMesh) o.castShadow = true; }); this.castleWob = 0; this.kidBounce = { v: 0, h: 0 }; this.guest = null; this.guestT = 4; }
   onCastle(x, z, m = 0) { const K = FARM.castle; return Math.abs(x - K.x) < 5.4 - m && Math.abs(z - K.z) < 5.4 - m; }
   castleBoing(v = 1, pitch = 1) { this.castleWob = Math.max(this.castleWob, 0.6 * v); sfx.boing(clamp(v * (1.2 - this.camDist(FARM.castle) / 60), 0.05, 1), pitch); sfx.squeakBounce && sfx.squeakBounce(v, pitch); }
+  // v5.6.1 a landing on the castle floor: a springy bounce (JUMP queued = a BIG flip bounce)
+  castleLand(p, big) { const B = this.kidBounce; this.castleJumpQ = false; B.bigUsed = big; const fart = !big && Math.random() < 0.18; B.v = big ? 16.5 : fart ? 13 : 10.5; this.n.bounces++; p.mech.squashT = 0.18;
+    if (big) { this.n.bigBounces++; p.mech.flipT = 0.75; this.n.flipsK++; }
+    if (fart) { this.n.fartBounces++; sfx.fart(pick(['squeakup', 'squeaky', 'tiny']), 0.8); this.cloud(V(p.pos.x, p.pos.y + 0.6, p.pos.z), V(0, -1, 0), 6, 0.7); this.toast('💨 FART-BOUNCE! 😂', 4); }
+    this.castleBoing(big ? 1 : 0.7, big ? 0.8 : 1 + Math.random() * 0.2); if (this.n.bounces === 1) this.toast('🏰 BOING! The BOUNCY CASTLE! Tap JUMP for a big flip! Walk out the door to hop off.'); }
+  // v5.6.1 JUMP on the castle: fires right away (no waiting for the next landing). One big jump per bounce, so mashing or holding
+  // the button can never stack up and launch Leandro into the sky; a tap high in the air is saved for the next landing.
+  castleJump(p) { const B = this.kidBounce; this.n.jumpTaps = (this.n.jumpTaps || 0) + 1; if (this.castleHop) return;
+    if (!B.bigUsed && B.h < 2.6) { B.bigUsed = true; B.v = Math.max(B.v, Math.sqrt(Math.max(0, 2 * 24 * (5.7 - B.h)))); this.n.bigBounces++; this.n.jumpNow = (this.n.jumpNow || 0) + 1; p.mech.flipT = 0.75; this.n.flipsK++; this.castleBoing(1, 0.8); }
+    else this.castleJumpQ = true; }
+  // v5.6.1 the castle's walls are real: hop in over a wall, stay in, walk out the door or push on a wall to hop off. Horse and tractor stay out.
+  castlePhys(dt, p) { const K = FARM.castle, C = this.kc || (this.kc = { lx: 0, lz: 0, push: 0, has: false, bumpT: 0 }); C.bumpT -= dt;
+    if (!p || !this.active) { C.has = false; return; }
+    if (!C.has || Math.hypot(p.pos.x - C.lx, p.pos.z - C.lz) > 3) { C.lx = p.pos.x; C.lz = p.pos.z; C.has = true; C.inside = undefined; } // first frame, or a teleport (restart, travel, tests): never drag him back
+    const IN = 4.9, OUT = 6.7, DOOR = 2.0, dx = p.pos.x - K.x, dz = p.pos.z - K.z, ldx = C.lx - K.x, ldz = C.lz - K.z;
+    if (this.castleHop) { C.lx = p.pos.x; C.lz = p.pos.z; return; }
+    if (this.riding || this.driving) { // the horse and the tractor can't go on the bouncy castle: a soft rubbery push back
+      const r = this.riding ? 1.4 : 2.2, E = OUT + r; if (Math.abs(dx) < E && Math.abs(dz) < E) { const ox = E - Math.abs(dx), oz = E - Math.abs(dz);
+        if (ox < oz) p.pos.x = K.x + Math.sign(dx || -1) * E; else p.pos.z = K.z + Math.sign(dz || -1) * E; p.speedNow *= 0.5; this.n.rideBlocks = (this.n.rideBlocks || 0) + 1;
+        if (C.bumpT <= 0) { C.bumpT = 2.5; this.castleBoing(0.5, 0.7); this.toast(this.riding ? '🐴 No horses on the bouncy castle! Tap HOP OFF, then jump on! 🏰' : '🚜 Tractors are too heavy for the bouncy castle! Tap HOP OFF, then jump on! 🏰', 3); } }
+      C.lx = p.pos.x; C.lz = p.pos.z; return; }
+    if (C.inside === undefined) C.inside = Math.abs(dx) < IN + 0.3 && Math.abs(dz) < IN + 0.3;
+    const band = dx < -IN + 0.01 && dx > -OUT - 0.5 && Math.abs(dz) < DOOR + 0.6; // the doorway passage on the yard side
+    if (C.inside) {
+      // bouncy floor: slower steps so he stays on it and gets lots of bounces
+      p.pos.x = C.lx + (p.pos.x - C.lx) * 0.6; p.pos.z = C.lz + (p.pos.z - C.lz) * 0.6; let nx = p.pos.x - K.x, nz = p.pos.z - K.z;
+      const door = nx < -IN && Math.abs(nz) < DOOR;
+      if (door) { C.push = 0; if (nx < -OUT) { C.inside = false; this.n.doorExits = (this.n.doorExits || 0) + 1; } } // walked straight out of the doorway
+      else if (Math.abs(nx) > IN || Math.abs(nz) > IN) { const ox = Math.abs(nx) - IN, oz = Math.abs(nz) - IN, n = ox > oz ? V(Math.sign(nx), 0, 0) : V(0, 0, Math.sign(nz));
+        if (nx < -IN && Math.abs(nz) < DOOR + 0.6) nz = clamp(nz, -DOOR + 0.05, DOOR - 0.05); else { nx = clamp(nx, -IN, IN); nz = clamp(nz, -IN, IN); } p.pos.x = K.x + nx; p.pos.z = K.z + nz; C.push += dt;
+        if (C.bumpT <= 0) { C.bumpT = 0.8; this.castleWob = Math.max(this.castleWob, 0.4); sfx.squeakBounce && sfx.squeakBounce(0.5, 1.2); this.n.wallBumps = (this.n.wallBumps || 0) + 1; }
+        if (C.push > 1.6) this.startCastleHop(p, false, V(p.pos.x + n.x * (OUT - IN + 2.4), 0, p.pos.z + n.z * (OUT - IN + 2.4))); }
+      else C.push = Math.max(0, C.push - dt * 2); }
+    else if (Math.abs(dx) < OUT && Math.abs(dz) < OUT) { // outside → into the castle: through the doorway, or spring over the wall
+      if (band || (ldx < -IN && Math.abs(ldz) < DOOR + 0.6 && dx < -IN)) { p.pos.z = K.z + clamp(dz, -DOOR + 0.05, DOOR - 0.05); if (dx > -IN) C.inside = true; }
+      else { const t = V(K.x + clamp(dx, -IN + 1.2, IN - 1.2) * 0.75, 0, K.z + clamp(dz, -IN + 1.2, IN - 1.2) * 0.75); this.startCastleHop(p, true, t, V(C.lx, 0, C.lz)); } }
+    C.lx = p.pos.x; C.lz = p.pos.z; }
+  startCastleHop(p, into, to, from = V(p.pos.x, 0, p.pos.z)) { const B = this.kidBounce; if (this.kc) this.kc.inside = false; this.castleHop = { a: from, b: to, t: 0, dur: into ? 0.55 : 0.6, h: into ? 3.2 : 2.6, into }; B.h = 0; B.v = 0; this.castleJumpQ = false; B.bigUsed = false; if (this.kc) this.kc.push = 0;
+    if (into) { this.n.hopIns = (this.n.hopIns || 0) + 1; sfx.boing(0.7, 1.1); } else { this.n.hopOffs2 = (this.n.hopOffs2 || 0) + 1; sfx.boing(0.7, 1.25); this.toast('🤸 WHEEE! Leandro hopped off the castle!', 3); }
+    this.castleWob = Math.max(this.castleWob, 0.6); }
+  // v5.6.1 a fresh start (restart level / new kid): nobody is left riding, driving or mid-bounce
+  resetKid() { const H = this.horse; if (this.riding && H) { H.set('idle', 0); H.free = null; } if (H && H.state === 'ridden') { H.set('idle', 0); H.free = null; }
+    this.riding = false; this.driving = false; this.kidSpeed = null; this.castleHop = null; this.castleJumpQ = false; this.turboT = 0; if (this.kidBounce) { this.kidBounce.h = 0; this.kidBounce.v = 0; this.kidBounce.bigUsed = false; } if (this.kc) { this.kc.has = false; this.kc.inside = undefined; } this._rl = null; }
   updateCastle(dt, p) { const K = FARM.castle, y0 = this.castle.position.y, cp = this.g.camera.position;
     // the camera never gets a face full of inflatable: walls go see-through when the camera is right at / inside the castle
-    const camIn = Math.abs(cp.x - K.x) < 8.2 && Math.abs(cp.z - K.z) < 8.2 && cp.y < y0 + 4.2; if (camIn !== this._camIn) { this._camIn = camIn; for (const w of this.castleWalls) { w.material.transparent = camIn; w.material.opacity = camIn ? 0.28 : 1; w.material.depthWrite = !camIn; w.material.needsUpdate = true; } }
+    const camIn = Math.abs(cp.x - K.x) < 10.5 && Math.abs(cp.z - K.z) < 10.5 && cp.y < y0 + 10; /* v5.6.1: a bit wider and higher, the camera rises with the big bounces */ if (camIn !== this._camIn) { this._camIn = camIn; for (const w of this.castleWalls) { w.material.transparent = camIn; w.material.opacity = camIn ? 0.28 : 1; w.material.depthWrite = !camIn; w.material.needsUpdate = true; } }
     const W = this.castleWob = Math.max(0, this.castleWob - dt * 1.2);
     this.castleFloor.scale.set(1 + W * 0.04 * Math.sin(this.t * 22), 1 - W * 0.12 * Math.abs(Math.sin(this.t * 18)), 1 + W * 0.04 * Math.cos(this.t * 20));
     for (const T of this.turrets) { T.t.rotation.x = Math.sin(this.t * 2.2 + T.ph) * (0.04 + W * 0.18); T.t.rotation.z = Math.cos(this.t * 1.9 + T.ph) * (0.04 + W * 0.18); T.t.scale.y = 1 + Math.sin(this.t * 3 + T.ph) * 0.03 - W * 0.08; }
-    // Leandro bounces when he's on it (JUMP = a big bounce with a flip)
-    const B = this.kidBounce; if (p && !this.riding && !this.driving) { const on = this.onCastle(p.pos.x, p.pos.z);
-      if (on || B.h > 0) { B.v -= 24 * dt; B.h = Math.max(0, B.h + B.v * dt);
-        if (B.h <= 0 && on) { const big = this.castleJumpQ; this.castleJumpQ = false; const fart = !big && Math.random() < 0.18; B.v = big ? 15 : fart ? 12 : 9; this.n.bounces++; if (big) { this.n.bigBounces++; p.mech.flipT = 0.75; this.n.flipsK++; }
-          if (fart) { this.n.fartBounces++; sfx.fart(pick(['squeakup', 'squeaky', 'tiny']), 0.8); this.cloud(V(p.pos.x, p.pos.y + 0.6, p.pos.z), V(0, -1, 0), 6, 0.7); this.toast('💨 FART-BOUNCE! 😂', 4); }
-          this.castleBoing(big ? 1 : 0.7, big ? 0.8 : 1 + Math.random() * 0.2); if (this.n.bounces === 1) this.toast('🏰 BOING! The BOUNCY CASTLE! Tap JUMP for a big flip!'); }
+    // v5.6.1 Leandro on the castle. ROOT CAUSE of "issues with jumping on the bouncy castle": the castle was only an invisible
+    // square trigger with no walls, and the bounce was purely cosmetic. A kid holding the joystick ran straight across it in under
+    // a second (2 small bounces), through the far wall and off the other side; JUMP only queued a flip for the next landing (often
+    // after he had already left), and a horse or tractor parked nearby stole the JUMP button. Now the inflatable walls are real:
+    // walk into one from outside and Leandro springs over it onto the castle; inside, the walls keep him on (soft boing) and the
+    // bouncy floor slows his steps; walk out of the doorway or keep pushing into a wall to hop off. JUMP fires at once.
+    this.castlePhys(dt, p);
+    const B = this.kidBounce; if (p && !this.riding && !this.driving) { const on = this.onCastle(p.pos.x, p.pos.z), H = this.castleHop;
+      if (H) { H.t += dt; const u = Math.min(1, H.t / H.dur); p.pos.x = lerp(H.a.x, H.b.x, u); p.pos.z = lerp(H.a.z, H.b.z, u); p.groundY(); B.h = Math.sin(u * Math.PI) * H.h; B.v = 0; p.speedNow = 0;
+        if (u >= 1) { this.castleHop = null; B.h = 0; if (H.into) { B.v = 0; if (this.kc) this.kc.inside = true; this.castleLand(p, false); } else { this.fx.dust(p.pos, 8, 1.2, 4); sfx.boing(0.5, 1.3); B.v = 0; } } p.mech.castleH = (H.into ? u : 1 - u) * 0.9 + B.h; }
+      else if (on || B.h > 0) { B.v -= 24 * dt; B.h = Math.max(0, B.h + B.v * dt);
+        if (B.h <= 0 && on) this.castleLand(p, this.castleJumpQ);
         if (!on && B.h <= 0) B.v = 0; p.mech.castleH = (on ? 0.9 : 0) + B.h; }
       else p.mech.castleH = 0; }
-    else { B.h = 0; B.v = 0; if (p) p.mech.castleH = 0; }
+    else { B.h = 0; B.v = 0; this.castleHop = null; if (p) p.mech.castleH = 0; }
     // guests: an animal hops on for a silly bounce (with fart-bounces) while Leandro plays there
     if (this.guest) { const a = this.guest; a.gT += dt; if (a.gT > 7 || a.state !== 'bounce') { if (a.state === 'bounce') { this.fx.dust(a.pos, 8, 1.2, 4); a.goHome(1.4); } this.guest = null; this.guestT = 8; } }
     else if (p && this.onCastle(p.pos.x, p.pos.z) && (this.guestT -= dt) <= 0) { const c = this.animals.filter(a => !a.busy && a.state !== 'herded' && a !== this.runaway && a.kind !== 'horse' && a.pos.distanceTo(p.pos) < 90).sort(() => Math.random() - 0.5)[0];
@@ -855,6 +907,7 @@ export class KidMech {
     if (this.flipT > 0) { const th = R.obj.rotation.x, h = 0.8; R.obj.position.set(0, h - h * Math.cos(th), -h * Math.sin(th)); } else if (!this.riding) R.obj.position.set(0, 0, 0);
     if (this.stinkT > 0) { this.stinkT -= dt; const w = Math.min(1, this.stinkT * 3); R.obj.rotation.z = Math.sin(t * 45) * 0.09 * w; R.root.position.y -= 0.12 * w; for (const g of R.legs) { g.hip.rotation.x = -0.5 * w; g.knee.rotation.x = 0.9 * w; } for (const a of R.arms) a.sh.rotation.set(-0.4 * w, 0, a.s * 0.6 * w); } // SUPER STINKY wind-up wobble
     R.root.position.y += this.castleH || 0; // v5.3 bouncy castle height
+    if (this.squashT > 0 || this._sq) { this.squashT = Math.max(0, (this.squashT || 0) - dt); const k = Math.sin((this.squashT / 0.18) * Math.PI); R.root.scale.set(1 + k * 0.16, 1 - k * 0.24, 1 + k * 0.16); this._sq = this.squashT > 0; } // v5.6.1 springy squash on each castle landing
   }
   throwArm() { const a = this.R.arms[1], u = 1 - this.throwT / 0.45; a.sh.rotation.set(lerp(-2.9, -0.9, smooth(0, 1, u)), 0, 0.15); a.el.rotation.set(-0.5 * (1 - u), 0, 0); }
 }

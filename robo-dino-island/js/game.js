@@ -157,7 +157,7 @@ export class Game {
     let def = DINOS.find(d => d.id === this.save.selected) || DINOS[0]; const oc = this.world && this.world.ocean, by = id => DINOS.find(d => d.id === id);
     if (oc && !def.sea && !def.westie) def = by(this.save.seaSel) || by('shark'); else if (!oc && def.sea) def = by(this.save.landSel) || by('rex'); // v5: sea creatures swim in the Deep Sea, land dinos stomp on land
     def = this.unrobo(def); // v5.6: Robo Dinos OFF → a regular dino
-    if (this.world && this.world.farm) { def = KID; if (this.farm) { this.farm.riding = false; this.farm.kidSpeed = null; } } // v5.1: on the farm you ARE Leandro
+    if (this.world && this.world.farm) { def = KID; if (this.farm) { if (this.farm.resetKid) this.farm.resetKid(); else { this.farm.riding = false; this.farm.kidSpeed = null; } } } // v5.1: on the farm you ARE Leandro
     const p = new Dino(this, def, false); this.player = p; if (def.farmKid) { p.mech.setRide(false); p.mech.mud = 0; } if (def.westie) setScuba(p.mech.w, oc); // Ricky / Bobby dive in scuba gear this.mountRider();
     if (atArena) p.place(ARENA.x - 30, ARENA.z, Math.PI / 2); else p.place(BASE.x, BASE.z - 6, Math.PI);
     this.cam.yaw = p.yaw + Math.PI; this.snapCam = true;
@@ -1014,6 +1014,7 @@ export class Game {
       else { this.collapseShots++; if (CC.yaw === undefined) this.pickCollapseShot(CC, p, c);
         dist = lerp(dist, Math.max(dist, CC.dist), ck); if (!inp.looking) c.yaw += angDiff(c.yaw, CC.yaw) * Math.min(1, dt * 3) * ck; } }
     const tgt = tmp.set(p.pos.x, p.pos.y + h * 0.82, p.pos.z);
+    if (p.def.farmKid && p.mech.castleH) tgt.y += p.mech.castleH * 0.45; // v5.6.1 the camera rises a little with the big castle bounces, so Leandro stays in the picture
     if (CC && ck > 0) { const b = CC.b, gy = this.world.height(b.x, b.z); tgt.lerp(new THREE.Vector3((b.x + p.pos.x) / 2, gy + b.h * 0.45, (b.z + p.pos.z) / 2), ck); } // same aim point pickCollapseShot checked
     if (this.hype && (this.swoop || this.koCam)) dist = this.hype.camera(dt, dist, tgt, c, p, inp); // v5.4 KO punch-in + surprise / boss swoop
     c.dist = lerp(c.dist, dist, Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : CC ? 4 : 3)));
