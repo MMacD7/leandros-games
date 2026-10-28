@@ -844,7 +844,7 @@ export class FarmLife {
     // escape toward the player so the chase happens on screen
     const ex = lerp(G.x + G.ox * 10, kp.x, 0.55) + (Math.random() - 0.5) * 8, ez = lerp(G.z + G.oz * 10, kp.z, 0.55) + (Math.random() - 0.5) * 8;
     pig.path = pig.inside() ? [V(G.x - G.ox * 3, 0, G.z - G.oz * 3), V(G.x + G.ox * 4, 0, G.z + G.oz * 4), V(ex, 0, ez)] : [V(ex, 0, ez)]; pig.pathK = 3.2; pig.free = null; pig.set('runaway'); pig.say(1.2); this.emote('bang', pig, 2);
-    this.runaway = pig; return pig; // v5.3: no extra toast here; Ricky & Bobby's single POOOOPY! shout is the only intro line
+    this.runaway = pig; return pig; // v5.3: no extra toast here; Ricky & Bobby's single POOP! shout is the only intro line
   }
   herd(pig) { const G = gateOf(pig.pen); pig.path = [V(G.x + G.ox * 4, 0, G.z + G.oz * 4), V(G.x - G.ox * 4, 0, G.z - G.oz * 4), V(pig.pen.x, 0, pig.pen.z)]; pig.set('herded'); }
   herdDone(pig) { this.n.herds++; this.runaway = null; pig.free = null; pig.set('happy'); this.toast('🐷 Back in the pen! Good dogs! 🐶🐶'); voice.say('Good dogs!', { prio: 2, cd: 3000, pitch: 1.1 }); sfx.tada(0.7); }

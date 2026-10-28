@@ -200,10 +200,10 @@ export class Westies {
   danger() { const g = this.g; for (const e of g.enemies) { if (!e.alive) continue; for (const d of this.dogs) if (e.pos.distanceTo(d.pos) < 6 + e.radius) return true; } return false; }
   intro() {
     const g = this.g; this.introduced = true;
-    if (g.farm) { // v5.3 (Mike's exact words): ONE big bouncy line on the farm, nothing else before or after it
-      const line = "Look it's Ricky and Bobby, they are going to POOOOPY!"; this.farmShouts = (this.farmShouts || 0) + 1;
+    if (g.farm) { // v5.3 (Mike's exact words, updated in v5.6.2 to say POOP): ONE big bouncy line on the farm, nothing else before or after it
+      const line = "Look it's Ricky and Bobby, they are going to POOP!"; this.farmShouts = (this.farmShouts || 0) + 1;
       if (g.hud.shout) g.hud.shout(line, 4.2); else g.hud.banner(line, 4, true); sfx.cheer && sfx.cheer(1);
-      voice.say("Look, it's Ricky and Bobby, they are going to poooopy!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true }); return; }
+      voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true }); return; }
     const solo = this.activeDogs().length === 1 ? this.activeDogs()[0].name : null;
     g.hud.banner(solo ? '🐶 ' + solo + '! 🐶' : '🐶 RICKY & BOBBY! 🐶', 4, true); document.getElementById('banner').classList.add('rb'); // banner sits high so it doesn't cover the dogs
     sfx.cheer && sfx.cheer(1);
