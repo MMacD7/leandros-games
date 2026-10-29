@@ -61,10 +61,11 @@ h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2
 .card:focus-visible{outline:4px solid #fff;outline-offset:4px}
 .robo{--c1:#3a3a3a;--c2:#e0321f;--glow:rgba(255,60,30,.55)}
 /* ---- Rosado Nights feature card ---- */
-.rosado{--c1:#ff2bd6;--c2:#19d3ff;--glow:rgba(255,43,214,.5);cursor:default;
+.rosado{--c1:#ff2bd6;--c2:#19d3ff;--glow:rgba(255,43,214,.5);
  background:linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff);
  box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 26px rgba(255,43,214,.55),0 0 46px rgba(25,211,255,.35);animation:neon 4s ease-in-out infinite}
-.rosado:hover,.rosado:active{transform:none}
+.rosado:hover{animation:none;box-shadow:0 14px 0 rgba(0,0,0,.45),0 0 40px rgba(255,43,214,.8),0 0 70px rgba(25,211,255,.55)}
+.rosado:active{animation:none;box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 20px rgba(255,43,214,.6),0 0 36px rgba(25,211,255,.4)}
 .rosado .in{background:linear-gradient(180deg,#2a1150 0%,#1a0b33 55%,#0d1a3a 100%)}
 .grid>*{min-width:0}
 .poster{position:relative;aspect-ratio:4/5;overflow:hidden;background:#1a0b33}
@@ -167,7 +168,7 @@ footer b{color:#2fd27a}
    </div>
   </a>
 
-  <div class="card rosado" role="group" aria-label="Rosado Nights, coming soon">
+  <a class="card rosado" href="rosado-nights/" aria-label="Rosado Nights: hear the music">
    <div class="in">
     <div class="poster">
      <span class="soon-chip">NEW</span>
@@ -178,11 +179,11 @@ footer b{color:#2fd27a}
     </div>
     <div class="body">
      <div class="title">Rosado Nights</div>
-     <div class="tag">Neon nights. Palm trees. Coming soon.</div>
-     <span class="play">★ Coming Soon</span>
+     <div class="tag">Neon nights. Palm trees. Hear the theme!</div>
+     <span class="play">♫ Hear the Music</span>
     </div>
    </div>
-  </div>
+  </a>
  </div>
 
  <footer>Made for <b>Leandro</b> · Ready, set, ROAR!</footer>
