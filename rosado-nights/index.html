@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="Rosado Nights: hear the neon synthwave theme. Game coming soon.">
+<meta name="description" content="Rosado Nights: hear the neon synthwave theme and play Level 1: Reps for Jesus.">
 <title>Rosado Nights · Music</title>
 <style>
 *{box-sizing:border-box}
@@ -55,7 +55,12 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
 .play:active{transform:translateY(5px);box-shadow:0 1px 0 #2a0b4a,0 0 18px rgba(255,43,214,.7),inset 0 2px 0 rgba(255,255,255,.3)}
 .play[aria-pressed="true"]{background:linear-gradient(180deg,#2a8cff 0%,#1a4fd0 50%,#3a1a8a 100%);border-color:#ff2bd6}
 .now{margin:4px 0 0;font-size:15px;font-weight:700;color:#bfefff;letter-spacing:.06em;text-align:center;min-height:1.3em}
-.soon{margin:2px 0 0;font-size:13px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#ff9be9;opacity:.85}
+.playgame{display:flex;align-items:center;justify-content:center;text-align:center;margin-top:6px;min-height:64px;max-width:min(440px,92vw);padding:10px 26px;border-radius:16px;
+ color:#fff;text-decoration:none;font:900 italic 21px/1.15 "Avenir Next Condensed","Arial Narrow",Impact,"Arial Black",system-ui,sans-serif;letter-spacing:.06em;
+ background:rgba(20,6,40,.78);border:3px solid #ff2bd6;text-shadow:0 0 6px #fff,0 0 12px #ff2bd6,0 0 24px #ff2bd6;
+ box-shadow:0 0 14px rgba(255,43,214,.8),0 0 34px rgba(255,43,214,.45),inset 0 0 14px rgba(255,43,214,.35);animation:glow 3s ease-in-out infinite}
+.playgame:active{transform:translateY(3px)}
+.playgame:focus-visible{outline:4px solid #fff;outline-offset:4px}
 @media (max-width:699px) and (orientation:portrait){
  h1 .a{font-size:clamp(40px,11.5vw,80px)}
  .stage{gap:10px}
@@ -74,7 +79,7 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
  text-shadow:0 0 3px #fff,0 0 10px #ff2bd6,0 0 22px #ff2bd6,0 0 42px rgba(255,43,214,.6);animation:glow 5s ease-in-out infinite}
 @keyframes glow{0%,100%{opacity:1}50%{opacity:.82}}
 @media (max-height:560px) and (orientation:landscape){
- .stage{flex-direction:row;gap:26px}.poster{height:62dvh}h1 .a{font-size:44px}.play{min-height:64px}
+ .stage{flex-direction:row;gap:26px}.poster{height:62dvh}h1 .a{font-size:44px}.play{min-height:64px}.playgame{min-height:52px;font-size:18px;padding:6px 20px}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
@@ -99,7 +104,7 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
    <p class="neon-sub">Neon Lights</p>
    <button class="play" id="play" type="button" aria-pressed="false">▶ PLAY MUSIC</button>
    <p class="now" id="now" aria-live="polite">Tap play and turn it up!</p>
-   <p class="soon">Game coming soon</p>
+   <a class="playgame" id="playgame" href="game/">▶ PLAY LEVEL 1: REPS FOR JESUS</a>
   </div>
  </div>
 </main>
