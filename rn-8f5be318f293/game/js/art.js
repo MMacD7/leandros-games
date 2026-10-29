@@ -1,4 +1,4 @@
-/* Rosado Nights · Level 1 art (v0.1.0)
+/* Rosado Nights · Level 2 (gym) art (v0.2.0)
    All original pixel-style art, drawn in code on a low-res canvas (225 px tall) that the game scales up
    with smoothing off. No image files. Characters are made up: Richie (seated lifter) and Apollo (spotter). */
 (function(){
