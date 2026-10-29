@@ -58,6 +58,7 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
 .picks{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(420px,92vw);margin-top:4px}
 @media (min-width:640px){.picks{width:min(500px,60vw);gap:12px}.picks .pick{min-height:70px;font-size:19px}.picks .pick small{font-size:12px}}
 .picks{grid-auto-rows:1fr}
+.picks .pick.main{grid-column:1/-1}
 .pick{appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:manipulation;min-height:62px;padding:8px 10px;border-radius:16px;
  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#e6fbff;text-align:center;
  font:800 17px/1.1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.02em;
@@ -71,7 +72,7 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
 .pick.on small::after{content:" ♫"}
 .pick:focus-visible{outline:4px solid #fff;outline-offset:3px}
 @media (max-width:699px) and (orientation:portrait){
- .poster{height:clamp(170px,29dvh,420px)}
+ .poster{height:clamp(150px,25dvh,420px)}
  h1 .a{font-size:clamp(40px,11.5vw,80px)}
  .stage{gap:10px}
 }
@@ -107,7 +108,8 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
    <h1><span class="a">Rosado</span><span class="b">Nights</span></h1>
    <button class="play" id="play" type="button" aria-pressed="false">▶ PLAY MUSIC</button>
    <div class="picks" role="group" aria-label="Choose a theme">
-    <button class="pick" type="button" aria-pressed="true"><small>Main Theme</small>Neon Pursuit</button>
+    <button class="pick main" type="button" aria-pressed="true"><small>Main Theme · Robot Mix</small>Neon Pursuit</button>
+    <button class="pick" type="button" aria-pressed="false"><small>Option 2</small>Neon Pursuit (classic)</button>
     <button class="pick" type="button" aria-pressed="false"><small>Option 1</small>Night Drive</button>
     <button class="pick" type="button" aria-pressed="false"><small>Option 3</small>Ocean Drive 3AM</button>
     <button class="pick" type="button" aria-pressed="false"><small>Original</small>Rosado Theme</button>
@@ -365,6 +367,136 @@ var SONGS={
  })()
 };
 
+/* ===== Neon Pursuit (main theme): French-house robot-vocal version. Original song & words. ===== */
+var PHON={oh:[500,900,2400],ah:[730,1100,2450],eh:[530,1850,2500],ee:[280,2250,2900],er:[490,1350,1700],oo:[320,870,2250]};
+var CONS={r:{f:[310,1060,1380],a:0.6,d:0.07},n:{f:[260,1300,2500],a:0.4,d:0.06},w:{f:[300,620,2200],a:0.5,d:0.06},
+ d:{f:[300,1700,2600],a:0.12,d:0.035,burst:[2800,0.018,0.5]},p:{f:[400,800,2300],a:0,d:0.045,burst:[1100,0.022,0.6]},
+ s:{f:null,a:0,d:0.1,hiss:[4800,0.1,0.55]}};
+/* word: [first consonant, vowel, glide-to vowel, final consonant] */
+var WORDS={ro:['r','oh'],sa:['s','ah'],'do':['d','oh'],nights:['n','ah','ee','ts'],ne:['n','eh'],on:[null,'ah',null,'n'],
+ pur:['p','er'],suit:['s','oo',null,'t'],ooh:[null,'oo'],wah:['w','ah']};
+function SY(w,s,d,p){return {w:w,s:s,d:d,p:p}}
+function RS(a,b,c,d){return [SY('ro',0,2,[a,a-12]),SY('sa',2,2,[b,b-12]),SY('do',4,3,[c,c-12]),SY('nights',8,7,[d,d-12])]}
+function NP(a,b,c,d,L){return [SY('ne',0,2,[a,a-12]),SY('on',2,4,[b,b-12]),SY('pur',8,2,[c,c-12]),SY('suit',10,L||5,[d,d-12])]}
+SONGS.robot=(function(){
+ var P=SONGS.pursuit;
+ return {bpm:95,drive:10,bassLvl:0.62,cutLo:500,cutHi:2600,sweepBars:2,padMode:'stab',stabs:[],padAtk:0.005,padRel:0.2,padCut:3200,padLvl:0.2,
+  voiceLvl:0.8,leadLvl:0.14,verb:0.42,A:P.A,B:P.B,kick:P.kick,snare:P.snare,hat:P.hat,voice:P.voice,voiceB:0.5,fill:'toms',crash:true,hook:P.hook,
+  bassPat:{I:'x..ox.xo..x.o.x.',A:'x..ox.xo..x.o.x.',B:'x.oxx.o.x.oxx.o.',C:'x.oxx.o.x.oxx.o.'},
+  chops:{I:'..x..x....x..x..',A:'..x..x....x..x..',B:'..x...x...x...x.',C:'..x...x...x...x.'},
+  kickR:{I:'x.......x.......',A:'x.......x.x.....',B:'x...x...x...x...',C:'x...x...x...x...'},
+  hatR:{A:'..x...x...x...x.',B:'..oc..oc..oc..oc',C:'..oc..oc..oc..oc'},
+  vocals:{I2:[RS(59,62,64,66)],
+   A6:NP(76,72,71,71,9),B0:RS(64,67,69,71),B2:NP(74,71,69,67),B4:RS(64,67,72,71),B6:NP(71,69,66,63,6)},
+  riffA:[[64,71,3],[67,76,3],[70,74,2],[72,71,8],[80,67,4],[84,69,4],[88,71,8],[96,72,3],[99,76,3],[102,74,2],[104,72,8],[112,71,4],[116,69,4],[120,66,8]],
+  ext:robotExt};
+})();
+SONGS.robot.vocals.I2=[SY('ro',0,4,[59,47]),SY('sa',4,4,[62,50]),SY('do',8,6,[64,52]),SY('nights',16,12,[66,54])];
+
+function robotExt(E,X){
+ var ctx=X.ctx,S=X.S,ST=X.ST,G=X.G,F=X.F,osc=X.osc,noise=X.noise,chain=X.chain,lfo=X.lfo,on=X.on;
+ /* re-route bass + pads through a sidechain pump and a build-up low-pass */
+ var pump=G(1),build=F('lowpass',16000,0.9);
+ X.bassBus.disconnect();X.padBus.disconnect();
+ X.bassBus.connect(pump);X.padBus.connect(pump);chain(pump,build,X.bus);chain(X.padBus,G(0.45),X.hallIn);
+ /* robot voice chain: compressor -> presence -> stereo chorus -> bus (+ reverb/delay sends) */
+ var vIn=G(1),vc=ctx.createDynamicsCompressor();vc.threshold.value=-26;vc.ratio.value=4;vc.attack.value=0.003;vc.release.value=0.12;vc.knee.value=6;
+ var pres=F('peaking',2600,0.9);pres.gain.value=4;var vOut=G(S.voiceLvl);
+ chain(vIn,F('highpass',140),vc,pres,vOut,X.bus);
+ [[0.012,0.7,-0.7],[0.018,0.93,0.7]].forEach(function(c){var d=ctx.createDelay(0.05);d.delayTime.value=c[0];lfo(c[1],0.0022).connect(d.delayTime);
+  var pn=ctx.createStereoPanner?ctx.createStereoPanner():G(1);if(pn.pan)pn.pan.value=c[2];chain(vOut,d,G(0.5),pn,X.bus)});
+ chain(vOut,G(0.32),X.hallIn);chain(vOut,G(0.2),X.dIn);
+ /* phaser lead */
+ var lIn=G(S.leadLvl*1.6),mix=G(1),wet=G(0.9),ap=lIn;lIn.connect(mix);
+ var ph=lfo(0.32,650);for(var i=0;i<4;i++){var a=F('allpass',1000,0.7);ph.connect(a.frequency);ap.connect(a);ap=a}
+ chain(ap,wet,mix);mix.connect(X.bus);chain(mix,G(0.85),X.dIn);chain(mix,G(0.5),X.hallIn);
+
+ function burst(t,f,d,a){var n=noise(t,d+0.03),g=G(0);g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(a,t+0.002);g.gain.exponentialRampToValueAtTime(0.0001,t+d);chain(n,F('bandpass',f,1.3),g,vIn)}
+ function hiss(t,f,d,a){var n=noise(t,d+0.05),g=G(0);g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(a,t+0.02);g.gain.setValueAtTime(a,t+d*0.7);g.gain.exponentialRampToValueAtTime(0.0001,t+d);chain(n,F('highpass',f),F('peaking',7000),g,vIn)}
+ /* talk-box style singer: detuned saw+pulse carrier through a moving 3-formant mouth */
+ function sing(t0,sy,lvl){
+  var nv=sy[0].p.length,last=sy[sy.length-1],tS=t0-0.12,tE=t0+(last.s+last.d)*ST+0.4;
+  var car=G(1/Math.sqrt(nv)),vca=G(0),out=G(lvl),o=[];
+  vca.gain.setValueAtTime(0,tS);
+  for(var k=0;k<nv;k++){
+   var kv=k?0.55:1,f0=mtof(sy[0].p[k]);
+   [-9,8].forEach(function(d){var x=osc('sawtooth',f0,d,tS,tE),g=G(kv);x.connect(g);g.connect(car);o.push([x,k])});
+   var q=osc('square',f0,3,tS,tE),qg=G(0.45*kv);q.connect(qg);qg.connect(car);o.push([q,k]);
+  }
+  var fb=[0,1,2].map(function(i){var b=F('bandpass',PHON.ah[i],[5,9,13][i]);chain(car,b,G([1,0.85,0.5][i]*3.4),vca);return b});
+  chain(car,F('highpass',3000),G(0.05),vca);chain(vca,out,vIn);
+  var cs=sy.map(function(x){var c=WORDS[x.w][0];return t0+x.s*ST-(c?CONS[c].d:0)});
+  sy.forEach(function(x,i){
+   var t=t0+x.s*ST,D=x.d*ST,W=WORDS[x.w],c=W[0]&&CONS[W[0]],v=PHON[W[1]],v2=W[2]&&PHON[W[2]],fin=W[3];
+   o.forEach(function(e){e[0].frequency.setTargetAtTime(mtof(x.p[e[1]]),i?t-0.04:tS,i?0.03:0.001)});
+   if(c){
+    if(c.f)fb.forEach(function(b,j){b.frequency.setTargetAtTime(c.f[j],cs[i],0.006)});
+    vca.gain.setTargetAtTime(c.a,cs[i],0.008);
+    if(c.burst)burst(t-0.012,c.burst[0],c.burst[1],c.burst[2]);
+    if(c.hiss)hiss(cs[i],c.hiss[0],c.hiss[1],c.hiss[2]);
+   }else if(!c&&!i)fb.forEach(function(b,j){b.frequency.setValueAtTime(v[j],tS)});
+   fb.forEach(function(b,j){b.frequency.setTargetAtTime(v[j],t,0.022)});
+   vca.gain.setTargetAtTime(1,t,0.01);
+   if(v2)fb.forEach(function(b,j){b.frequency.setTargetAtTime(v2[j],t+D*0.4,0.05)});
+   var off=t+D*0.92;if(i+1<sy.length)off=Math.max(t+0.06,Math.min(off,cs[i+1]-0.012));
+   if(fin==='n'){fb.forEach(function(b,j){b.frequency.setTargetAtTime(CONS.n.f[j],t+D*0.62,0.015)});vca.gain.setTargetAtTime(0.42,t+D*0.62,0.015)}
+   if(fin==='t'||fin==='ts'){off=Math.min(off,t+D*0.72);burst(off+0.035,3600,0.02,0.45);if(fin==='ts')hiss(off+0.05,5200,0.11,0.45)}
+   vca.gain.setTargetAtTime(0,off,0.018);
+  });
+ }
+ E.sing=sing;
+ function riser(t,dur){var n=noise(t,Math.min(dur,1.9)),n2=noise(t+1.9,Math.max(0.01,dur-1.9)),b=F('bandpass',300,2),g=G(0);
+  b.frequency.setValueAtTime(300,t);b.frequency.exponentialRampToValueAtTime(7000,t+dur);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.16,t+dur);g.gain.setValueAtTime(0.0001,t+dur+0.01);
+  n.connect(b);n2.connect(b);chain(b,g,X.bus);g.connect(X.hallIn)}
+ function openHat(t,v){var n=noise(t,0.3),g=G(0);g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.32*v,t+0.002);g.gain.exponentialRampToValueAtTime(0.0001,t+0.24);chain(n,F('highpass',7000),g,X.drumBus);var s=G(0.15);g.connect(s);s.connect(X.hallIn)}
+ function kick(t,v){X.kick(t,v);pump.gain.cancelScheduledValues(t);pump.gain.setValueAtTime(0.32,t);pump.gain.linearRampToValueAtTime(1,t+ST*3)}
+ function sweepTo(t,from,to,bars){build.frequency.cancelScheduledValues(t);build.frequency.setValueAtTime(from,t);build.frequency.exponentialRampToValueAtTime(to,t+bars*16*ST)}
+ var INTRO=4,LOOP=24;
+ function pos(n){var bar=Math.floor(n/16),s=n%16,intro=bar<INTRO,lb=intro?bar:(bar-INTRO)%LOOP,sec=intro?'I':(lb<8?'A':lb<16?'B':'C'),bi=intro?bar:lb%8;
+  return {bar:bar,s:s,intro:intro,lb:lb,sec:sec,bi:bi,ch:((sec==='I'||sec==='A')?S.A:S.B)[bi]}}
+ E.step=function(n,t){
+  var P=pos(n),s=P.s,sec=P.sec,bi=P.bi,ch=P.ch;E.lastBar=P.lb;
+  /* filter build-ups */
+  if(s===0){
+   if(P.intro&&P.bar===0)sweepTo(t,280,16000,4);
+   else if(sec==='A'&&bi===4)sweepTo(t,450,16000,4);
+   else if(bi===0&&!P.intro){build.frequency.cancelScheduledValues(t);build.frequency.setValueAtTime(16000,t)}
+   if((sec==='A'&&bi===6)||(P.intro&&P.bar===2))riser(t,32*ST);
+  }
+  /* funky gritty octave bass */
+  var bp=S.bassPat[sec][s];
+  if(bp!=='.'&&on('bass')&&!(sec==='C'&&bi===7&&s>=8))X.bass(t,ch.b+(bp==='o'?12:0),ST*1.6,s%4===0?1:0.85,X.sweep(P.bar+s/16));
+  /* disco chord chops */
+  if(!(P.intro&&P.bar<1)&&S.chops[sec][s]==='x'&&on('pad'))X.pad(t,ch.p.map(function(m){return m+12}),ST*0.9,0.004,0.16,1);
+  /* drums */
+  if(on('drums')){
+   if(P.intro){if(P.bar>=2&&S.kickR.I[s]==='x')kick(t,0.95);if(P.bar===3&&s>=8)X.tom(t,[150,150,120,120,95,95,80,80][s-8],0.6+0.05*(s-8))}
+   else{
+    if(S.kickR[sec][s]==='x')kick(t,s===0?1:0.9);
+    if(s===4||s===12)X.snare(t,1);
+    var h=S.hatR[sec][s];if(h==='x'||h==='c')X.hat(t,h==='c'?0.45:0.9);if(h==='o')openHat(t,1);
+    if(bi===7){if(sec==='B'){if(s>=12)X.snare(t,[0.35,0.5,0.65,0.85][s-12])}else if(s>=8)X.tom(t,[150,150,120,120,95,95,80,80][s-8],0.6+0.05*(s-8))}
+    if(s===0&&bi===0)X.crash(t);
+   }
+  }
+  /* robot vocals: scheduled one step early so consonants can lead into the beat */
+  if(on('voice')){
+   var Q=pos(n+1),tq=t+ST;
+   if(Q.s===0){
+    if(Q.intro&&Q.bar===2)sing(tq,S.vocals.I2,1);
+    if((Q.sec==='B'||Q.sec==='A')&&S.vocals[Q.sec+Q.bi])sing(tq,S.vocals[Q.sec+Q.bi],1);
+   }
+   var harm=(Q.sec==='A'&&(Q.bi===1||Q.bi===3)&&Q.s===8)||(Q.sec==='B'&&Q.bi%2===1&&Q.bi<7&&Q.s===4)||(Q.sec==='C'&&Q.bi%2===1&&Q.bi<7&&Q.s===10);
+   if(harm){var tri=Q.ch.v.slice(-3);sing(tq,[SY('ooh',0,2,tri),SY('wah',2,Q.sec==='C'?4:5,tri)],Q.sec==='C'?0.55:0.75)}
+  }
+  /* phaser lead: riff in late A, classic hook in C */
+  if(on('lead')){
+   var L=sec==='A'?S.riffA:sec==='C'?S.hook:null,ss=sec==='C'?(bi*16+s):(bi*16+s);
+   if(L)for(var j=0;j<L.length;j++)if(L[j][0]===ss)X.lead(t,L[j][1],L[j][2]*ST,lIn);
+  }
+ };
+}
+
 function makeNight(ctx,S){
  var sr=ctx.sampleRate,ST=60/S.bpm/4,E={ctx:ctx,bpm:S.bpm,stepDur:ST,only:null},lfos=[];
  var nb=ctx.createBuffer(1,sr*2,sr),nd=nb.getChannelData(0);
@@ -408,7 +540,7 @@ function makeNight(ctx,S){
  var chorus=lfo(0.33,9),chorus2=lfo(0.21,6);
  var voiceBus=G(S.voiceLvl*0.28);voiceBus.connect(bus);chain(voiceBus,G(0.55),hallIn);chain(voiceBus,G(0.28),dIn);
  var leadBus=G(S.leadLvl*1.6);leadBus.connect(bus);chain(leadBus,G(0.85),dIn);chain(leadBus,G(0.55),hallIn);
- function on(name){return !E.only||E.only==='all'||E.only===name}
+ function on(name){return !E.only||E.only==='all'||E.only===name||(E.only[0]==='!'&&E.only!=='!'+name)}
 
  function env(g,t,a,peak,hold,rel){
   g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(peak,t+a);
@@ -477,14 +609,14 @@ function makeNight(ctx,S){
   env(g,t,0.05,lv,Math.max(0.02,dur-0.05),0.25);g.connect(voiceBus);
  }
  var prevLead=0;
- function lead(t,m,dur){
+ function lead(t,m,dur,dest){
   var f=mtof(m),from=prevLead||f;prevLead=f;var end=t+dur+0.5,g=G(0),lp=F('lowpass',1900,1);
   var o1=osc('square',f,0,t,end),o2=osc('sawtooth',f,7,t,end),g2=G(0.5);
   [o1,o2].forEach(function(o){o.frequency.setValueAtTime(from,t);o.frequency.exponentialRampToValueAtTime(f,t+0.09)});
   var vib=ctx.createOscillator(),vg=G(0);vib.frequency.value=5;vg.gain.setValueAtTime(0,t);vg.gain.linearRampToValueAtTime(12,t+Math.min(0.5,dur));
   vib.connect(vg);vg.connect(o1.detune);vg.connect(o2.detune);vib.start(t);vib.stop(end);
   o1.connect(lp);chain(o2,g2,lp);
-  env(g,t,0.03,0.8,Math.max(0.02,dur-0.06),0.35);chain(lp,g,leadBus);
+  env(g,t,0.03,0.8,Math.max(0.02,dur-0.06),0.35);chain(lp,g,dest||leadBus);
  }
  function fill(t,s,lb){
   if(S.fill==='toms'){if(s>=8&&on('drums'))tom(t,[150,150,120,120,95,95,80,80][s-8],0.6+0.05*(s-8))}
@@ -527,13 +659,16 @@ function makeNight(ctx,S){
    for(var j=0;j<list.length;j++)if(list[j][0]===ss)lead(t,list[j][1],list[j][2]*ST);
   }
  };
+ if(S.ext)S.ext(E,{ctx:ctx,S:S,ST:ST,G:G,F:F,osc:osc,noise:noise,chain:chain,lfo:lfo,on:on,bus:bus,hallIn:hallIn,dIn:dIn,drumBus:drumBus,
+  bassBus:bassBus,padBus:padBus,kick:kick,snare:snare,hat:hat,crash:crash,tom:tom,bass:bass,pad:pad,lead:lead,sweep:sweep});
  E.bypass=function(){glue.ratio.value=1;lim.ratio.value=1;makeup.gain.value=1};/* test hook: measure raw stem levels */
  E.dispose=function(){lfos.forEach(function(o){try{o.stop()}catch(e){}});try{out.disconnect()}catch(e){}};
  return E;
 }
 
 var TRACKS=[
- {id:'pursuit',label:'Main Theme',name:'Neon Pursuit',make:function(c){return makeNight(c,SONGS.pursuit)}},
+ {id:'robot',label:'Main Theme',name:'Neon Pursuit',make:function(c){return makeNight(c,SONGS.robot)}},
+ {id:'pursuit',label:'Option 2',name:'Neon Pursuit (classic)',make:function(c){return makeNight(c,SONGS.pursuit)}},
  {id:'night',label:'Option 1',name:'Night Drive',make:function(c){return makeNight(c,SONGS.night)}},
  {id:'ocean',label:'Option 3',name:'Ocean Drive 3AM',make:function(c){return makeNight(c,SONGS.ocean)}},
  {id:'orig',label:'Original',name:'Rosado Theme',make:makeEngine}
