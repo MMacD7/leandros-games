@@ -34,79 +34,125 @@ var PINK='#ff3ad8',BLUE='#2f7bff',CYAN='#29d6ff',YEL='#ffd23a';
    Layout is in background-image pixels (gym-bg is 1280x720, cover-fitted to the W x 225 scene; visible x range is
    about 224..1056 on the narrowest (portrait) screens, so keep important things inside it).
    To swap art later: replace the files (same names) and, if sizes change, tweak LAY below. */
-var SPR={},CORE=['bg','bench','bag','richie-idle','richie-punch','richie-bench-bar','richie-bench-arms','richie-bench-body','apollo-cross','apollo-lean'],
+var SPR={},CORE=['bg','bag','bench-empty','richie-idle','apollo-cross',
+ 'richie-press-0','richie-press-1','richie-press-2','apollo-spot-0','apollo-spot-1','apollo-cheer-0','apollo-cheer-1',
+ 'richie-box-0','richie-box-1','richie-box-2','richie-box-3','richie-walk-0','richie-walk-1','richie-walk-2','richie-walk-3'],
  SLOT_NAMES=CORE.concat(['richie-portrait','apollo-portrait']);
-var LAY={IW:1280,IH:720,
- bench:[540,280],                       /* bench patch (original pixels of the empty bench) drawn at its place in the bg */
- bag:{x:284,y:132,px:342,py:0,max:0.11},/* bag sprite top-left + chain pivot; swing clamp (rad) */
- sR:0.82,sRb:0.86,sAx:1.25,sAy:1.0,              /* Richie scale; Apollo scale (wider = bulkier, Richie stays a bit taller) */
- press:{x:540,bottom:592,D:55,slices:{barY:84,plateY:124,armY:190},head:[617,399]},
- lean:{right:612,bottom:560},
- stand:{richie:[800,640],apollo:[965,616]},
- box:{bottom:640,fistX:398,back:14},
- apolloBag:[965,616]};
+/* v0.2.1 frames are stored at half size: draw them x2 in bg pixels. a = anchor x inside the stored frame. */
+var PAD=8,LAY={IW:1280,IH:720,
+ press:{x:470,bottom:604,a:2,head:[30,-164]},       /* bench-press frames: bench bottom-left */
+ bench:{x:520,bottom:600,a:11},                     /* empty bench + rack (stand / bag layouts) */
+ spot:{x:492,bottom:546,a:56},                      /* Apollo spotting, feet centre, standing behind Richie's head */
+ bag:{px:342,py:-24,chain:150,w:120,h:364,max:0.26},/* chain pivot (above the top edge), chain length, bag sprite, swing clamp */
+ box:{x:398,bottom:648},                            /* boxer frames are flipped (facing the bag): x = fist side */
+ stand:{richie:[800,640],apollo:[965,616],sR:0.82,sA:1.05},
+ apolloBag:[965,616],
+ walk:{bottom:646,a:52.5},
+ lights:[[365,34],[462,104],[912,104],[975,34]],sign:[619,159,775,262]};
 function spriteMode(){for(var i=0;i<CORE.length;i++)if(!SPR[CORE[i]])return false;return true}
 function loadSprites(map,onChange){
  var keys=Object.keys(map||{}).filter(function(k){return SLOT_NAMES.indexOf(k)>=0&&map[k]});
  return Promise.all(keys.map(function(k){return new Promise(function(res){var im=new Image();im.decoding='async';
   im.onload=function(){SPR[k]=im;if(onChange)onChange(k);res(true)};im.onerror=function(){delete SPR[k];res(false)};im.src=map[k]})}));
 }
-function fit(W){var k=Math.max(W/LAY.IW,H/LAY.IH);return {k:k,ox:(W-LAY.IW*k)/2,oy:(H-LAY.IH*k)/2}}
+/* scene fit: the bg cache is PAD px wider than the screen so the camera can drift without showing an edge */
+function fit(W,cam){var k=Math.max((W+PAD)/LAY.IW,H/LAY.IH);return {k:k,ox:(W-LAY.IW*k)/2+(cam||0),oy:(H-LAY.IH*k)/2}}
+function camX(t){return Math.sin((t||0)*0.37)*2.2+Math.sin((t||0)*0.91)*0.8}
+function mote(i){var r=Math.sin(i*127.1)*43758.5453;return r-Math.floor(r)}
 function drawSpriteScene(g,bg,S){
- var W=bg.width,F=fit(W),k=F.k;
- g.drawImage(bg,0,0);
- if(S.pulse>0){var pg=g.createLinearGradient(0,0,0,H*0.5);pg.addColorStop(0,'rgba(255,58,216,'+(S.pulse*0.10)+')');pg.addColorStop(1,'rgba(255,58,216,0)');g.fillStyle=pg;g.fillRect(0,0,W,H*0.5)}
- g.save();g.translate(Math.round(S.shakeX||0),Math.round(S.shakeY||0));
- g.translate(F.ox,F.oy);g.scale(k,k);g.imageSmoothingEnabled=false;
- var L=S.layout||'press';
- function img(n,x,y,sx,sy,flip){var im=SPR[n],w=im.naturalWidth*sx,h=im.naturalHeight*(sy||sx);if(flip){g.save();g.translate(x+w,y);g.scale(-1,1);g.drawImage(im,0,0,w,h);g.restore()}else g.drawImage(im,x,y,w,h);return [w,h]}
- function shadow(x,y,rx){g.fillStyle='rgba(0,0,0,.38)';g.beginPath();g.ellipse(x,y,rx,rx*0.16,0,0,Math.PI*2);g.fill()}
- /* heavy bag + chain (swings around the chain top) */
- var B=LAY.bag,bi=SPR.bag,ang=Math.max(-B.max,Math.min(B.max,(S.bagAng||0)*0.3));
- g.save();g.translate(B.px,B.py);g.rotate(ang);
- g.strokeStyle='#8d8a96';g.lineWidth=5;g.beginPath();g.moveTo(0,0);g.lineTo(0,70);g.moveTo(0,70);g.lineTo(B.x-B.px+14,B.y-B.py+12);g.moveTo(0,70);g.lineTo(B.x-B.px+bi.naturalWidth-14,B.y-B.py+12);g.stroke();
- g.strokeStyle='#3a3842';g.lineWidth=2;g.setLineDash([5,5]);g.beginPath();g.moveTo(0,0);g.lineTo(0,70);g.stroke();g.setLineDash([]);
- var sq=1+(S.bagSquash||0)*0.04;g.drawImage(bi,B.x-B.px-(sq-1)*bi.naturalWidth/2,B.y-B.py,bi.naturalWidth*sq,bi.naturalHeight);
- if(S.bagFlash>0){g.globalCompositeOperation='lighter';g.globalAlpha=Math.min(1,S.bagFlash)*0.35;g.drawImage(bi,B.x-B.px,B.y-B.py);g.globalAlpha=1;g.globalCompositeOperation='source-over'}
+ var W=bg.width-PAD,t=S.t||0,cam=camX(t),F=fit(W,cam),k=F.k,L=S.layout||'press',X2=2;
+ var sx=Math.round(S.shakeX||0),sy=Math.round(S.shakeY||0);
+ g.save();g.translate(sx,sy);
+ g.drawImage(bg,Math.round(-PAD/2+cam),0);
+ g.save();g.translate(F.ox,F.oy);g.scale(k,k);g.imageSmoothingEnabled=false;
+ function fr(n,x,bottom,a,flip,dy){var im=SPR[n],w=im.naturalWidth*X2,h=im.naturalHeight*X2,x0=x-(a||0)*X2,y0=bottom-h+(dy||0);
+  if(flip){g.save();g.translate(x0+w,y0);g.scale(-1,1);g.drawImage(im,0,0,w,h);g.restore()}else g.drawImage(im,x0,y0,w,h);return [x0,y0,w,h]}
+ function shadow(x,y,rx){g.fillStyle='rgba(10,0,20,.42)';g.beginPath();g.ellipse(x,y,rx,rx*0.15,0,0,Math.PI*2);g.fill()}
+ /* neon sign: soft glow that breathes with the music, and a flicker */
+ var SG=LAY.sign,scx=(SG[0]+SG[2])/2,scy=(SG[1]+SG[3])/2;
+ g.globalCompositeOperation='lighter';
+ var gl=g.createRadialGradient(scx,scy,10,scx,scy,190);gl.addColorStop(0,'rgba(255,58,216,'+(0.16+(S.pulse||0)*0.22)+')');gl.addColorStop(1,'rgba(255,58,216,0)');
+ g.fillStyle=gl;g.fillRect(scx-200,scy-200,400,400);
+ /* light shafts from the ceiling lamps */
+ for(var i=0;i<LAY.lights.length;i++){var Lp=LAY.lights[i],al=0.075*(0.75+0.25*Math.sin(t*1.3+i*1.7));
+  var sg=g.createLinearGradient(0,Lp[1],0,700);sg.addColorStop(0,'rgba(255,236,220,'+al+')');sg.addColorStop(1,'rgba(255,200,230,0)');
+  g.fillStyle=sg;g.beginPath();g.moveTo(Lp[0]-16,Lp[1]+8);g.lineTo(Lp[0]+16,Lp[1]+8);g.lineTo(Lp[0]+150,700);g.lineTo(Lp[0]-150,700);g.closePath();g.fill()}
+ g.globalCompositeOperation='source-over';
+ if(S.flicker){g.fillStyle='rgba(8,2,14,.55)';g.fillRect(SG[0],SG[1],SG[2]-SG[0],SG[3]-SG[1])}
+ var ci=SPR['apollo-cross'],sA=LAY.stand.sA;
+ function apolloStand(x,bottom,pose){
+  if(pose==='fist'){var ph=Math.floor(t*4)%2,hop=Math.abs(Math.sin(t*8))*12;shadow(x,bottom-4,80);fr('apollo-cheer-'+ph,x,bottom,LAY.spot.a,false,-hop);return}
+  var aw=ci.naturalWidth*sA,ah=ci.naturalHeight*sA;shadow(x,bottom-4,aw*0.5);g.drawImage(ci,x-aw/2,bottom-ah,aw,ah)}
+ /* ---- heavy bag on a swinging chain ---- */
+ var B=LAY.bag,ang=Math.max(-B.max,Math.min(B.max,(S.bagAng||0)*0.45)),ac=ang*0.82+Math.sin(t*2.3)*0.004,
+  ex=B.px+Math.sin(ac)*B.chain,ey=B.py+Math.cos(ac)*B.chain,bi=SPR.bag,sq=S.bagSquash||0;
+ shadow(ex+Math.sin(ang)*B.h*0.9,652,70-Math.abs(ang)*60);
+ for(var l=0,nl=9;l<nl;l++){var u=(l+0.5)/nl,lx=B.px+(ex-B.px)*u,ly=B.py+(ey-B.py)*u;
+  g.fillStyle=l%2?'#5d5a66':'#a9a6b4';if(l%2)g.fillRect(lx-2,ly-8,4,16);else{g.strokeStyle='#a9a6b4';g.lineWidth=4;g.beginPath();g.ellipse(lx,ly,6,9,ac,0,Math.PI*2);g.stroke()}}
+ g.save();g.translate(ex,ey);g.rotate(ang);
+ g.strokeStyle='#8d8a96';g.lineWidth=4;g.beginPath();g.moveTo(0,0);g.lineTo(-B.w/2+12,22);g.moveTo(0,0);g.lineTo(B.w/2-12,22);g.stroke();
+ var bw=B.w*(1+sq*0.08),bh=B.h*(1-sq*0.035);g.drawImage(bi,-bw/2,18,bw,bh);
+ if(S.bagFlash>0){g.globalCompositeOperation='lighter';g.globalAlpha=Math.min(1,S.bagFlash)*0.45;g.drawImage(bi,-bw/2,18,bw,bh);g.globalAlpha=1;g.globalCompositeOperation='source-over'}
  g.restore();
- var ci=SPR['apollo-cross'];
  if(L==='press'){
-  var P=LAY.press,bb=SPR['richie-bench-body'],sw=bb.naturalWidth,sh=bb.naturalHeight,s=LAY.sRb,top=P.bottom-sh*s,d=(1-(S.barH||0))*P.D,sl=P.slices,dip=(S.dip||0)*2;
-  var li=SPR['apollo-lean'],lw=li.naturalWidth*LAY.sAx,lh=li.naturalHeight*LAY.sAy;
-  shadow(LAY.lean.right-lw*0.5,LAY.lean.bottom-4,lw*0.42);
-  g.drawImage(li,LAY.lean.right-lw,LAY.lean.bottom-lh-(1-(S.barH||0))*10,lw,lh);
-  shadow(P.x+sw*s*0.5,P.bottom-6,sw*s*0.46);
-  g.drawImage(bb,P.x,top,sw*s,sh*s);
-  var ai=SPR['richie-bench-arms'],ah=sl.armY-sl.barY;
-  g.drawImage(ai,0,sl.barY,sw,ah,P.x,top+(sl.barY+d)*s,sw*s,Math.max(1,(ah-d))*s);
-  g.drawImage(SPR['richie-bench-bar'],P.x,top+(d+dip)*s,sw*s,sh*s);
+  var P=LAY.press,h=S.barH||0,up=S.lowering?h<0.25?0:h<0.7?1:2:h<0.42?0:h<0.8?1:2,jit=S.strain?Math.round(Math.sin(t*61)*(1+(S.rep||0))*1.5):0;
+  var sp=S.strain&&Math.floor(t*3.5)%2?1:0,pose=S.apolloPose||'spot';
+  if(pose==='cheer'){fr('apollo-cheer-'+(Math.floor(t*4)%2),LAY.spot.x,LAY.spot.bottom,LAY.spot.a,false,-Math.abs(Math.sin(t*8))*10)}
+  else{shadow(LAY.spot.x+20,LAY.spot.bottom-4,70);fr('apollo-spot-'+(pose==='shout'?1:sp),LAY.spot.x,LAY.spot.bottom,LAY.spot.a,false,(1-h)*42)}
+  shadow(P.x+190,P.bottom-6,200);
+  fr('richie-press-'+up,P.x+jit,P.bottom,P.a,false,(S.dip||0)*1.5);
  }else{
-  g.drawImage(SPR.bench,LAY.bench[0],LAY.bench[1]);
+  var BE=LAY.bench;shadow(BE.x+170,BE.bottom-6,180);fr('bench-empty',BE.x,BE.bottom,BE.a);
   if(L==='stand'){
-   var r=SPR['richie-idle'],rw=r.naturalWidth*LAY.sR,rh=r.naturalHeight*LAY.sR,A=LAY.stand;
-   var aw=ci.naturalWidth*LAY.sAx,ah2=ci.naturalHeight*LAY.sAy;
-   shadow(A.apollo[0],A.apollo[1]-4,aw*0.5);g.drawImage(ci,A.apollo[0]-aw/2,A.apollo[1]-ah2,aw,ah2);
+   var r=SPR['richie-idle'],rw=r.naturalWidth*LAY.stand.sR,rh=r.naturalHeight*LAY.stand.sR,A=LAY.stand;
+   apolloStand(A.apollo[0],A.apollo[1],'cross');
    shadow(A.richie[0],A.richie[1]-4,rw*0.5);g.drawImage(r,A.richie[0]-rw/2,A.richie[1]-rh,rw,rh);
   }else{
-   var aw3=ci.naturalWidth*LAY.sAx,ah3=ci.naturalHeight*LAY.sAy,hop=S.apolloArms==='fist'?Math.abs(Math.sin((S.t||0)*9))*14:0;
-   shadow(LAY.apolloBag[0],LAY.apolloBag[1]-4,aw3*0.5);g.drawImage(ci,LAY.apolloBag[0]-aw3/2,LAY.apolloBag[1]-ah3-hop,aw3,ah3);
+   apolloStand(LAY.apolloBag[0],LAY.apolloBag[1],S.apolloArms);
+   if(L==='bag'){
+    var X=LAY.box,sp2=S.sincePunch==null?9:S.sincePunch,f,dx=0;
+    if(sp2<0.05)f=1;else if(sp2<0.2){f=S.punchSide?3:2;dx=-6}else if(sp2<0.3)f=1;else f=Math.floor(t*5)%2;
+    var bob=sp2<0.3?0:Math.round(Math.abs(Math.sin(t*Math.PI*2.5))*6);
+    shadow(X.x+250,X.bottom-4,110);fr('richie-box-'+f,X.x+dx,X.bottom,0,true,-bob);
+   }else if(L==='exit'){
+    var wx=S.exitX==null?560:S.exitX,wf=S.walking?Math.floor(t*8)%4:0,wb=S.walking&&wf%2?-4:0;
+    shadow(wx,LAY.walk.bottom-4,70);fr('richie-walk-'+wf,wx,LAY.walk.bottom,LAY.walk.a,false,wb);
+   }
   }
  }
- if(L==='bag'){
-  var X=LAY.box,p=S.punch||0,useP=S.boxPose==='punch';
-  if(useP){var pi=SPR['richie-punch'],pw=pi.naturalWidth*LAY.sR,ph=pi.naturalHeight*LAY.sR;shadow(X.fistX+pw*0.6,X.bottom-4,pw*0.38);img('richie-punch',X.fistX+X.back*(1-p),X.bottom-ph,LAY.sR,LAY.sR,true)}
-  else{var ri=SPR['richie-idle'],iw=ri.naturalWidth*LAY.sR,ih=ri.naturalHeight*LAY.sR;shadow(X.fistX+90,X.bottom-4,iw*0.5);img('richie-idle',X.fistX+90-iw/2,X.bottom-ih,LAY.sR,LAY.sR,true)}
- }
+ /* dust motes drifting through the light */
+ g.globalCompositeOperation='lighter';
+ for(var m=0;m<34;m++){var mx=((mote(m)*1400+t*(8+mote(m+50)*14))%1400)-60,my=80+((mote(m+9)*560-t*(5+mote(m+70)*8))%560+560)%560,
+  tw=0.35+0.65*Math.abs(Math.sin(t*(0.7+mote(m+30))+m));g.fillStyle='rgba(255,226,240,'+(0.32*tw)+')';g.fillRect(mx+Math.sin(t+m)*10,my,4,4)}
+ g.globalCompositeOperation='source-over';
  g.restore();
  /* particles are in scene (logical) coords */
- g.save();g.translate(Math.round(S.shakeX||0),Math.round(S.shakeY||0));particles(g,S.parts||[]);g.restore();
+ particles(g,S.parts||[]);
+ /* foreground props: dark silhouettes that drift faster than the room (parallax) */
+ var fx=Math.round(cam*1.8);fgProps(g,W,fx);
+ g.restore();
+ if(bg.__vig)g.drawImage(bg.__vig,0,0);
+ if(S.flash>0){g.globalCompositeOperation='lighter';g.fillStyle='rgba(255,220,250,'+(S.flash*0.55)+')';g.fillRect(0,0,W,H);g.globalCompositeOperation='source-over'}
 }
-function spriteAnchors(W){var F=fit(W),k=F.k,m=function(x,y){return [F.ox+x*k,F.oy+y*k]},im=m(LAY.box.fistX+4,LAY.box.bottom-330);
- return {head:m(LAY.press.head[0],LAY.press.head[1]),bagX:im[0]-18,impact:im}}
+function fgProps(g,W,fx){
+ var D='#0a0512',E='#3a1a48';
+ /* left: plate stack + dumbbell */
+ var x=fx-6,y=H;
+ R(g,x,y-12,40,12,D);R(g,x+2,y-18,34,6,D);R(g,x+5,y-23,28,5,D);R(g,x+2,y-18,34,1,E);R(g,x+5,y-23,28,1,E);R(g,x,y-12,40,1,E);
+ R(g,x+38,y-9,26,3,D);R(g,x+36,y-14,6,14,D);R(g,x+60,y-14,6,14,D);R(g,x+36,y-14,6,1,'#ff3ad8');R(g,x+60,y-14,6,1,'#ff3ad8');
+ /* right: kettlebell + towel */
+ var rx=W+fx-34;
+ R(g,rx+6,y-20,16,3,D);R(g,rx+4,y-18,3,6,D);R(g,rx+21,y-18,3,6,D);R(g,rx,y-13,28,13,D);R(g,rx+2,y-15,24,2,D);R(g,rx+2,y-15,24,1,'#29d6ff');
+ R(g,rx+30,y-8,12,8,D);R(g,rx+30,y-8,12,1,E);
+}
+function spriteAnchors(W,t){var F=fit(W,camX(t)),k=F.k,m=function(x,y){return [F.ox+x*k,F.oy+y*k]},P=LAY.press,B=LAY.bag;
+ var im=m(B.px+B.w/2-6,LAY.box.bottom-345);
+ return {head:m(P.x+P.head[0],P.bottom+P.head[1]),bagX:im[0]-18,impact:im,walkY:m(0,LAY.walk.bottom)[1],toBg:function(x){return (x-F.ox)/k},fromBg:function(x){return F.ox+x*k}}}
 /* ---------- static background (wall, ceiling, signs, racks, floor) ---------- */
 function makeBg(W){
  var c=document.createElement('canvas');c.width=W;c.height=H;var g=c.getContext('2d'),r=rng(77),cx=W/2,bx=cx+30;
- if(spriteMode()){var im=SPR.bg,k=Math.max(W/im.naturalWidth,H/im.naturalHeight),dw=im.naturalWidth*k,dh=im.naturalHeight*k;g.imageSmoothingEnabled=true;g.drawImage(im,(W-dw)/2,(H-dh)/2,dw,dh);c.__img=true;return c}
+ if(spriteMode()){c.width=W+PAD;var im=SPR.bg,k=Math.max((W+PAD)/im.naturalWidth,H/im.naturalHeight),dw=im.naturalWidth*k,dh=im.naturalHeight*k;g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(im,(W+PAD-dw)/2,(H-dh)/2,dw,dh);c.__img=true;
+  var v=document.createElement('canvas');v.width=W;v.height=H;var vg=v.getContext('2d'),rg=vg.createRadialGradient(W/2,H*0.55,H*0.35,W/2,H*0.55,W*0.62);rg.addColorStop(0,'rgba(6,0,14,0)');rg.addColorStop(1,'rgba(6,0,14,.5)');vg.fillStyle=rg;vg.fillRect(0,0,W,H);c.__vig=v;return c}
  /* brick wall */
  R(g,0,0,W,FLOOR,'#1d1426');
  for(var y=16,row=0;y<FLOOR;y+=6,row++){
@@ -391,7 +437,7 @@ function portrait(cv,who,expr){
  headFront(g,12,4,12,14,P,expr||'smile',who==='apollo'?'buzz':'short');
 }
 
-function anchors(W,barH){if(spriteMode())return spriteAnchors(W);var cx=W/2,bx=cx+30,bagX=cx-95,f=function(x,y,ax,ay){return [ax+(x-ax)*SC,ay+(y-ay)*SC]};
+function anchors(W,barH,t){if(spriteMode())return spriteAnchors(W,t);var cx=W/2,bx=cx+30,bagX=cx-95,f=function(x,y,ax,ay){return [ax+(x-ax)*SC,ay+(y-ay)*SC]};
  var by=BAR0-(barH||0)*(BAR0-BAR1);
  return {head:f(bx-38,BENCH_TOP-12,bx,180),bar:f(bx-10,by,bx,180),bagX:bagX,bagHit:[bagX+18,95],boxerHead:f(bagX+58-2,196-90,bagX+58,196),bench:f(bx,150,bx,180)}}
 window.RosadoArt={anchors:anchors,loadSprites:loadSprites,sprites:SPR,SLOTS:SLOT_NAMES,spriteMode:spriteMode,LAY:LAY,H:H,makeBg:makeBg,drawScene:drawScene,portrait:portrait,PAL:PAL};

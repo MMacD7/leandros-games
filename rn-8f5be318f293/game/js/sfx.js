@@ -1,9 +1,10 @@
-/* Rosado Nights sound effects (v0.2.0)
+/* Rosado Nights sound effects (v0.2.1)
    Original WebAudio SFX, generated live. Own AudioContext so the effects keep working
    when the theme music is switched off (RosadoTheme.pause() suspends the music context).
    API: RosadoSFX.unlock() (call inside a tap), .clank(), .strain(level), .thump(power), .whiff(),
         .sting(), .blip(), .combo(n), .rack(), .fanfare(), .tick(), .setPaused(bool)
-   Level 1 (drive): .engine(level,boost) (continuous electric hum, 0 = off), .crash(v), .bump(), .puff(), .boost(), .chime(), .pickup(), .squelch(), .warn(), .clunk() */
+   Level 1 (drive): .engine(level,boost) (continuous electric hum, 0 = off), .crash(v), .bump(), .puff(), .boost(), .chime(), .pickup(), .squelch(), .warn(), .clunk()
+   Level 2 story (v0.2.1): .clang() (off-screen metal bin crash in the alley), .clangs() (call count, for tests) */
 (function(){
 "use strict";
 var ctx=null,out=null,nb=null,paused=false;
@@ -114,7 +115,16 @@ function squelch(){if(!ok())return;var t=now();
 function warn(){if(!ok())return;var t=now();[0,0.12].forEach(function(d){var o=osc('square',990,t+d,0.07),g=G(0);env(g,t+d,0.002,0.05,0.05);chain(o,g,out)})}
 /* van hatch drops something */
 function clunk(){if(!ok())return;var t=now(),o=osc('square',90,t,0.2),g=G(0);o.frequency.exponentialRampToValueAtTime(50,t+0.15);env(g,t,0.002,0.25,0.15);chain(o,F('lowpass',600),g,out)}
+/* off-screen alley crash: a metal bin tips over, bounces, and its lid rattles to a stop (muffled = far away) */
+var nClang=0;
+function clang(){nClang++;if(!ok())return;var t=now(),lp=F('lowpass',2400),bus=G(0.9);chain(lp,bus,out);
+ [[0,1],[0.16,0.7],[0.27,0.5]].forEach(function(h){var tt=t+h[0],v=h[1];
+  [[180,0.45],[431,0.32],[977,0.2],[1622,0.12],[2410,0.07]].forEach(function(p){var o=osc('square',p[0]*(0.96+Math.random()*0.08),tt,0.7),g=G(0);env(g,tt,0.002,p[1]*v*0.35,0.18+0.3*Math.random());chain(o,g,lp)});
+  var n=noise(tt,0.25),ng=G(0);env(ng,tt,0.001,0.6*v,0.16);chain(n,F('bandpass',1500,0.9),ng,lp)});
+ for(var i=0;i<7;i++){var tt=t+0.42+i*0.07*(1-i*0.08),o=osc('triangle',700+Math.random()*300,tt,0.06),g=G(0);env(g,tt,0.001,0.1*(1-i/8),0.04);chain(o,g,lp)}
+ var k=osc('sine',90,t,0.3),kg=G(0);k.frequency.exponentialRampToValueAtTime(45,t+0.25);env(kg,t,0.002,0.4,0.25);chain(k,kg,lp);
+}
 function setPaused(p){paused=!!p;if(!ctx)return;if(paused)ctx.suspend();else ctx.resume()}
 window.RosadoSFX={unlock:unlock,clank:clank,strain:strain,thump:thump,whiff:whiff,sting:sting,blip:blip,tick:tick,combo:combo,rack:rack,fanfare:fanfare,setPaused:setPaused,
- engine:engine,crash:crash,bump:bump,puff:puff,boost:boost,chime:chime,pickup:pickup,squelch:squelch,warn:warn,clunk:clunk};
+ engine:engine,crash:crash,bump:bump,puff:puff,boost:boost,chime:chime,pickup:pickup,squelch:squelch,warn:warn,clunk:clunk,clang:clang,clangs:function(){return nClang}};
 })();
