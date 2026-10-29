@@ -12,39 +12,68 @@
 <title>Leandro's Games</title>
 <style>
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;background:#0c0520}
 body{margin:0;min-height:100vh;min-height:100dvh;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
  background:
-  radial-gradient(120% 60% at 50% -10%,rgba(255,90,20,.28),transparent 60%),
-  radial-gradient(80% 50% at 100% 100%,rgba(0,200,120,.16),transparent 60%),
-  radial-gradient(80% 50% at 0% 100%,rgba(170,40,255,.16),transparent 60%),
-  #0b0612;
+  radial-gradient(70% 38% at 50% 0%,rgba(255,43,214,.30),transparent 70%),
+  radial-gradient(60% 40% at 100% 60%,rgba(25,211,255,.14),transparent 70%),
+  radial-gradient(60% 40% at 0% 80%,rgba(138,60,255,.18),transparent 70%),
+  linear-gradient(180deg,#140630 0%,#0c0520 55%,#090318 100%);
  -webkit-tap-highlight-color:transparent;overflow-x:hidden;display:flex;flex-direction:column}
 main.wrap{flex:1;width:100%}
-/* faint arcade grid */
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
- background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
- background-size:36px 36px;mask-image:linear-gradient(to bottom,transparent,#000 30%,#000 70%,transparent)}
-.hoops{position:relative;z-index:1;height:14px;background:repeating-linear-gradient(180deg,#0f8a3c 0 7px,#f4f4f4 7px 14px);opacity:.9}
-.hoops.top{height:21px;background:repeating-linear-gradient(180deg,#0f8a3c 0 7px,#f4f4f4 7px 14px,#0f8a3c 14px 21px)}
+/* synthwave horizon: soft sun glow + neon floor grid fixed behind everything (GPU-friendly transform scroll) */
+.horizon{position:fixed;left:0;right:0;bottom:0;height:38vh;z-index:0;pointer-events:none;overflow:hidden;
+ -webkit-mask-image:linear-gradient(transparent,#000 35%);mask-image:linear-gradient(transparent,#000 35%)}
+.horizon::before{content:"";position:absolute;left:50%;top:-34%;width:min(70vw,520px);aspect-ratio:1;transform:translateX(-50%);border-radius:50%;
+ background:radial-gradient(circle,rgba(255,140,90,.32),rgba(255,43,214,.16) 45%,transparent 70%)}
+.horizon .line{position:absolute;left:0;right:0;top:0;height:2px;background:#ff2bd6;box-shadow:0 0 10px #ff2bd6,0 0 22px rgba(255,43,214,.6);opacity:.75}
+.floor{position:absolute;left:-50%;right:-50%;top:0;bottom:0;perspective:220px;perspective-origin:50% 0}
+.floor i{position:absolute;left:0;right:0;top:0;height:200%;transform-origin:50% 0;transform:rotateX(62deg);
+ background-image:linear-gradient(rgba(25,211,255,.55) 2px,transparent 2px),linear-gradient(90deg,rgba(255,43,214,.45) 2px,transparent 2px);
+ background-size:100% 46px,58px 100%;animation:drive 2.6s linear infinite;will-change:transform}
+.hoops{position:relative;z-index:1;height:4px;background:linear-gradient(90deg,#19d3ff,#ff2bd6 50%,#19d3ff);box-shadow:0 0 12px rgba(255,43,214,.8),0 0 24px rgba(25,211,255,.5);opacity:.9}
+.hoops.top{height:4px}
 .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;
  padding:28px max(18px,env(safe-area-inset-right)) calc(36px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
-header{text-align:center;margin:10px 0 30px}
+header{text-align:center;margin:10px 0 26px}
 .badge{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;letter-spacing:.22em;text-transform:uppercase;
- color:#ffd34d;padding:7px 14px;border:2px solid rgba(255,211,77,.55);border-radius:999px;background:rgba(255,211,77,.08)}
-.badge .dot{width:9px;height:9px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 10px #ff3b3b;animation:blink 1.2s steps(2) infinite}
-h1{margin:16px 0 8px;line-height:.92;font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:clamp(46px,13vw,104px);
+ color:#bff6ff;padding:7px 14px;border:2px solid rgba(25,211,255,.8);border-radius:999px;background:rgba(25,211,255,.08);
+ box-shadow:0 0 10px rgba(25,211,255,.45),inset 0 0 8px rgba(25,211,255,.25);text-shadow:0 0 6px rgba(25,211,255,.8)}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:#ff2bd6;box-shadow:0 0 10px #ff2bd6;animation:blink 1.6s ease-in-out infinite}
+h1{margin:16px 0 8px;line-height:.95;font-weight:900;text-transform:uppercase;letter-spacing:.01em;font-size:clamp(46px,13vw,104px);
  font-family:Impact,"Arial Black","Helvetica Neue",system-ui,sans-serif}
 h1 span{display:block}
-h1 .l1{font-size:.62em;color:#fff;text-shadow:0 0 18px rgba(0,255,170,.55),3px 3px 0 #0f8a3c}
-h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2a1a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
- filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 22px rgba(255,90,0,.6));animation:flicker 3.2s ease-in-out infinite}
-.sub{margin:10px 0 0;font-size:clamp(16px,4.4vw,20px);font-weight:700;color:#cfe9ff;opacity:.9}
+/* neon tube lettering: pale core + coloured glow; flickers on once at load, then a slow gentle breathe (no strobe) */
+h1 .l1{font-size:.6em;color:#e9fdff;
+ text-shadow:0 0 3px #fff,0 0 10px #19d3ff,0 0 22px #19d3ff,0 0 42px rgba(25,211,255,.7);animation:on1 1.6s ease-out both}
+h1 .l2{color:#ffe9fb;
+ text-shadow:0 0 4px #fff,0 0 12px #ff2bd6,0 0 26px #ff2bd6,0 0 54px rgba(255,43,214,.75),0 6px 0 #3a0b4a;
+ animation:on2 2s ease-out .3s both,breathe 5s ease-in-out 2.4s infinite}
+.sub{margin:10px 0 0;font-size:clamp(16px,4.4vw,20px);font-weight:700;color:#cfe9ff;opacity:.92}
+/* theme music toggle */
+.music{margin-top:16px;display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 18px 0 14px;border-radius:999px;cursor:pointer;
+ font:800 15px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.06em;color:#fff;touch-action:manipulation;
+ background:rgba(26,8,52,.72);border:2px solid #ff2bd6;box-shadow:0 4px 0 #2a0b4a,0 0 14px rgba(255,43,214,.55),0 0 30px rgba(25,211,255,.25);
+ text-shadow:0 0 8px rgba(255,43,214,.9);-webkit-appearance:none;appearance:none;transition:transform .12s ease}
+.music:active{transform:translateY(3px);box-shadow:0 1px 0 #2a0b4a,0 0 12px rgba(255,43,214,.5)}
+.music:focus-visible{outline:4px solid #fff;outline-offset:4px}
+.music[aria-pressed="true"]{border-color:#19d3ff;background:linear-gradient(180deg,rgba(255,43,214,.4),rgba(106,43,216,.5));
+ box-shadow:0 4px 0 #2a0b4a,0 0 18px rgba(25,211,255,.6),0 0 36px rgba(255,43,214,.4)}
+.music[hidden]{display:none}
+.eq{display:inline-flex;align-items:flex-end;gap:3px;height:18px}
+.eq b{display:block;width:4px;height:6px;border-radius:2px;background:#19d3ff;box-shadow:0 0 6px #19d3ff}
+.music[aria-pressed="true"] .eq b{animation:eq .9s ease-in-out infinite}
+.music[aria-pressed="true"] .eq b:nth-child(2){animation-delay:-.3s;background:#ff2bd6;box-shadow:0 0 6px #ff2bd6}
+.music[aria-pressed="true"] .eq b:nth-child(3){animation-delay:-.6s}
 .grid{display:grid;grid-template-columns:1fr;gap:20px}
 @media (min-width:640px){.grid{gap:28px}}
-.card{--c1:#2f7d32;--c2:#a0c43a;--glow:rgba(140,255,90,.55);position:relative;display:flex;flex-direction:column;min-height:96px;
- border-radius:24px;padding:4px;text-decoration:none;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));
- box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 28px var(--glow);transition:transform .15s ease,box-shadow .15s ease;touch-action:manipulation}
+.card{--c1:#2f7d32;--c2:#a0c43a;--glow:rgba(140,255,90,.55);--glow2:rgba(140,255,90,.3);position:relative;display:flex;flex-direction:column;min-height:96px;
+ border-radius:24px;padding:3px;text-decoration:none;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));
+ box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 16px var(--glow),0 0 40px var(--glow2);transition:transform .15s ease,box-shadow .15s ease;touch-action:manipulation}
+/* neon glow pulse: a separate glow layer whose opacity breathes (cheap on phones: opacity only) */
+.card::after{content:"";position:absolute;inset:-2px;border-radius:26px;pointer-events:none;z-index:-1;
+ box-shadow:0 0 26px 2px var(--glow),0 0 64px 6px var(--glow2);opacity:.35;animation:pulse 4.5s ease-in-out infinite}
+.card.rosado::after{animation-delay:-2.2s}
 .card .in{flex:1;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:#140b1c}
 .art{position:relative;height:170px;display:grid;place-items:center;overflow:hidden;
  background:radial-gradient(circle at 50% 120%,var(--c2),transparent 70%),linear-gradient(180deg,#1d1030,#140b1c)}
@@ -59,13 +88,16 @@ h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2
 .card:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:0 14px 0 rgba(0,0,0,.45),0 0 44px var(--glow)}
 .card:active{transform:translateY(6px);box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 20px var(--glow)}
 .card:focus-visible{outline:4px solid #fff;outline-offset:4px}
-.robo{--c1:#3a3a3a;--c2:#e0321f;--glow:rgba(255,60,30,.55)}
+.robo{--c1:#ff7a1a;--c2:#ff2a3a;--glow:rgba(255,90,40,.6);--glow2:rgba(255,40,60,.32);
+ background:linear-gradient(135deg,#ffd34d,#ff7a1a 40%,#ff2a3a)}
+.robo .in{background:linear-gradient(180deg,#1d0f2e,#150a20)}
+.robo .title{color:#fff;text-shadow:0 0 10px rgba(255,120,40,.65)}
+.robo .play{box-shadow:0 5px 0 #a24a00,0 0 16px rgba(255,157,0,.55)}
 /* ---- Rosado Nights feature card ---- */
-.rosado{--c1:#ff2bd6;--c2:#19d3ff;--glow:rgba(255,43,214,.5);
- background:linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff);
- box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 26px rgba(255,43,214,.55),0 0 46px rgba(25,211,255,.35);animation:neon 4s ease-in-out infinite}
-.rosado:hover{animation:none;box-shadow:0 14px 0 rgba(0,0,0,.45),0 0 40px rgba(255,43,214,.8),0 0 70px rgba(25,211,255,.55)}
-.rosado:active{animation:none;box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 20px rgba(255,43,214,.6),0 0 36px rgba(25,211,255,.4)}
+.rosado{--c1:#ff2bd6;--c2:#19d3ff;--glow:rgba(255,43,214,.6);--glow2:rgba(25,211,255,.35);
+ background:linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff)}
+.rosado:hover{box-shadow:0 14px 0 rgba(0,0,0,.45),0 0 40px rgba(255,43,214,.8),0 0 70px rgba(25,211,255,.55)}
+.rosado:active{box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 20px rgba(255,43,214,.6),0 0 36px rgba(25,211,255,.4)}
 .rosado .in{background:linear-gradient(180deg,#2a1150 0%,#1a0b33 55%,#0d1a3a 100%)}
 .grid>*{min-width:0}
 .poster{position:relative;aspect-ratio:4/5;overflow:hidden;background:#1a0b33}
@@ -105,25 +137,29 @@ h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2
  .rosado .play{margin-top:14px}
 }
 @media (min-width:1000px){.wrap{max-width:940px}}
-@keyframes neon{0%,100%{box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 26px rgba(255,43,214,.55),0 0 46px rgba(25,211,255,.35)}
- 50%{box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 34px rgba(255,43,214,.75),0 0 62px rgba(25,211,255,.5)}}
-@keyframes sign{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.55}}
-footer{margin-top:34px;text-align:center;font-weight:700;color:#9d92b5;font-size:15px}
-footer b{color:#2fd27a}
-@keyframes flicker{0%,100%{filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 22px rgba(255,90,0,.6))}50%{filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 38px rgba(255,140,0,.9))}}
+footer{margin-top:34px;text-align:center;font-weight:700;color:#b6a8d6;font-size:15px}
+footer b{color:#ff7ae6;text-shadow:0 0 8px rgba(255,43,214,.7)}
+@keyframes on1{0%{opacity:.1}12%{opacity:.9}20%{opacity:.25}38%{opacity:1}52%{opacity:.5}70%,100%{opacity:1}}
+@keyframes on2{0%{opacity:.08}15%{opacity:.85}26%{opacity:.2}46%{opacity:1}60%{opacity:.55}78%,100%{opacity:1}}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.86}}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:.8}}
+@keyframes drive{from{transform:rotateX(62deg) translateY(0)}to{transform:rotateX(62deg) translateY(46px)}}
+@keyframes eq{0%,100%{height:5px}50%{height:18px}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes wobble{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
-@keyframes blink{50%{opacity:.2}}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@keyframes blink{50%{opacity:.35}}
+@keyframes sign{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.7}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.card::after{opacity:.5}}
 </style>
 </head>
 <body>
+<div class="horizon" aria-hidden="true"><div class="floor"><i></i></div><span class="line"></span></div>
 <div class="hoops top" aria-hidden="true"></div>
 <main class="wrap">
  <header>
   <div class="badge"><span class="dot"></span>Press Start</div>
   <h1><span class="l1">Leandro's</span><span class="l2">Games</span></h1>
   <p class="sub">Pick a game. Stomp, roar, and have fun!</p>
+  <button class="music" id="music" type="button" aria-pressed="false" hidden><span class="eq" aria-hidden="true"><b></b><b></b><b></b></span><span class="lbl">♫ Play Rosado Nights theme</span></button>
  </header>
 
  <div class="grid">
@@ -175,5 +211,15 @@ footer b{color:#2fd27a}
  <footer>Made for <b>Leandro</b> · Ready, set, ROAR!</footer>
 </main>
 <div class="hoops" aria-hidden="true"></div>
+<script src="rosado-nights/theme.js" defer></script>
+<script>
+/* theme music toggle: audio only starts from a tap (iOS rule); the music code is shared with rosado-nights/ */
+window.addEventListener('DOMContentLoaded',function(){
+ var T=window.RosadoTheme,b=document.getElementById('music');if(!b||!T||!T.supported)return;
+ var lbl=b.querySelector('.lbl');b.hidden=false;
+ function ui(p){b.setAttribute('aria-pressed',p?'true':'false');lbl.textContent=p?'❚❚ Pause Rosado Nights theme':'♫ Play Rosado Nights theme'}
+ T.onChange(ui);b.addEventListener('click',function(){T.toggle()});
+});
+</script>
 </body>
 </html>
