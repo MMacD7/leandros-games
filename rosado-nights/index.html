@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a0b33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Rosado Nights: hear the neon synthwave theme. Game coming soon.">
+<title>Rosado Nights · Theme</title>
+<style>
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:#12062a}
+body{margin:0;min-height:100vh;min-height:100dvh;color:#fff;overflow-x:hidden;touch-action:manipulation;
+ font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;
+ background:#12062a}
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;transform:scale(1.12);
+ filter:blur(16px) brightness(.5) saturate(1.35)}
+.bg::after{content:"";position:absolute;inset:0;
+ background:
+  radial-gradient(90% 55% at 50% 0%,rgba(255,43,214,.28),transparent 70%),
+  linear-gradient(180deg,rgba(42,17,80,.55) 0%,rgba(26,11,51,.72) 50%,rgba(10,8,40,.92) 100%)}
+#viz{position:fixed;left:0;right:0;bottom:0;width:100%;height:44%;z-index:1;pointer-events:none}
+main{position:relative;z-index:2;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;
+ padding:calc(12px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.top{width:100%;max-width:900px;display:flex}
+.back{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 18px;border-radius:999px;
+ color:#bfefff;text-decoration:none;font-weight:800;font-size:16px;letter-spacing:.02em;
+ background:rgba(20,6,40,.6);border:2px solid rgba(25,211,255,.7);box-shadow:0 0 12px rgba(25,211,255,.45);
+ -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.back:active{transform:translateY(2px)}
+.back:focus-visible,.play:focus-visible{outline:4px solid #fff;outline-offset:4px}
+.stage{flex:1;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding-top:10px}
+.poster{display:block;height:clamp(190px,40dvh,500px);aspect-ratio:2/3;border-radius:18px;overflow:hidden;
+ border:3px solid transparent;background:linear-gradient(#1a0b33,#1a0b33) padding-box,linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff) border-box;
+ box-shadow:0 0 26px rgba(255,43,214,.55),0 0 52px rgba(25,211,255,.3);transition:box-shadow .2s ease}
+.poster img{display:block;width:100%;height:100%;object-fit:cover}
+h1{margin:6px 0 0;text-align:center;line-height:.95;font-weight:900;font-style:italic;text-transform:uppercase;
+ font-family:"Avenir Next Condensed","Arial Narrow",Impact,"Arial Black",system-ui,sans-serif}
+h1 .a{display:block;font-size:clamp(44px,13vw,92px);letter-spacing:.04em;color:#ffe9fb;
+ text-shadow:0 0 4px #fff,0 0 10px #ff2bd6,0 0 22px #ff2bd6,0 0 44px rgba(255,43,214,.75);animation:sign 6s linear infinite}
+h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spacing:.42em;padding-left:.42em;color:#e6fbff;
+ text-shadow:0 0 4px #fff,0 0 10px #19d3ff,0 0 22px #19d3ff,0 0 40px rgba(25,211,255,.7)}
+.play{appearance:none;-webkit-appearance:none;border:3px solid #19d3ff;cursor:pointer;touch-action:manipulation;
+ margin-top:10px;min-height:76px;min-width:min(300px,86vw);padding:0 34px;border-radius:999px;
+ font:900 25px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.08em;color:#fff;
+ background:linear-gradient(180deg,#ff4fe0 0%,#c428d6 45%,#6a2bd8 100%);
+ text-shadow:0 0 10px rgba(255,255,255,.7);
+ box-shadow:0 6px 0 #2a0b4a,0 0 22px rgba(255,43,214,.75),0 0 46px rgba(25,211,255,.45),inset 0 2px 0 rgba(255,255,255,.35);
+ transition:transform .12s ease,box-shadow .12s ease}
+.play:hover{box-shadow:0 6px 0 #2a0b4a,0 0 32px rgba(255,43,214,.9),0 0 64px rgba(25,211,255,.6),inset 0 2px 0 rgba(255,255,255,.35)}
+.play:active{transform:translateY(5px);box-shadow:0 1px 0 #2a0b4a,0 0 18px rgba(255,43,214,.7),inset 0 2px 0 rgba(255,255,255,.3)}
+.play[aria-pressed="true"]{background:linear-gradient(180deg,#2a8cff 0%,#1a4fd0 50%,#3a1a8a 100%);border-color:#ff2bd6}
+.now{margin:4px 0 0;font-size:15px;font-weight:700;color:#bfefff;letter-spacing:.06em;text-align:center;min-height:1.3em}
+.soon{margin:2px 0 0;font-size:13px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#ff9be9;opacity:.85}
+@keyframes sign{0%,17%,21%,70%,72%,100%{opacity:1}19%,71%{opacity:.6}}
+@media (min-width:700px) and (orientation:landscape),(min-width:1000px){
+ .stage{flex-direction:row;gap:42px}
+ .stage .info{display:flex;flex-direction:column;align-items:center}
+ .poster{height:clamp(240px,62dvh,560px)}
+}
+.info{display:flex;flex-direction:column;align-items:center;gap:8px}
+@media (max-height:560px) and (orientation:landscape){
+ .stage{flex-direction:row;gap:26px}.poster{height:62dvh}h1 .a{font-size:44px}.play{min-height:64px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+ <picture>
+  <source srcset="cover.webp" type="image/webp">
+  <img src="cover.jpg" alt="" width="600" height="900" decoding="async">
+ </picture>
+</div>
+<canvas id="viz" aria-hidden="true"></canvas>
+<main>
+ <div class="top"><a class="back" href="../">← Back to games</a></div>
+ <div class="stage">
+  <picture class="poster">
+   <source srcset="cover.webp" type="image/webp">
+   <img src="cover.jpg" width="600" height="900" alt="Rosado Nights poster: a man in a palm-print shirt under a neon Miami night sky">
+  </picture>
+  <div class="info">
+   <h1><span class="a">Rosado</span><span class="b">Nights</span></h1>
+   <button class="play" id="play" type="button" aria-pressed="false">▶ PLAY MUSIC</button>
+   <p class="now" id="now" aria-live="polite">Main theme · turn it up!</p>
+   <p class="soon">Game coming soon</p>
+  </div>
+ </div>
+</main>
+<script>
+"use strict";
+/* ===== Rosado Nights theme: original synthwave, generated live with WebAudio ===== */
+(function(){
+var BPM=92, STEP=60/BPM/4, BAR_STEPS=16, LOOP_BARS=16;
+function mtof(m){return 440*Math.pow(2,(m-69)/12)}
+
+/* Chords per bar (pad voicing + bass root). E minor. A = bars 0-7, B = bars 8-15. */
+var CH={
+ Em7:{pad:[52,55,59,62],root:40},
+ Cmaj7:{pad:[52,55,59,60],root:36},
+ Am7:{pad:[52,55,57,60],root:33},
+ Bsus:{pad:[52,54,59,61],root:35},
+ B:{pad:[51,54,59,63],root:35},
+ D:{pad:[50,54,57,62],root:38},
+ Bm7:{pad:[50,54,57,59],root:35}
+};
+var BARS=['Em7','Em7','Cmaj7','Cmaj7','Am7','Am7','Bsus','B',
+          'Cmaj7','D','Bm7','Em7','Am7','D','Cmaj7','B'];
+/* Lead hook for the B section: [step within section, midi, length in steps] */
+var LEAD=[[0,71,6],[6,67,2],[8,76,6],[14,74,2],
+ [16,74,4],[20,69,4],[24,66,8],
+ [32,66,2],[34,69,2],[36,71,6],[42,74,6],
+ [48,71,12],
+ [64,72,6],[70,71,2],[72,69,4],[76,76,4],
+ [80,78,6],[86,76,2],[88,74,8],
+ [96,76,4],[100,74,4],[104,71,4],[108,67,4],
+ [112,66,4],[116,75,10]];
+var ARP=[0,2,1,3,2,4,3,1,0,2,1,3,4,3,2,1];
+
+function makeEngine(ctx){
+ var sr=ctx.sampleRate, E={ctx:ctx};
+ /* shared noise */
+ var nb=ctx.createBuffer(1,sr*2,sr),nd=nb.getChannelData(0);
+ for(var i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+ function impulse(sec,shape){
+  var len=Math.floor(sr*sec),b=ctx.createBuffer(2,len,sr);
+  for(var c=0;c<2;c++){var d=b.getChannelData(c);for(var i=0;i<len;i++){d[i]=(Math.random()*2-1)*shape(i/len,i/sr)}}
+  return b;
+ }
+ /* master chain: bus -> glue comp -> makeup -> limiter -> out */
+ var bus=ctx.createGain();bus.gain.value=0.8;
+ var lowcut=ctx.createBiquadFilter();lowcut.type='highpass';lowcut.frequency.value=28;
+ var glue=ctx.createDynamicsCompressor();
+ glue.threshold.value=-20;glue.knee.value=8;glue.ratio.value=3.5;glue.attack.value=0.008;glue.release.value=0.22;
+ var makeup=ctx.createGain();makeup.gain.value=1.7;
+ var lim=ctx.createDynamicsCompressor();
+ lim.threshold.value=-4;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.001;lim.release.value=0.12;
+ var out=ctx.createGain();out.gain.value=0.86;
+ var tilt=ctx.createBiquadFilter();tilt.type='highshelf';tilt.frequency.value=5000;tilt.gain.value=3;
+ var lows=ctx.createBiquadFilter();lows.type='lowshelf';lows.frequency.value=90;lows.gain.value=-3;
+ bus.connect(lowcut);lowcut.connect(lows);lows.connect(tilt);tilt.connect(glue);glue.connect(makeup);makeup.connect(lim);lim.connect(out);
+ var analyser=ctx.createAnalyser();analyser.fftSize=512;analyser.smoothingTimeConstant=0.6;
+ out.connect(analyser);out.connect(ctx.destination);
+ E.analyser=analyser;E.out=out;
+ /* hall reverb */
+ var hall=ctx.createConvolver();hall.buffer=impulse(2.8,function(p){return Math.pow(1-p,3.2)});
+ var hallIn=ctx.createGain();hallIn.gain.value=1;
+ var hallHP=ctx.createBiquadFilter();hallHP.type='highpass';hallHP.frequency.value=220;
+ var hallOut=ctx.createGain();hallOut.gain.value=0.42;
+ hallIn.connect(hallHP);hallHP.connect(hall);hall.connect(hallOut);hallOut.connect(bus);
+ /* gated reverb for the snare */
+ var gate=ctx.createConvolver();gate.buffer=impulse(0.34,function(p){return (1-p*0.35)*(p>0.93?(1-p)/0.07:1)});
+ var gateIn=ctx.createGain();var gateOut=ctx.createGain();gateOut.gain.value=0.55;
+ gateIn.connect(gate);gate.connect(gateOut);gateOut.connect(bus);
+ /* dotted-eighth ping-pong delay */
+ var dIn=ctx.createGain(),dL=ctx.createDelay(2),dR=ctx.createDelay(2),fb=ctx.createGain(),dLP=ctx.createBiquadFilter();
+ dL.delayTime.value=STEP*3;dR.delayTime.value=STEP*3;fb.gain.value=0.38;dLP.type='lowpass';dLP.frequency.value=2600;
+ var merge=ctx.createChannelMerger(2),dOut=ctx.createGain();dOut.gain.value=0.32;
+ dIn.connect(dLP);dLP.connect(dL);dL.connect(dR);dR.connect(fb);fb.connect(dLP);
+ dL.connect(merge,0,0);dR.connect(merge,0,1);merge.connect(dOut);dOut.connect(bus);dOut.connect(hallIn);
+ /* instrument buses */
+ var padBus=ctx.createGain();padBus.gain.value=1;   /* sidechain-pumped */
+ var padLP=ctx.createBiquadFilter();padLP.type='lowpass';padLP.frequency.value=2700;padLP.Q.value=0.6;
+ var padLevel=ctx.createGain();padLevel.gain.value=0.19;
+ padLevel.connect(padLP);padLP.connect(padBus);padBus.connect(bus);
+ var padSend=ctx.createGain();padSend.gain.value=0.5;padBus.connect(padSend);padSend.connect(hallIn);
+ var bassBus=ctx.createGain();bassBus.gain.value=0.42;bassBus.connect(bus);
+ var drumBus=ctx.createGain();drumBus.gain.value=0.9;drumBus.connect(bus);
+ var arpBus=ctx.createGain();arpBus.gain.value=0.12;
+ var arpPan=ctx.createStereoPanner?ctx.createStereoPanner():ctx.createGain();if(arpPan.pan)arpPan.pan.value=0.2;
+ arpBus.connect(arpPan);arpPan.connect(bus);arpBus.connect(dIn);
+ var arpSend=ctx.createGain();arpSend.gain.value=0.4;arpBus.connect(arpSend);arpSend.connect(hallIn);
+ var leadBus=ctx.createGain();leadBus.gain.value=0.16;
+ leadBus.connect(bus);var leadD=ctx.createGain();leadD.gain.value=0.9;leadBus.connect(leadD);leadD.connect(dIn);
+ var leadSend=ctx.createGain();leadSend.gain.value=0.55;leadBus.connect(leadSend);leadSend.connect(hallIn);
+
+ function env(g,t,a,peak,hold,rel){
+  g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(peak,t+a);
+  g.gain.setValueAtTime(peak,t+a+hold);g.gain.exponentialRampToValueAtTime(0.0001,t+a+hold+rel);
+  return t+a+hold+rel+0.05;
+ }
+ function noise(t,dur){var s=ctx.createBufferSource();s.buffer=nb;s.start(t,Math.random()*1.5);s.stop(t+dur);return s}
+
+ function kick(t,v){
+  var o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';
+  o.frequency.setValueAtTime(155,t);o.frequency.exponentialRampToValueAtTime(48,t+0.11);o.frequency.exponentialRampToValueAtTime(40,t+0.4);
+  g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.85*v,t+0.003);g.gain.exponentialRampToValueAtTime(0.0001,t+0.48);
+  o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+0.5);
+  var n=noise(t,0.02),nf=ctx.createBiquadFilter(),ng=ctx.createGain();nf.type='bandpass';nf.frequency.value=3200;
+  ng.gain.setValueAtTime(0.35*v,t);ng.gain.exponentialRampToValueAtTime(0.001,t+0.018);n.connect(nf);nf.connect(ng);ng.connect(drumBus);
+  /* sidechain pump on pads */
+  padBus.gain.cancelScheduledValues(t);padBus.gain.setValueAtTime(0.35,t);padBus.gain.linearRampToValueAtTime(1,t+0.3);
+ }
+ function snare(t,v){
+  var n=noise(t,0.3),hp=ctx.createBiquadFilter(),bp=ctx.createBiquadFilter(),g=ctx.createGain();
+  hp.type='highpass';hp.frequency.value=900;bp.type='peaking';bp.frequency.value=4500;bp.gain.value=6;
+  g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.75*v,t+0.002);g.gain.exponentialRampToValueAtTime(0.0001,t+0.24);
+  n.connect(hp);hp.connect(bp);bp.connect(g);g.connect(drumBus);g.connect(gateIn);
+  var o=ctx.createOscillator(),og=ctx.createGain();o.type='triangle';
+  o.frequency.setValueAtTime(230,t);o.frequency.exponentialRampToValueAtTime(170,t+0.08);
+  og.gain.setValueAtTime(0.0001,t);og.gain.linearRampToValueAtTime(0.55*v,t+0.002);og.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+  o.connect(og);og.connect(drumBus);og.connect(gateIn);o.start(t);o.stop(t+0.16);
+  var hs=ctx.createGain();hs.gain.value=0.25;g.connect(hs);hs.connect(hallIn);
+ }
+ function hat(t,v,open){
+  var d=open?0.16:0.035,n=noise(t,d+0.02),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  f.type='highpass';f.frequency.value=7500;
+  g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.5*v,t+0.001);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+  n.connect(f);f.connect(g);g.connect(drumBus);
+ }
+ function bass(t,m,dur,v){
+  var f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.Q.value=7;
+  f.frequency.setValueAtTime(150,t);f.frequency.linearRampToValueAtTime(320+1700*v,t+0.012);f.frequency.exponentialRampToValueAtTime(260,t+0.22);
+  var end=env(g,t,0.004,0.9*v,dur*0.55,dur*0.5);
+  [-9,9].forEach(function(dt){var o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtof(m);o.detune.value=dt;o.connect(f);o.start(t);o.stop(end)});
+  var s=ctx.createOscillator(),sg=ctx.createGain();s.type='sine';s.frequency.value=mtof(m-12);sg.gain.value=0.35;
+  s.connect(sg);sg.connect(g);s.start(t);s.stop(end);
+  f.connect(g);g.connect(bassBus);
+ }
+ function pad(t,notes,dur){
+  notes.forEach(function(m,i){
+   var g=ctx.createGain(),end=env(g,t,0.35,0.5,Math.max(0.05,dur-0.4),0.9);
+   var p=ctx.createStereoPanner?ctx.createStereoPanner():null;
+   [-14,-4,11].forEach(function(dt){var o=ctx.createOscillator();o.type='sawtooth';o.frequency.value=mtof(m);o.detune.value=dt+(i-1.5)*2;
+    o.connect(g);o.start(t);o.stop(end)});
+   if(p){p.pan.value=(i/(notes.length-1)-0.5)*0.9;g.connect(p);p.connect(padLevel)}else g.connect(padLevel);
+  });
+ }
+ function arp(t,m,v){
+  var o=ctx.createOscillator(),o2=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  o.type='square';o2.type='sawtooth';o.frequency.value=mtof(m);o2.frequency.value=mtof(m);o2.detune.value=7;
+  f.type='lowpass';f.Q.value=4;f.frequency.setValueAtTime(3800*v+600,t);f.frequency.exponentialRampToValueAtTime(700,t+0.15);
+  var end=env(g,t,0.003,0.9*v,0.02,0.17);
+  o.connect(f);o2.connect(f);f.connect(g);g.connect(arpBus);o.start(t);o2.start(t);o.stop(end);o2.stop(end);
+ }
+ function lead(t,m,dur){
+  var o=ctx.createOscillator(),o2=ctx.createOscillator(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  o.type='sawtooth';o2.type='square';o.frequency.value=mtof(m);o2.frequency.value=mtof(m-12);o.detune.value=-6;o2.detune.value=5;
+  /* slight scoop + delayed vibrato */
+  o.detune.setValueAtTime(-40,t);o.detune.linearRampToValueAtTime(-6,t+0.06);
+  var lfo=ctx.createOscillator(),lg=ctx.createGain();lfo.frequency.value=5.2;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(14,t+Math.min(dur,0.6));
+  lfo.connect(lg);lg.connect(o.detune);lg.connect(o2.detune);
+  f.type='lowpass';f.Q.value=2;f.frequency.setValueAtTime(900,t);f.frequency.linearRampToValueAtTime(2600,t+0.08);f.frequency.exponentialRampToValueAtTime(1500,t+dur);
+  var og2=ctx.createGain();og2.gain.value=0.45;
+  var end=env(g,t,0.02,0.85,Math.max(0.02,dur-0.08),0.32);
+  o.connect(f);o2.connect(og2);og2.connect(f);f.connect(g);g.connect(leadBus);
+  [o,o2,lfo].forEach(function(x){x.start(t);x.stop(end)});
+ }
+
+ /* one 16th-note step of the arrangement; n counts from 0 forever */
+ E.step=function(n,t){
+  var bar=Math.floor(n/BAR_STEPS),s=n%BAR_STEPS,lb=bar%LOOP_BARS,secB=lb>=8,loop=Math.floor(bar/LOOP_BARS);
+  var ch=CH[BARS[lb]],intro=(bar<2);
+  E.lastBar=lb;
+  /* pads: whole-bar chords; in A section chords last 2 bars */
+  if(s===0){
+   if(secB) pad(t,ch.pad,STEP*16);
+   else if(lb%2===0) pad(t,ch.pad,STEP*(BARS[lb+1]===BARS[lb]?32:16));
+   else if(BARS[lb-1]!==BARS[lb]) pad(t,ch.pad,STEP*16);
+  }
+  /* bass: driving 8ths with octave pops */
+  if(s%2===0){
+   var oct=(s===6||s===14)?12:0, acc=(s%4===0)?1:0.72;
+   if(!(intro&&s>8))bass(t,ch.root+oct,STEP*2,intro?0.6:acc);
+  } else if(secB&&(s===11||s===15)){bass(t,ch.root+12,STEP*0.9,0.55)}
+  if(!intro){
+   /* kick: 1 and 3, plus pickup in B section */
+   if(s===0||s===8||(secB&&s===10&&lb%2===1)||(lb===15&&s===14))kick(t,s===0?1:0.92);
+   /* snare on 2 and 4, fill at section ends */
+   if(s===4||s===12)snare(t,1);
+   if((lb===7||lb===15)&&s>=13)snare(t,0.35+0.15*(s-13));
+   /* hats: offbeat 8ths in A, busy 16ths in B */
+   if(secB){hat(t,(s%4===2)?1:(s%2?0.38:0.55),s===14&&lb%4===3)}
+   else if(s%2===0){hat(t,(s%4===2)?0.9:0.45,false)}
+  }
+  /* arpeggio */
+  if(bar>=1){
+   var tones=ch.pad.map(function(x){return x+12});tones.push(ch.pad[0]+24);
+   var v=(s%4===0)?1:0.7;
+   if(!secB||s%2===0) arp(t,tones[ARP[s]],secB?v*0.6:v);
+  }
+  /* lead hook in B section */
+  if(secB){
+   var ss=(lb-8)*16+s;
+   for(var i=0;i<LEAD.length;i++)if(LEAD[i][0]===ss)lead(t,LEAD[i][1],LEAD[i][2]*STEP);
+  }
+ };
+ return E;
+}
+
+/* offline render for testing: returns AudioBuffer */
+window.RosadoTheme={BPM:BPM,STEP:STEP,makeEngine:makeEngine,
+ render:function(seconds){
+  var OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  var ctx=new OAC(2,Math.ceil(44100*seconds),44100),e=makeEngine(ctx);
+  for(var n=0,t=0.05;t<seconds;n++,t+=STEP)e.step(n,t);
+  return ctx.startRendering();
+ }};
+
+/* ---------- live player with lookahead scheduler ---------- */
+var btn=document.getElementById('play'),now=document.getElementById('now');
+var ctx=null,eng=null,nextT=0,stepN=0,timer=null,playing=false,AHEAD=0.15;
+function schedule(){
+ if(!ctx)return;
+ var ahead=document.hidden?1.6:AHEAD;
+ if(nextT<ctx.currentTime)nextT=ctx.currentTime+0.02;
+ while(nextT<ctx.currentTime+ahead){eng.step(stepN,nextT);stepN++;nextT+=STEP}
+}
+function setUI(p){
+ btn.textContent=p?'❚❚ PAUSE':'▶ PLAY MUSIC';btn.setAttribute('aria-pressed',p?'true':'false');
+ now.textContent=p?'♫ Now playing: Rosado Nights theme':'Main theme · turn it up!';
+}
+btn.addEventListener('click',function(){
+ if(!ctx){
+  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC){now.textContent='Sorry, this browser can’t play the music.';return}
+  try{ctx=new AC({latencyHint:'playback'})}catch(e){ctx=new AC()}
+  /* iOS unlock: play a silent buffer inside the tap */
+  var sb=ctx.createBufferSource();sb.buffer=ctx.createBuffer(1,1,22050);sb.connect(ctx.destination);sb.start(0);
+  eng=makeEngine(ctx);window.__rosadoCtx=ctx;
+  nextT=ctx.currentTime+0.08;
+ }
+ if(!playing){
+  ctx.resume();playing=true;setUI(true);schedule();
+  if(!timer)timer=setInterval(schedule,25);
+ }else{
+  playing=false;setUI(false);clearInterval(timer);timer=null;ctx.suspend();
+ }
+});
+document.addEventListener('visibilitychange',function(){if(playing)schedule()});
+/* if iOS interrupts audio (phone call etc), reflect it */
+setInterval(function(){if(ctx&&playing&&ctx.state==='interrupted'){playing=false;clearInterval(timer);timer=null;setUI(false)}},1000);
+
+/* ---------- neon sun + grid visualizer ---------- */
+var cv=document.getElementById('viz'),g2=cv.getContext('2d');
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+var W=0,H=0,DPR=1,bins=null,lvl=0;
+function size(){DPR=Math.min(window.devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);draw(0)}
+function draw(ts){
+ g2.setTransform(DPR,0,0,DPR,0,0);g2.clearRect(0,0,W,H);
+ var hz=H*0.34, cx=W/2;
+ /* sun */
+ var R=Math.min(W*0.26,H*0.42)*(1+lvl*0.07);
+ var sg=g2.createLinearGradient(0,hz-R,0,hz);sg.addColorStop(0,'#ffd84a');sg.addColorStop(0.55,'#ff6a9e');sg.addColorStop(1,'#ff2bd6');
+ g2.save();g2.globalAlpha=0.55+lvl*0.35;g2.shadowColor='#ff2bd6';g2.shadowBlur=30+lvl*40;
+ g2.beginPath();g2.arc(cx,hz,R,Math.PI,2*Math.PI);g2.closePath();g2.fillStyle=sg;g2.fill();g2.restore();
+ g2.save();g2.globalCompositeOperation='destination-out';
+ for(var k=0;k<6;k++){var y=hz-R*0.08-k*R*0.14,hh=R*(0.075-k*0.01);if(hh>0)g2.fillRect(cx-R,y-hh,2*R,hh)}
+ g2.restore();
+ /* floor */
+ var fg=g2.createLinearGradient(0,hz,0,H);fg.addColorStop(0,'rgba(40,8,70,.0)');fg.addColorStop(1,'rgba(20,4,40,.85)');
+ g2.fillStyle=fg;g2.fillRect(0,hz,W,H-hz);
+ var a=0.45+lvl*0.55;
+ g2.lineWidth=1.5;g2.shadowBlur=8;
+ /* horizon */
+ g2.strokeStyle='rgba(255,43,214,'+(0.7+lvl*0.3)+')';g2.shadowColor='#ff2bd6';
+ g2.beginPath();g2.moveTo(0,hz);g2.lineTo(W,hz);g2.stroke();
+ /* vertical lines fanning */
+ g2.strokeStyle='rgba(25,211,255,'+a*0.8+')';g2.shadowColor='#19d3ff';g2.beginPath();
+ for(var i=-14;i<=14;i++){var xb=cx+i*W*0.11;g2.moveTo(cx+i*W*0.012,hz);g2.lineTo(xb,H)}
+ g2.stroke();
+ /* horizontal lines scrolling toward viewer at tempo (1 line per beat) */
+ var beat=reduce?0:((ctx&&playing)?ctx.currentTime*BPM/60:ts/1000*0.4);
+ var ph=beat-Math.floor(beat);
+ g2.strokeStyle='rgba(255,43,214,'+a+')';g2.shadowColor='#ff2bd6';g2.beginPath();
+ for(var j=0;j<12;j++){var z=(j+ph)/12,y2=hz+(H-hz)*Math.pow(z,2.2);g2.moveTo(0,y2);g2.lineTo(W,y2)}
+ g2.stroke();g2.shadowBlur=0;
+}
+function loop(ts){
+ if(eng&&playing){
+  if(!bins)bins=new Uint8Array(eng.analyser.frequencyBinCount);
+  eng.analyser.getByteFrequencyData(bins);var s=0;for(var i=1;i<6;i++)s+=bins[i];
+  var target=Math.max(0,(s/5-150)/105);lvl+=(target-lvl)*(target>lvl?0.6:0.12);
+ }else lvl*=0.9;
+ draw(ts);requestAnimationFrame(loop);
+}
+window.addEventListener('resize',size);size();
+if(!reduce)requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
