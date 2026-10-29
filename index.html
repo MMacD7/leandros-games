@@ -41,7 +41,7 @@ h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2
  filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 22px rgba(255,90,0,.6));animation:flicker 3.2s ease-in-out infinite}
 .sub{margin:10px 0 0;font-size:clamp(16px,4.4vw,20px);font-weight:700;color:#cfe9ff;opacity:.9}
 .grid{display:grid;grid-template-columns:1fr;gap:20px}
-@media (min-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:24px}}
+@media (min-width:640px){.grid{gap:28px}}
 .card{--c1:#2f7d32;--c2:#a0c43a;--glow:rgba(140,255,90,.55);position:relative;display:flex;flex-direction:column;min-height:96px;
  border-radius:24px;padding:4px;text-decoration:none;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));
  box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 28px var(--glow);transition:transform .15s ease,box-shadow .15s ease;touch-action:manipulation}
@@ -79,7 +79,14 @@ h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2
 .rosado .play{color:#fff;background:linear-gradient(180deg,#3a1670,#22104a);border:2px solid #19d3ff;
  box-shadow:0 5px 0 #0b0520,0 0 16px rgba(25,211,255,.55);text-shadow:0 0 8px #19d3ff}
 @media (min-width:640px){
- .rosado{grid-column:1/-1}
+ .card.robo .in{flex-direction:row}
+ .robo .art{width:min(42%,340px);flex:none;height:auto;min-height:260px;
+  background:radial-gradient(circle at 50% 115%,var(--c2),transparent 72%),radial-gradient(circle at 30% 20%,rgba(255,204,0,.12),transparent 55%),linear-gradient(180deg,#1d1030,#140b1c)}
+ .robo .art svg{width:min(230px,90%);height:auto;aspect-ratio:1}
+ .card.robo .body{justify-content:center;padding:26px 30px;gap:10px}
+ .robo .title{font-size:clamp(28px,4.2vw,44px)}
+ .robo .tag{font-size:19px}
+ .robo .play{margin-top:14px}
  .card.rosado .in{flex-direction:row}
  .rosado .poster{width:min(42%,340px);flex:none}
  .rosado .poster::after{display:none}
@@ -120,27 +127,6 @@ footer b{color:#2fd27a}
  </header>
 
  <div class="grid">
-  <a class="card" href="dino-world/">
-   <div class="in">
-    <div class="art" aria-hidden="true">
-     <svg viewBox="0 0 160 160">
-      <ellipse cx="80" cy="146" rx="52" ry="7" fill="#000" opacity=".35"/>
-      <path d="M24 108c10-4 22-6 30-14l4-30c4-20 22-34 44-34 20 0 34 12 34 28 0 10-6 16-16 18l-16 2-2 14c0 18-8 36-24 44H58l-2-12c-12-2-24-6-32-16z" fill="#4fc23a"/>
-      <path d="M58 76l-8-8 12-4zM70 56l-6-10 13-1zM84 42l-2-12 12 4z" fill="#ffcc00"/>
-      <circle cx="114" cy="50" r="7" fill="#fff"/><circle cx="116" cy="50" r="3.5" fill="#111"/>
-      <path d="M112 72c6 2 12 2 18-1" stroke="#1b5e20" stroke-width="3" fill="none" stroke-linecap="round"/>
-      <path d="M68 136v8h12v-10M88 128v16h12v-18" fill="#3a9a2c"/>
-      <path d="M96 94l14 4-4 6" stroke="#3a9a2c" stroke-width="7" fill="none" stroke-linecap="round"/>
-     </svg>
-    </div>
-    <div class="body">
-     <div class="title">Leandro's Dinosaur World</div>
-     <div class="tag">Explore the jungle and meet giant dinos!</div>
-     <span class="play">▶ Play</span>
-    </div>
-   </div>
-  </a>
-
   <a class="card robo" href="robo-dino-island/">
    <div class="in">
     <div class="art" aria-hidden="true">
