@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b0612">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -108,6 +109,9 @@ h1 .l2{color:#ffe9fb;
 .rosado .title{font-size:26px;text-transform:uppercase;letter-spacing:.04em;color:#ffe9fb;
  text-shadow:0 0 6px #ff2bd6,0 0 16px #ff2bd6,0 0 30px rgba(255,43,214,.6);animation:sign 5s linear infinite}
 .rosado .tag{color:#bfefff;font-weight:600}
+/* "Neon Lights" sign under the card title: same pink neon tube as the Rosado Nights page, gentle glow only */
+.rosado .neon-sub{margin-top:-2px;font-style:italic;font-weight:800;font-size:20px;line-height:1.05;letter-spacing:.08em;color:#ffe3fa;
+ text-shadow:0 0 3px #fff,0 0 9px #ff2bd6,0 0 20px #ff2bd6,0 0 36px rgba(255,43,214,.55);animation:breathe 5s ease-in-out infinite}
 .rosado .play{color:#fff;background:linear-gradient(180deg,#3a1670,#22104a);border:2px solid #19d3ff;
  box-shadow:0 5px 0 #0b0520,0 0 16px rgba(25,211,255,.55);text-shadow:0 0 8px #19d3ff}
 @media (min-width:640px){
@@ -134,6 +138,7 @@ h1 .l2{color:#ffe9fb;
  .card.rosado .body{justify-content:center;padding:26px 30px;gap:10px}
  .rosado .title{font-size:clamp(28px,4.2vw,44px)}
  .rosado .tag{font-size:19px}
+ .rosado .neon-sub{font-size:clamp(22px,3vw,30px)}
  .rosado .play{margin-top:14px}
 }
 @media (min-width:1000px){.wrap{max-width:940px}}
@@ -201,6 +206,7 @@ footer b{color:#ff7ae6;text-shadow:0 0 8px rgba(255,43,214,.7)}
     </div>
     <div class="body">
      <div class="title">Rosado Nights</div>
+     <div class="neon-sub">Neon Lights</div>
      <div class="tag">Neon nights. Palm trees. Hear the theme!</div>
      <span class="play">♫ Hear the Music</span>
     </div>
@@ -211,7 +217,7 @@ footer b{color:#ff7ae6;text-shadow:0 0 8px rgba(255,43,214,.7)}
  <footer>Made for <b>Leandro</b> · Ready, set, ROAR!</footer>
 </main>
 <div class="hoops" aria-hidden="true"></div>
-<script src="rosado-nights/theme.js" defer></script>
+<script src="rosado-nights/theme.js?v=2" defer></script>
 <script>
 /* theme music toggle: audio only starts from a tap (iOS rule); the music code is shared with rosado-nights/ */
 window.addEventListener('DOMContentLoaded',function(){
