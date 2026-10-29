@@ -2,35 +2,50 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#12062a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="Rosado Nights · Level 1: Reps for Jesus, at Shred Zeppelin. Bench press 400 lbs, then hit the heavy bag.">
-<title>Rosado Nights · Level 1: Reps for Jesus · Shred Zeppelin</title>
-<link rel="stylesheet" href="css/game.css?v=0.1.0">
+<meta name="description" content="Rosado Nights · Level 1: Causeway Chase, drive Richie across the neon bridge to Shred Zeppelin. Level 2: Reps for Jesus, bench press 400 lbs, then hit the heavy bag.">
+<title>Rosado Nights · Level 1: Causeway Chase</title>
+<link rel="stylesheet" href="css/game.css?v=0.2.0">
 </head>
 <body>
-<div id="app" data-phase="intro">
- <div id="view"><canvas id="scene" aria-label="Shred Zeppelin: Richie and Apollo" role="img"></canvas>
+<div id="app" data-phase="intro" data-level="1">
+ <div id="view"><canvas id="scene" aria-label="Causeway Chase: Richie drives to Shred Zeppelin" role="img"></canvas>
   <div id="shout" aria-live="polite"></div>
   <div id="pop"></div>
   <div id="record" hidden><span>NEW RECORD!</span><small>400 LBS × 3</small></div>
  </div>
  <div id="hud" aria-live="polite">
    <div class="hud-left">
-    <div class="lvl">LEVEL 1 · REPS FOR JESUS · SHRED ZEPPELIN</div>
+    <div class="lvl">LEVEL 2 · REPS FOR JESUS · SHRED ZEPPELIN</div>
     <div class="row press-only"><span class="pill" id="rep">REP 1/3</span><span class="plate" id="plate"><b>400</b><small>LBS</small></span></div>
-    <div class="row bag-only"><span class="pill" id="hits">HITS 0/20</span><span class="pill" id="time">TIME 45</span><span class="pill combo" id="combo">COMBO x0</span></div>
+    <div class="row bag-only"><span class="pill" id="hits">HITS 0/12</span><span class="pill" id="time">TIME 45</span><span class="pill combo" id="combo">COMBO x0</span></div>
    </div>
   </div>
+ <div id="dhud" aria-live="off">
+  <div class="dbox2 hp"><div class="dlab"><span class="heart" aria-hidden="true">&#9829;</span> HEALTH</div><div id="hpbar" aria-label="Health"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="dbox2 togym"><div class="dlab">DISTANCE TO GYM</div><div class="dval"><b id="dist">3.00</b><small>KM</small></div><div class="dbar"><i id="distFill"></i></div></div>
+ </div>
+ <button id="selfBtn" type="button" aria-pressed="false" aria-label="Self drive: the car steers itself">
+  <svg class="wheel" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/><path d="M3.2 10.5h6.3M14.5 10.5h6.3M12 14.6v6.6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+  <span class="slab">SELF DRIVE</span><span class="sstate" id="selfState">OFF</span></button>
+ <div id="selfInd" hidden><i></i>SELF DRIVE ON</div>
  <button id="pauseBtn" class="icon" type="button" aria-label="Pause">❚❚</button>
  <div id="controls">
   <div class="press-only meterWrap"><div class="mlabel">POWER</div><div id="meter"><i id="meterFill"></i><em id="meterGoal"></em></div></div>
   <div class="bag-only meterWrap"><div class="mlabel">TIMING · HIT THE PINK ZONE</div><div id="track"><i id="zone"></i><i id="perfect"></i><b id="marker"></b></div></div>
   <button id="action" type="button" class="big">PUSH!</button>
+ </div>
+ <div id="dctl">
+  <button id="left" type="button" class="sbtn" aria-label="Steer left">&#9664;</button>
+  <button id="right" type="button" class="sbtn" aria-label="Steer right">&#9654;</button>
+  <div class="dinfo"><div class="spd"><b id="kmh">150</b><small>KM/H</small></div><div class="gearbox"><b id="gear">4</b><small>GEAR</small></div>
+   <div class="n2o"><span>N2O</span><div class="n2obar"><i id="n2oFill"></i></div></div></div>
+  <button id="boost" type="button" class="big">BOOST!</button>
  </div>
  <div id="dialog" hidden>
   <div class="dbox"><canvas id="face" width="144" height="144" aria-hidden="true"></canvas>
@@ -41,10 +56,11 @@
   <div class="cardin">
    <div class="kicker">ROSADO NIGHTS</div>
    <h1>LEVEL 1</h1>
-   <h2>REPS FOR JESUS</h2>
-   <div class="where">— SHRED ZEPPELIN —</div>
-   <p class="how">Bench press 400 lbs for 3 reps, then hit the heavy bag.</p>
-   <button id="start" type="button" class="big">▶ START</button>
+   <h2>CAUSEWAY CHASE</h2>
+   <div class="where">— ROAD TO SHRED ZEPPELIN —</div>
+   <p class="how">Drive Richie to the gym! Switch lanes to dodge oil and spikes, bump the bikers away, and hit BOOST.</p>
+   <div class="btnrow"><button id="start" type="button" class="big">▶ START</button>
+   <button id="startL2" type="button" class="mid lvlsel">LEVEL 2: REPS FOR JESUS ▶</button></div>
    <p class="rot">Tip: turn your phone sideways for the best view.</p>
    <a class="link" href="../">← Back</a>
   </div>
@@ -58,20 +74,33 @@
    <a id="home" class="mid btnlink" href="../">⌂ HOME</a>
   </div>
  </div>
- <div id="done" class="card" hidden>
+ <div id="done1" class="card" hidden>
   <div class="cardin">
    <div class="kicker">ROSADO NIGHTS</div>
    <h1 class="small">LEVEL 1 COMPLETE</h1>
+   <div class="where">— YOU MADE IT TO SHRED ZEPPELIN —</div>
+   <p class="stats" id="stats1"></p>
+   <button id="next2" type="button" class="big">▶ LEVEL 2</button>
+   <button id="again1" type="button" class="mid">↻ DRIVE AGAIN</button>
+   <a class="mid btnlink" href="../">⌂ HOME</a>
+  </div>
+ </div>
+ <div id="done" class="card" hidden>
+  <div class="cardin">
+   <div class="kicker">ROSADO NIGHTS</div>
+   <h1 class="small">LEVEL 2 COMPLETE</h1>
    <p class="stats" id="stats"></p>
    <p class="next2">Next: Back on the streets <span>(coming soon)</span></p>
    <button id="again" type="button" class="big">↻ PLAY AGAIN</button>
+   <button id="toL1" type="button" class="mid">◀ LEVEL 1: CAUSEWAY CHASE</button>
    <a class="mid btnlink" href="../">⌂ HOME</a>
   </div>
  </div>
 </div>
 <script src="../theme.js?v=2"></script>
-<script src="js/sfx.js?v=0.1.0"></script>
-<script src="js/art.js?v=0.1.0"></script>
-<script src="js/game.js?v=0.1.0"></script>
+<script src="js/sfx.js?v=0.2.0"></script>
+<script src="js/drive.js?v=0.2.0"></script>
+<script src="js/art.js?v=0.2.0"></script>
+<script src="js/game.js?v=0.2.0"></script>
 </body>
 </html>
