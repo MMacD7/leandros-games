@@ -1,4 +1,4 @@
-/* Rosado Nights · Level 1 "Reps for Jesus" · v0.1.0 */
+/* Rosado Nights · v0.2.0 · Level 1 "Causeway Chase" (drive) + Level 2 "Reps for Jesus" (gym) */
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:#07040d;color:#fff;overscroll-behavior:none}
 body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
@@ -124,3 +124,84 @@ button:focus-visible,a:focus-visible{outline:4px solid #fff;outline-offset:3px}
  .icon{width:64px;height:64px;font-size:22px}#line{font-size:24px}#face{width:84px;height:84px}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
+/* ---------- v0.2.0: Level 1 drive ---------- */
+#app[data-level="1"] #hud,#app[data-level="1"] #controls{display:none!important}
+.who.biker{color:#ff4a5a;text-shadow:0 0 8px #ff2a3a}
+.btnrow{display:flex;flex-direction:column;align-items:center;gap:10px}
+.lvlsel{font-size:16px}
+.lvlsel.unlocked::before{content:"\2605  ";color:var(--yel)}
+#dhud{position:absolute;z-index:3;left:0;right:0;top:0;padding:calc(8px + env(safe-area-inset-top)) 78px 0 max(10px,env(safe-area-inset-left));display:none;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+#app[data-level="1"][data-hud="1"] #dhud{display:flex}
+.dbox2{background:rgba(8,4,24,.72);border:2px solid var(--blue);border-radius:10px;padding:6px 10px 7px;box-shadow:0 0 10px rgba(41,214,255,.45)}
+.dlab{font:900 11px/1 system-ui,sans-serif;letter-spacing:.14em;color:#bff3ff;text-shadow:0 0 6px var(--blue);white-space:nowrap}
+.hp{border-color:var(--pink);box-shadow:0 0 10px rgba(255,58,216,.45)}
+.hp .dlab{color:#ffd6f6;text-shadow:0 0 6px var(--pink)}
+.heart{color:#ff3a8a;font-size:14px;text-shadow:0 0 6px #ff3a8a}
+#hpbar{display:flex;gap:2px;margin-top:5px}
+#hpbar i{display:block;width:12px;height:13px;border-radius:2px;background:rgba(255,255,255,.12)}
+#hpbar i.on{background:#3dff7a;box-shadow:0 0 6px #3dff7a}
+#hpbar i.on.low{background:#ff3a5a;box-shadow:0 0 6px #ff3a5a}
+.dval{font:900 italic 24px/1 var(--neo);color:#fff;margin-top:4px;text-shadow:0 0 6px var(--blue)}
+.dval small{font:900 12px system-ui;margin-left:4px;color:#bff3ff}
+.dbar,.n2obar{height:7px;border-radius:4px;background:rgba(255,255,255,.12);margin-top:5px;overflow:hidden}
+.dbar i,.n2obar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#29d6ff,#9df3ff);box-shadow:0 0 8px #29d6ff}
+#dctl{position:absolute;z-index:4;left:0;right:0;bottom:0;padding:0 max(12px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+ display:none;grid-template-columns:auto auto 1fr auto;grid-template-areas:"l r . i" "l r . b";column-gap:10px;row-gap:6px;align-items:end;pointer-events:none}
+#app[data-level="1"][data-dctl="1"] #dctl{display:grid}
+#dctl>*{pointer-events:auto}
+#left{grid-area:l}#right{grid-area:r}.dinfo{grid-area:i}#boost{grid-area:b}
+.sbtn{width:92px;height:92px;border-radius:24px;border:3px solid var(--blue);background:rgba(12,4,30,.5);font:900 36px/1 system-ui,sans-serif;color:#e6fbff;
+ text-shadow:0 0 10px var(--blue);box-shadow:0 0 14px rgba(41,214,255,.5),inset 0 0 12px rgba(41,214,255,.25)}
+.sbtn:active,.sbtn.hit{transform:translateY(3px);background:rgba(41,214,255,.35)}
+.dinfo{display:flex;align-items:flex-end;gap:10px;justify-content:flex-end;pointer-events:none!important}
+.spd b{font:900 italic 34px/1 var(--neo);color:#fff;text-shadow:0 0 8px var(--blue),0 2px 0 #000}
+.spd small{font:900 12px system-ui;letter-spacing:.1em;margin-left:3px;color:#bff3ff}
+.gearbox{display:flex;flex-direction:column;align-items:center;border:2px solid var(--pink);border-radius:8px;padding:3px 7px;background:rgba(8,4,24,.7)}
+.gearbox b{font:900 18px/1 var(--neo);color:#ffd6f6}.gearbox small{font:900 8px system-ui;letter-spacing:.1em;color:#ffd6f6}
+.n2o{width:110px;background:rgba(8,4,24,.72);border:2px solid var(--blue);border-radius:8px;padding:4px 7px}
+.n2o span{font:900 11px/1 system-ui;letter-spacing:.12em;color:#bff3ff}.n2o .n2obar{margin-top:3px}
+#boost{min-width:220px;min-height:80px;font-size:30px;background:linear-gradient(180deg,#4fe9ff 0%,#1f8bd6 50%,#5a2bd8 100%);border-color:var(--pink)}
+#boost.off{opacity:.5;filter:saturate(.5)}
+#app.boosting #boost{animation:bglow .25s linear infinite alternate}
+@keyframes bglow{to{box-shadow:0 0 30px #29d6ff,0 0 60px #ff3ad8}}
+#app[data-level="1"] #shout{top:calc(32% + env(safe-area-inset-top))}
+@media (max-height:500px) and (orientation:landscape){
+ .sbtn{width:80px;height:80px;font-size:30px}#boost{min-height:70px;min-width:190px;font-size:26px}.spd b{font-size:28px}
+ .btnrow{flex-direction:row;gap:12px}.card .how{font-size:14px}.where{font-size:15px}
+}
+@media (orientation:portrait){
+ #app[data-level="1"] #view{height:min(60vh,87vw)}
+ #dhud{top:min(60vh,87vw);padding:12px 14px 0;justify-content:center;gap:12px}
+ .dbox2{padding:8px 12px}.dlab{font-size:12px}#hpbar i{width:13px;height:16px}.dval{font-size:28px}
+ #dctl{grid-template-columns:1fr 1fr;grid-template-areas:"i i" "b b" "l r";row-gap:12px;column-gap:14px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+ .dinfo{justify-content:center}
+ .sbtn{width:100%;height:118px;font-size:48px}
+ #boost{width:100%;min-height:92px;font-size:36px}
+ #app[data-level="1"] #shout{top:calc(min(60vh,87vw) - 44px)}
+}
+@media (orientation:portrait) and (min-width:700px){#dctl{width:min(620px,100%);left:50%;transform:translateX(-50%)}.sbtn{height:150px}#boost{min-height:110px}.dval{font-size:34px}#hpbar i{width:18px;height:20px}}
+@media (min-width:1000px) and (min-height:700px){.sbtn{width:120px;height:120px;font-size:44px}#boost{min-width:280px;min-height:100px;font-size:36px}.dlab{font-size:13px}.dval{font-size:30px}#hpbar i{width:16px;height:18px}.spd b{font-size:42px}.n2o{width:150px}}
+
+/* SELF DRIVE toggle (Level 1): top-centre in landscape, top-left of the road view in portrait; never near steer/boost */
+#selfBtn{position:absolute;z-index:6;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;
+ min-height:56px;padding:0 16px 0 12px;border-radius:16px;border:3px solid rgba(41,214,255,.6);background:rgba(8,4,24,.78);color:#9fdcec;
+ font:900 italic 17px/1 var(--neo);letter-spacing:.08em;box-shadow:0 0 10px rgba(41,214,255,.35);white-space:nowrap}
+#app[data-level="1"][data-dctl="1"] #selfBtn{display:flex}
+#selfBtn .wheel{width:28px;height:28px;flex:none}
+#selfBtn .sstate{font:900 11px/1 system-ui;letter-spacing:.1em;padding:4px 6px;border-radius:6px;background:rgba(255,255,255,.12);color:#cfd6e6;font-style:normal}
+#selfBtn:active{transform:translateX(-50%) translateY(2px)}
+#app.selfdrive #selfBtn{color:#fff;border-color:#29d6ff;background:rgba(10,60,90,.85);text-shadow:0 0 8px #29d6ff;box-shadow:0 0 18px #29d6ff,0 0 36px rgba(41,214,255,.6),inset 0 0 12px rgba(41,214,255,.5)}
+#app.selfdrive #selfBtn .wheel{filter:drop-shadow(0 0 4px #29d6ff);animation:wheel 1.6s ease-in-out infinite}
+#app.selfdrive #selfBtn .sstate{background:#29d6ff;color:#06202c}
+@keyframes wheel{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+#selfInd{position:absolute;z-index:5;top:calc(72px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;pointer-events:none;
+ font:900 11px/1 system-ui;letter-spacing:.14em;color:#bff6ff;padding:5px 9px;border-radius:999px;background:rgba(6,30,48,.8);border:1px solid #29d6ff;text-shadow:0 0 6px #29d6ff}
+#selfInd i{width:8px;height:8px;border-radius:50%;background:#29d6ff;box-shadow:0 0 8px #29d6ff;animation:blink 1s steps(2) infinite}
+#selfInd[hidden],#app:not([data-dctl="1"]) #selfInd{display:none}
+@media (orientation:portrait){
+ #selfBtn{left:max(10px,env(safe-area-inset-left));transform:none}
+ #selfBtn:active{transform:translateY(2px)}
+ #selfInd{left:max(12px,env(safe-area-inset-left));transform:none}
+}
+@media (min-width:1000px) and (min-height:700px){#selfBtn{min-height:64px;font-size:20px}#selfBtn .wheel{width:34px;height:34px}#selfInd{top:calc(84px + env(safe-area-inset-top));font-size:13px}}
