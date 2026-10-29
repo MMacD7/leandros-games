@@ -51,21 +51,6 @@ h1 .l2{color:#ffe9fb;
  text-shadow:0 0 4px #fff,0 0 12px #ff2bd6,0 0 26px #ff2bd6,0 0 54px rgba(255,43,214,.75),0 6px 0 #3a0b4a;
  animation:on2 2s ease-out .3s both,breathe 5s ease-in-out 2.4s infinite}
 .sub{margin:10px 0 0;font-size:clamp(16px,4.4vw,20px);font-weight:700;color:#cfe9ff;opacity:.92}
-/* theme music toggle */
-.music{margin-top:16px;display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 18px 0 14px;border-radius:999px;cursor:pointer;
- font:800 15px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.06em;color:#fff;touch-action:manipulation;
- background:rgba(26,8,52,.72);border:2px solid #ff2bd6;box-shadow:0 4px 0 #2a0b4a,0 0 14px rgba(255,43,214,.55),0 0 30px rgba(25,211,255,.25);
- text-shadow:0 0 8px rgba(255,43,214,.9);-webkit-appearance:none;appearance:none;transition:transform .12s ease}
-.music:active{transform:translateY(3px);box-shadow:0 1px 0 #2a0b4a,0 0 12px rgba(255,43,214,.5)}
-.music:focus-visible{outline:4px solid #fff;outline-offset:4px}
-.music[aria-pressed="true"]{border-color:#19d3ff;background:linear-gradient(180deg,rgba(255,43,214,.4),rgba(106,43,216,.5));
- box-shadow:0 4px 0 #2a0b4a,0 0 18px rgba(25,211,255,.6),0 0 36px rgba(255,43,214,.4)}
-.music[hidden]{display:none}
-.eq{display:inline-flex;align-items:flex-end;gap:3px;height:18px}
-.eq b{display:block;width:4px;height:6px;border-radius:2px;background:#19d3ff;box-shadow:0 0 6px #19d3ff}
-.music[aria-pressed="true"] .eq b{animation:eq .9s ease-in-out infinite}
-.music[aria-pressed="true"] .eq b:nth-child(2){animation-delay:-.3s;background:#ff2bd6;box-shadow:0 0 6px #ff2bd6}
-.music[aria-pressed="true"] .eq b:nth-child(3){animation-delay:-.6s}
 .grid{display:grid;grid-template-columns:1fr;gap:20px}
 @media (min-width:640px){.grid{gap:28px}}
 .card{--c1:#2f7d32;--c2:#a0c43a;--glow:rgba(140,255,90,.55);--glow2:rgba(140,255,90,.3);position:relative;display:flex;flex-direction:column;min-height:96px;
@@ -74,7 +59,6 @@ h1 .l2{color:#ffe9fb;
 /* neon glow pulse: a separate glow layer whose opacity breathes (cheap on phones: opacity only) */
 .card::after{content:"";position:absolute;inset:-2px;border-radius:26px;pointer-events:none;z-index:-1;
  box-shadow:0 0 26px 2px var(--glow),0 0 64px 6px var(--glow2);opacity:.35;animation:pulse 4.5s ease-in-out infinite}
-.card.rosado::after{animation-delay:-2.2s}
 .card .in{flex:1;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:#140b1c}
 .art{position:relative;height:170px;display:grid;place-items:center;overflow:hidden;
  background:radial-gradient(circle at 50% 120%,var(--c2),transparent 70%),linear-gradient(180deg,#1d1030,#140b1c)}
@@ -94,26 +78,7 @@ h1 .l2{color:#ffe9fb;
 .robo .in{background:linear-gradient(180deg,#1d0f2e,#150a20)}
 .robo .title{color:#fff;text-shadow:0 0 10px rgba(255,120,40,.65)}
 .robo .play{box-shadow:0 5px 0 #a24a00,0 0 16px rgba(255,157,0,.55)}
-/* ---- Rosado Nights feature card ---- */
-.rosado{--c1:#ff2bd6;--c2:#19d3ff;--glow:rgba(255,43,214,.6);--glow2:rgba(25,211,255,.35);
- background:linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff)}
-.rosado:hover{box-shadow:0 14px 0 rgba(0,0,0,.45),0 0 40px rgba(255,43,214,.8),0 0 70px rgba(25,211,255,.55)}
-.rosado:active{box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 20px rgba(255,43,214,.6),0 0 36px rgba(25,211,255,.4)}
-.rosado .in{background:linear-gradient(180deg,#2a1150 0%,#1a0b33 55%,#0d1a3a 100%)}
 .grid>*{min-width:0}
-.poster{position:relative;aspect-ratio:4/5;overflow:hidden;background:#1a0b33}
-.poster img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 12%}
-.poster::after{content:"";position:absolute;inset:auto 0 0 0;height:22%;background:linear-gradient(transparent,#1a0b33)}
-.soon-chip{position:absolute;top:12px;right:12px;z-index:1;font-size:12px;font-weight:900;letter-spacing:.18em;color:#fff;padding:6px 11px;border-radius:999px;
- background:rgba(20,6,40,.7);border:2px solid #19d3ff;box-shadow:0 0 12px rgba(25,211,255,.7)}
-.rosado .title{font-size:26px;text-transform:uppercase;letter-spacing:.04em;color:#ffe9fb;
- text-shadow:0 0 6px #ff2bd6,0 0 16px #ff2bd6,0 0 30px rgba(255,43,214,.6);animation:sign 5s linear infinite}
-.rosado .tag{color:#bfefff;font-weight:600}
-/* "Neon Lights" sign under the card title: same pink neon tube as the Rosado Nights page, gentle glow only */
-.rosado .neon-sub{margin-top:-2px;font-style:italic;font-weight:800;font-size:20px;line-height:1.05;letter-spacing:.08em;color:#ffe3fa;
- text-shadow:0 0 3px #fff,0 0 9px #ff2bd6,0 0 20px #ff2bd6,0 0 36px rgba(255,43,214,.55);animation:breathe 5s ease-in-out infinite}
-.rosado .play{color:#fff;background:linear-gradient(180deg,#3a1670,#22104a);border:2px solid #19d3ff;
- box-shadow:0 5px 0 #0b0520,0 0 16px rgba(25,211,255,.55);text-shadow:0 0 8px #19d3ff}
 @media (min-width:640px){
  .card.robo .in{flex-direction:row}
  .robo .art{width:min(42%,340px);flex:none;height:auto;min-height:260px;
@@ -123,23 +88,6 @@ h1 .l2{color:#ffe9fb;
  .robo .title{font-size:clamp(28px,4.2vw,44px)}
  .robo .tag{font-size:19px}
  .robo .play{margin-top:14px}
- .card.rosado .in{flex-direction:row}
- .rosado .poster{width:min(42%,340px);flex:none}
- .rosado .poster::after{display:none}
- .rosado .poster img{-webkit-mask-image:linear-gradient(90deg,#000 60%,transparent);mask-image:linear-gradient(90deg,#000 60%,transparent)}
- .rosado .poster{background:transparent}
- .card.rosado .body{position:relative;overflow:hidden;
-  background:
-      radial-gradient(circle at 78% 112%,#ffcf4a 0,#ff5fa2 16%,rgba(255,43,214,.35) 30%,transparent 46%)}
- .card.rosado .body::before{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;
-  background-image:linear-gradient(rgba(25,211,255,.35) 2px,transparent 2px),linear-gradient(90deg,rgba(255,43,214,.3) 2px,transparent 2px);
-  background-size:100% 18px,44px 100%;-webkit-mask-image:linear-gradient(transparent,#000),linear-gradient(90deg,transparent,#000 35%);-webkit-mask-composite:source-in;mask-image:linear-gradient(transparent,#000),linear-gradient(90deg,transparent,#000 35%);mask-composite:intersect}
- .card.rosado .body>*{position:relative}
- .card.rosado .body{justify-content:center;padding:26px 30px;gap:10px}
- .rosado .title{font-size:clamp(28px,4.2vw,44px)}
- .rosado .tag{font-size:19px}
- .rosado .neon-sub{font-size:clamp(22px,3vw,30px)}
- .rosado .play{margin-top:14px}
 }
 @media (min-width:1000px){.wrap{max-width:940px}}
 footer{margin-top:34px;text-align:center;font-weight:700;color:#b6a8d6;font-size:15px}
@@ -149,10 +97,8 @@ footer b{color:#ff7ae6;text-shadow:0 0 8px rgba(255,43,214,.7)}
 @keyframes breathe{0%,100%{opacity:1}50%{opacity:.86}}
 @keyframes pulse{0%,100%{opacity:.3}50%{opacity:.8}}
 @keyframes drive{from{transform:rotateX(62deg) translateY(0)}to{transform:rotateX(62deg) translateY(46px)}}
-@keyframes eq{0%,100%{height:5px}50%{height:18px}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 @keyframes blink{50%{opacity:.35}}
-@keyframes sign{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.7}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.card::after{opacity:.5}}
 </style>
 </head>
@@ -164,7 +110,6 @@ footer b{color:#ff7ae6;text-shadow:0 0 8px rgba(255,43,214,.7)}
   <div class="badge"><span class="dot"></span>Press Start</div>
   <h1><span class="l1">Leandro's</span><span class="l2">Games</span></h1>
   <p class="sub">Pick a game. Stomp, roar, and have fun!</p>
-  <button class="music" id="music" type="button" aria-pressed="false" hidden><span class="eq" aria-hidden="true"><b></b><b></b><b></b></span><span class="lbl">♫ Play Rosado Nights theme</span></button>
  </header>
 
  <div class="grid">
@@ -194,38 +139,10 @@ footer b{color:#ff7ae6;text-shadow:0 0 8px rgba(255,43,214,.7)}
     </div>
    </div>
   </a>
-
-  <a class="card rosado" href="rosado-nights/" aria-label="Rosado Nights: hear the music">
-   <div class="in">
-    <div class="poster">
-     <span class="soon-chip">NEW</span>
-     <picture>
-      <source srcset="rosado-nights/cover.webp" type="image/webp">
-      <img src="rosado-nights/cover.jpg" width="600" height="900" alt="Rosado Nights poster: a man in a palm-print shirt under a neon Miami night sky" loading="lazy" decoding="async">
-     </picture>
-    </div>
-    <div class="body">
-     <div class="title">Rosado Nights</div>
-     <div class="neon-sub">Neon Lights</div>
-     <div class="tag">Neon nights. Palm trees. Hear the theme!</div>
-     <span class="play">♫ Hear the Music</span>
-    </div>
-   </div>
-  </a>
  </div>
 
  <footer>Made for <b>Leandro</b> · Ready, set, ROAR!</footer>
 </main>
 <div class="hoops" aria-hidden="true"></div>
-<script src="rosado-nights/theme.js?v=2" defer></script>
-<script>
-/* theme music toggle: audio only starts from a tap (iOS rule); the music code is shared with rosado-nights/ */
-window.addEventListener('DOMContentLoaded',function(){
- var T=window.RosadoTheme,b=document.getElementById('music');if(!b||!T||!T.supported)return;
- var lbl=b.querySelector('.lbl');b.hidden=false;
- function ui(p){b.setAttribute('aria-pressed',p?'true':'false');lbl.textContent=p?'❚❚ Pause Rosado Nights theme':'♫ Play Rosado Nights theme'}
- T.onChange(ui);b.addEventListener('click',function(){T.toggle()});
-});
-</script>
 </body>
 </html>
