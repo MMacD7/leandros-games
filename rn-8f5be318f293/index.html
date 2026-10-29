@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="Rosado Nights: hear the neon synthwave theme and play the game: Level 1 Causeway Chase and Level 2 Reps for Jesus.">
-<title>Rosado Nights · Music</title>
+<meta name="description" content="Rosado Nights: the storyline, Level 1 Causeway Chase and Level 2 Reps for Jesus, with the neon synthwave theme.">
+<title>Rosado Nights</title>
 <style>
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;background:#12062a}
@@ -27,15 +27,15 @@ body{margin:0;min-height:100vh;min-height:100dvh;color:#fff;overflow-x:hidden;to
 #viz{position:fixed;left:0;right:0;bottom:0;width:100%;height:44%;z-index:1;pointer-events:none}
 main{position:relative;z-index:2;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;
  padding:calc(12px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
-.top{width:100%;max-width:900px;display:flex}
+.top{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .back{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 18px;border-radius:999px;
  color:#bfefff;text-decoration:none;font-weight:800;font-size:16px;letter-spacing:.02em;
  background:rgba(20,6,40,.6);border:2px solid rgba(25,211,255,.7);box-shadow:0 0 12px rgba(25,211,255,.45);
  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .back:active{transform:translateY(2px)}
-.back:focus-visible,.play:focus-visible{outline:4px solid #fff;outline-offset:4px}
-.stage{flex:1;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding-top:10px}
-.poster{display:block;height:clamp(190px,45dvh,540px);aspect-ratio:2/3;border-radius:18px;overflow:hidden;
+.back:focus-visible,.mute:focus-visible,.box:focus-visible{outline:4px solid #fff;outline-offset:4px}
+.stage{flex:1;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding-top:8px}
+.poster{display:block;flex:none;height:clamp(170px,30dvh,420px);aspect-ratio:2/3;border-radius:18px;overflow:hidden;
  border:3px solid transparent;background:linear-gradient(#1a0b33,#1a0b33) padding-box,linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff) border-box;
  box-shadow:0 0 26px rgba(255,43,214,.55),0 0 52px rgba(25,211,255,.3);transition:box-shadow .2s ease}
 .poster img{display:block;width:100%;height:100%;object-fit:cover}
@@ -45,42 +45,57 @@ h1 .a{display:block;font-size:clamp(44px,13vw,92px);letter-spacing:.04em;color:#
  text-shadow:0 0 4px #fff,0 0 10px #ff2bd6,0 0 22px #ff2bd6,0 0 44px rgba(255,43,214,.75);animation:sign 6s linear infinite}
 h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spacing:.42em;padding-left:.42em;color:#e6fbff;
  text-shadow:0 0 4px #fff,0 0 10px #19d3ff,0 0 22px #19d3ff,0 0 40px rgba(25,211,255,.7)}
-.play{appearance:none;-webkit-appearance:none;border:3px solid #19d3ff;cursor:pointer;touch-action:manipulation;
- margin-top:6px;min-height:72px;min-width:min(300px,86vw);padding:0 34px;border-radius:999px;
- font:900 25px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.08em;color:#fff;
- background:linear-gradient(180deg,#ff4fe0 0%,#c428d6 45%,#6a2bd8 100%);
- text-shadow:0 0 10px rgba(255,255,255,.7);
- box-shadow:0 6px 0 #2a0b4a,0 0 22px rgba(255,43,214,.75),0 0 46px rgba(25,211,255,.45),inset 0 2px 0 rgba(255,255,255,.35);
- transition:transform .12s ease,box-shadow .12s ease}
-.play:hover{box-shadow:0 6px 0 #2a0b4a,0 0 32px rgba(255,43,214,.9),0 0 64px rgba(25,211,255,.6),inset 0 2px 0 rgba(255,255,255,.35)}
-.play:active{transform:translateY(5px);box-shadow:0 1px 0 #2a0b4a,0 0 18px rgba(255,43,214,.7),inset 0 2px 0 rgba(255,255,255,.3)}
-.play[aria-pressed="true"]{background:linear-gradient(180deg,#2a8cff 0%,#1a4fd0 50%,#3a1a8a 100%);border-color:#ff2bd6}
-.now{margin:4px 0 0;font-size:15px;font-weight:700;color:#bfefff;letter-spacing:.06em;text-align:center;min-height:1.3em}
-.playgame{display:flex;align-items:center;justify-content:center;text-align:center;margin-top:6px;min-height:64px;max-width:min(440px,92vw);padding:10px 26px;border-radius:16px;
- color:#fff;text-decoration:none;font:900 italic 21px/1.15 "Avenir Next Condensed","Arial Narrow",Impact,"Arial Black",system-ui,sans-serif;letter-spacing:.06em;
- background:rgba(20,6,40,.78);border:3px solid #ff2bd6;text-shadow:0 0 6px #fff,0 0 12px #ff2bd6,0 0 24px #ff2bd6;
- box-shadow:0 0 14px rgba(255,43,214,.8),0 0 34px rgba(255,43,214,.45),inset 0 0 14px rgba(255,43,214,.35);animation:glow 3s ease-in-out infinite}
-.playgame:active{transform:translateY(3px)}
-.playgame:focus-visible{outline:4px solid #fff;outline-offset:4px}
+.mute{appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+ min-height:48px;min-width:48px;padding:0 16px;border-radius:999px;font:800 15px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.04em;
+ color:#ffd6f6;background:rgba(20,6,40,.6);border:2px solid rgba(255,43,214,.75);box-shadow:0 0 12px rgba(255,43,214,.45);
+ -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.mute[aria-pressed="true"]{color:#9a8cb8;border-color:rgba(154,140,184,.6);box-shadow:none}
+.mute:active{transform:translateY(2px)}
+.hint{margin:0;font-size:14px;font-weight:700;color:#bfefff;letter-spacing:.06em;text-align:center;min-height:1.3em;text-shadow:0 0 8px rgba(25,211,255,.6)}
+.boxes{display:flex;flex-direction:column;gap:12px;width:min(460px,100%);margin-top:4px}
+.box{display:flex;align-items:center;gap:14px;min-height:88px;padding:10px 16px 10px 10px;border-radius:18px;text-decoration:none;color:#fff;
+ touch-action:manipulation;background:rgba(20,6,40,.78);border:3px solid var(--c);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+ box-shadow:0 0 14px var(--g),0 0 32px var(--g2),inset 0 0 14px var(--g2);transition:transform .12s ease,box-shadow .12s ease}
+.box:hover{box-shadow:0 0 20px var(--g),0 0 46px var(--g),inset 0 0 18px var(--g2)}
+.box:active{transform:translateY(3px) scale(.99)}
+.box.s{--c:#ff2bd6;--g:rgba(255,43,214,.8);--g2:rgba(255,43,214,.35)}
+.box.l1{--c:#19d3ff;--g:rgba(25,211,255,.8);--g2:rgba(25,211,255,.3)}
+.box.l2{--c:#ffb02e;--g:rgba(255,176,46,.8);--g2:rgba(255,176,46,.3)}
+.box .th{flex:none;width:66px;height:66px;border-radius:12px;overflow:hidden;border:2px solid var(--c);box-shadow:0 0 10px var(--g)}
+.box .th img{display:block;width:100%;height:100%;object-fit:cover}
+.box .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;text-align:left}
+.box .k{font:800 12px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.2em;color:var(--c);text-shadow:0 0 8px var(--g)}
+.box .t{font:900 italic 22px/1.05 "Avenir Next Condensed","Arial Narrow",Impact,"Arial Black",system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;
+ text-shadow:0 0 6px #fff,0 0 12px var(--c),0 0 24px var(--g)}
+.box .d{font-size:13px;font-weight:700;color:#d9cdf0;line-height:1.2}
+.box .ar{flex:none;font-size:26px;font-weight:900;color:var(--c);text-shadow:0 0 10px var(--g)}
 @media (max-width:699px) and (orientation:portrait){
  h1 .a{font-size:clamp(40px,11.5vw,80px)}
- .stage{gap:10px}
- .poster{height:clamp(190px,41dvh,500px)}
+ .stage{gap:8px}
 }
 @keyframes sign{0%,17%,21%,70%,72%,100%{opacity:1}19%,71%{opacity:.6}}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.82}}
+.info{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
 @media (min-width:700px) and (orientation:landscape),(min-width:1000px){
  .stage{flex-direction:row;gap:42px}
- .stage .info{display:flex;flex-direction:column;align-items:center}
  .poster{height:clamp(240px,62dvh,560px)}
+ .info{width:auto;flex:0 1 460px}
 }
-.info{display:flex;flex-direction:column;align-items:center;gap:8px}
-/* "Neon Lights" sign under the title: pink neon tube, slow gentle glow (no flicker) */
-.neon-sub{margin:2px 0 4px;font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;font-style:italic;font-weight:800;
- font-size:clamp(22px,6.4vw,40px);line-height:1;letter-spacing:.08em;color:#ffe3fa;white-space:nowrap;
- text-shadow:0 0 3px #fff,0 0 10px #ff2bd6,0 0 22px #ff2bd6,0 0 42px rgba(255,43,214,.6);animation:glow 5s ease-in-out infinite}
-@keyframes glow{0%,100%{opacity:1}50%{opacity:.82}}
+@media (min-width:700px) and (orientation:portrait){
+ .poster{height:clamp(240px,34dvh,460px)}
+ .boxes{width:min(520px,100%);gap:16px}
+ .box{min-height:104px}.box .th{width:80px;height:80px}.box .t{font-size:26px}.box .d{font-size:15px}
+}
 @media (max-height:560px) and (orientation:landscape){
- .stage{flex-direction:row;gap:26px}.poster{height:62dvh}h1 .a{font-size:44px}.play{min-height:64px}.playgame{min-height:52px;font-size:18px;padding:6px 20px}
+ main{padding-top:calc(6px + env(safe-area-inset-top));padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+ .back,.mute{min-height:44px}
+ .stage{flex-direction:row;gap:22px;padding-top:4px}
+ .poster{height:min(72dvh,280px)}
+ h1{margin:0}h1 .a{font-size:38px}h1 .b{font-size:18px;margin-top:2px}
+ .info{gap:4px;flex:0 1 430px}.hint{font-size:12px;min-height:1.1em}
+ .boxes{gap:8px;margin-top:2px}
+ .box{min-height:62px;padding:6px 12px 6px 6px;gap:10px;border-radius:14px}
+ .box .th{width:48px;height:48px;border-radius:9px}.box .t{font-size:18px}.box .k{font-size:10px}.box .d{font-size:11.5px}.box .ar{font-size:20px}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
@@ -94,7 +109,7 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
 </div>
 <canvas id="viz" aria-hidden="true"></canvas>
 <main>
- <div class="top"><a class="back" href="../">← Back to games</a></div>
+ <div class="top"><a class="back" href="../">← Back to games</a><button class="mute" id="mute" type="button" aria-pressed="false" aria-label="Mute music">♫ ON</button></div>
  <div class="stage">
   <picture class="poster">
    <source srcset="cover.webp" type="image/webp">
@@ -102,10 +117,21 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
   </picture>
   <div class="info">
    <h1><span class="a">Rosado</span><span class="b">Nights</span></h1>
-   <p class="neon-sub">Neon Lights</p>
-   <button class="play" id="play" type="button" aria-pressed="false">▶ PLAY MUSIC</button>
-   <p class="now" id="now" aria-live="polite">Tap play and turn it up!</p>
-   <a class="playgame" id="playgame" href="game/">▶ PLAY</a>
+   <p class="hint" id="hint" aria-live="polite">&nbsp;</p>
+   <nav class="boxes" aria-label="Rosado Nights">
+    <a class="box s" id="box-story" href="https://mmacd7.github.io/rosado-storyline/">
+     <span class="th"><picture><source srcset="cover.webp" type="image/webp"><img src="cover.jpg" alt="" width="66" height="66"></picture></span>
+     <span class="tx"><span class="k">THE STORY</span><span class="t">Storyline</span><span class="d">Grown-ups only</span></span><span class="ar" aria-hidden="true">›</span>
+    </a>
+    <a class="box l1" id="box-l1" href="game/">
+     <span class="th"><img src="thumb-drive.webp" alt="" width="66" height="66"></span>
+     <span class="tx"><span class="k">LEVEL 1</span><span class="t">Causeway Chase</span><span class="d">Drive to Shred Zeppelin</span></span><span class="ar" aria-hidden="true">›</span>
+    </a>
+    <a class="box l2" id="box-l2" href="game/">
+     <span class="th"><img src="thumb-gym.webp" alt="" width="66" height="66"></span>
+     <span class="tx"><span class="k">LEVEL 2</span><span class="t">Reps for Jesus</span><span class="d">Hit the gym</span></span><span class="ar" aria-hidden="true">›</span>
+    </a>
+   </nav>
   </div>
  </div>
 </main>
@@ -113,14 +139,42 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
 <script>
 (function(){
 "use strict";
-/* ---------- play / pause (the music itself lives in theme.js, shared with the home page) ---------- */
-var T=window.RosadoTheme,btn=document.getElementById('play'),now=document.getElementById('now');
-function setUI(p,started){
- btn.textContent=p?'❚❚ PAUSE':'▶ PLAY MUSIC';btn.setAttribute('aria-pressed',p?'true':'false');
- now.textContent=p?'♫ Now playing: Rosado Nights · Main Theme':(started?'Paused · Rosado Nights · Main Theme':'Tap play and turn it up!');
+/* ---------- music: try autoplay on load; browsers that block it (iOS/Safari) start on the first touch, click or key ---------- */
+var T=window.RosadoTheme,mute=document.getElementById('mute'),hint=document.getElementById('hint');
+var KEY='rn-muted',muted=false;
+try{muted=sessionStorage.getItem(KEY)==='1'}catch(e){}
+function ctxState(){var c=window.__rosadoCtx;return c?c.state:'none'}
+function running(){return !!(T&&T.isPlaying()&&ctxState()==='running')}
+function ui(){
+ mute.textContent=muted?'♫ OFF':'♫ ON';mute.setAttribute('aria-pressed',muted?'true':'false');
+ mute.setAttribute('aria-label',muted?'Unmute music':'Mute music');
+ hint.textContent=!T||!T.supported?'':(muted?'Music off':(running()?'♫ Rosado Nights · Main Theme':'Tap anywhere for music ♫'));
 }
-if(!T||!T.supported){btn.disabled=true;now.textContent='Sorry, this browser can’t play the music.'}
-else{btn.addEventListener('click',function(){T.toggle()});T.onChange(setUI);setUI(false,false)}
+function start(){if(!T||!T.supported||muted)return;T.play();ui()}
+var EV=['pointerdown','touchstart','touchend','mousedown','click','keydown'];
+function arm(){EV.forEach(function(t){document.addEventListener(t,onGesture,true)})}
+function disarm(){EV.forEach(function(t){document.removeEventListener(t,onGesture,true)})}
+function onGesture(e){
+ if(e.target&&e.target.closest&&e.target.closest('#mute'))return; /* the toggle handles its own tap */
+ if(muted){disarm();return}
+ start();
+ /* keep listening until the audio context is really running (iOS unlocks on touchend, not touchstart) */
+ setTimeout(function(){if(running())disarm();ui()},60);
+}
+mute.addEventListener('click',function(){
+ muted=!muted;try{sessionStorage.setItem(KEY,muted?'1':'0')}catch(e){}
+ if(muted){if(T&&T.started())T.pause();disarm()}else start();
+ setTimeout(ui,60);ui();
+});
+if(!T||!T.supported){mute.hidden=true}
+else{
+ T.onChange(function(){ui()});
+ if(!muted){start();arm()} /* autoplay attempt */
+ setTimeout(ui,400);
+ /* coming back with the Back button (page cache): pick the music up again on the next tap */
+ window.addEventListener('pageshow',function(ev){if(ev.persisted&&!muted){if(!running())arm();ui()}});
+}
+ui();
 
 /* ---------- neon sun + grid visualizer ---------- */
 var cv=document.getElementById('viz'),g2=cv.getContext('2d');
