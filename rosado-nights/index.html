@@ -107,8 +107,8 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
    <h1><span class="a">Rosado</span><span class="b">Nights</span></h1>
    <button class="play" id="play" type="button" aria-pressed="false">▶ PLAY MUSIC</button>
    <div class="picks" role="group" aria-label="Choose a theme">
-    <button class="pick" type="button" aria-pressed="true"><small>Option 1</small>Night Drive</button>
-    <button class="pick" type="button" aria-pressed="false"><small>Option 2</small>Neon Pursuit</button>
+    <button class="pick" type="button" aria-pressed="true"><small>Main Theme</small>Neon Pursuit</button>
+    <button class="pick" type="button" aria-pressed="false"><small>Option 1</small>Night Drive</button>
     <button class="pick" type="button" aria-pressed="false"><small>Option 3</small>Ocean Drive 3AM</button>
     <button class="pick" type="button" aria-pressed="false"><small>Original</small>Rosado Theme</button>
    </div>
@@ -533,8 +533,8 @@ function makeNight(ctx,S){
 }
 
 var TRACKS=[
+ {id:'pursuit',label:'Main Theme',name:'Neon Pursuit',make:function(c){return makeNight(c,SONGS.pursuit)}},
  {id:'night',label:'Option 1',name:'Night Drive',make:function(c){return makeNight(c,SONGS.night)}},
- {id:'pursuit',label:'Option 2',name:'Neon Pursuit',make:function(c){return makeNight(c,SONGS.pursuit)}},
  {id:'ocean',label:'Option 3',name:'Ocean Drive 3AM',make:function(c){return makeNight(c,SONGS.ocean)}},
  {id:'orig',label:'Original',name:'Rosado Theme',make:makeEngine}
 ];
