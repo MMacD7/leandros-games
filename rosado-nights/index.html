@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1a0b33">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,7 +34,7 @@ main{position:relative;z-index:2;min-height:100vh;min-height:100dvh;display:flex
 .back:active{transform:translateY(2px)}
 .back:focus-visible,.play:focus-visible{outline:4px solid #fff;outline-offset:4px}
 .stage{flex:1;width:100%;max-width:900px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding-top:10px}
-.poster{display:block;height:clamp(190px,48dvh,560px);aspect-ratio:2/3;border-radius:18px;overflow:hidden;
+.poster{display:block;height:clamp(190px,45dvh,540px);aspect-ratio:2/3;border-radius:18px;overflow:hidden;
  border:3px solid transparent;background:linear-gradient(#1a0b33,#1a0b33) padding-box,linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff) border-box;
  box-shadow:0 0 26px rgba(255,43,214,.55),0 0 52px rgba(25,211,255,.3);transition:box-shadow .2s ease}
 .poster img{display:block;width:100%;height:100%;object-fit:cover}
@@ -58,7 +59,7 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
 @media (max-width:699px) and (orientation:portrait){
  h1 .a{font-size:clamp(40px,11.5vw,80px)}
  .stage{gap:10px}
- .poster{height:clamp(200px,46dvh,520px)}
+ .poster{height:clamp(190px,41dvh,500px)}
 }
 @keyframes sign{0%,17%,21%,70%,72%,100%{opacity:1}19%,71%{opacity:.6}}
 @media (min-width:700px) and (orientation:landscape),(min-width:1000px){
@@ -67,6 +68,11 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
  .poster{height:clamp(240px,62dvh,560px)}
 }
 .info{display:flex;flex-direction:column;align-items:center;gap:8px}
+/* "Neon Lights" sign under the title: pink neon tube, slow gentle glow (no flicker) */
+.neon-sub{margin:2px 0 4px;font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;font-style:italic;font-weight:800;
+ font-size:clamp(22px,6.4vw,40px);line-height:1;letter-spacing:.08em;color:#ffe3fa;white-space:nowrap;
+ text-shadow:0 0 3px #fff,0 0 10px #ff2bd6,0 0 22px #ff2bd6,0 0 42px rgba(255,43,214,.6);animation:glow 5s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.82}}
 @media (max-height:560px) and (orientation:landscape){
  .stage{flex-direction:row;gap:26px}.poster{height:62dvh}h1 .a{font-size:44px}.play{min-height:64px}
 }
@@ -90,13 +96,14 @@ h1 .b{display:block;margin-top:4px;font-size:clamp(20px,5.6vw,38px);letter-spaci
   </picture>
   <div class="info">
    <h1><span class="a">Rosado</span><span class="b">Nights</span></h1>
+   <p class="neon-sub">Neon Lights</p>
    <button class="play" id="play" type="button" aria-pressed="false">▶ PLAY MUSIC</button>
    <p class="now" id="now" aria-live="polite">Tap play and turn it up!</p>
    <p class="soon">Game coming soon</p>
   </div>
  </div>
 </main>
-<script src="theme.js"></script>
+<script src="theme.js?v=2"></script>
 <script>
 (function(){
 "use strict";
