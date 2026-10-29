@@ -1,3 +1,192 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Leandro's Games</title>
-<style>body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;background:#120a06;color:#fff;font-family:system-ui,sans-serif}a{display:block;width:min(80vw,420px);padding:28px;border-radius:18px;text-align:center;font-size:26px;font-weight:800;color:#fff;text-decoration:none}.a{background:linear-gradient(135deg,#2f7d32,#a0c43a)}.b{background:linear-gradient(135deg,#222,#b3261e)}h1{font-size:32px}</style></head>
-<body><h1>Leandro's Games</h1><a class="a" href="dino-world/">🦕 Leandro's Dinosaur World</a><a class="b" href="robo-dino-island/">🤖 Leandro's Robo Dino Island</a></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0612">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Leandro's Games">
+<meta name="description" content="Leandro's arcade of dinosaur games.">
+<title>Leandro's Games</title>
+<style>
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+ background:
+  radial-gradient(120% 60% at 50% -10%,rgba(255,90,20,.28),transparent 60%),
+  radial-gradient(80% 50% at 100% 100%,rgba(0,200,120,.16),transparent 60%),
+  radial-gradient(80% 50% at 0% 100%,rgba(170,40,255,.16),transparent 60%),
+  #0b0612;
+ -webkit-tap-highlight-color:transparent;overflow-x:hidden;display:flex;flex-direction:column}
+main.wrap{flex:1;width:100%}
+/* faint arcade grid */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+ background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+ background-size:36px 36px;mask-image:linear-gradient(to bottom,transparent,#000 30%,#000 70%,transparent)}
+.hoops{position:relative;z-index:1;height:14px;background:repeating-linear-gradient(180deg,#0f8a3c 0 7px,#f4f4f4 7px 14px);opacity:.9}
+.hoops.top{height:21px;background:repeating-linear-gradient(180deg,#0f8a3c 0 7px,#f4f4f4 7px 14px,#0f8a3c 14px 21px)}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;
+ padding:28px max(18px,env(safe-area-inset-right)) calc(36px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+header{text-align:center;margin:10px 0 30px}
+.badge{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px;letter-spacing:.22em;text-transform:uppercase;
+ color:#ffd34d;padding:7px 14px;border:2px solid rgba(255,211,77,.55);border-radius:999px;background:rgba(255,211,77,.08)}
+.badge .dot{width:9px;height:9px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 10px #ff3b3b;animation:blink 1.2s steps(2) infinite}
+h1{margin:16px 0 8px;line-height:.92;font-weight:900;text-transform:uppercase;letter-spacing:-.01em;font-size:clamp(46px,13vw,104px);
+ font-family:Impact,"Arial Black","Helvetica Neue",system-ui,sans-serif}
+h1 span{display:block}
+h1 .l1{font-size:.62em;color:#fff;text-shadow:0 0 18px rgba(0,255,170,.55),3px 3px 0 #0f8a3c}
+h1 .l2{background:linear-gradient(180deg,#fff6a8 0%,#ffcc00 28%,#ff7a00 60%,#ff2a1a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 22px rgba(255,90,0,.6));animation:flicker 3.2s ease-in-out infinite}
+.sub{margin:10px 0 0;font-size:clamp(16px,4.4vw,20px);font-weight:700;color:#cfe9ff;opacity:.9}
+.grid{display:grid;grid-template-columns:1fr;gap:20px}
+@media (min-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:24px}}
+.card{--c1:#2f7d32;--c2:#a0c43a;--glow:rgba(140,255,90,.55);position:relative;display:flex;flex-direction:column;min-height:96px;
+ border-radius:24px;padding:4px;text-decoration:none;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2));
+ box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 28px var(--glow);transition:transform .15s ease,box-shadow .15s ease;touch-action:manipulation}
+.card .in{flex:1;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:#140b1c}
+.art{position:relative;height:170px;display:grid;place-items:center;overflow:hidden;
+ background:radial-gradient(circle at 50% 120%,var(--c2),transparent 70%),linear-gradient(180deg,#1d1030,#140b1c)}
+.art svg{width:150px;height:150px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.4));animation:bob 2.6s ease-in-out infinite}
+.body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
+.title{text-wrap:balance}.tag{text-wrap:pretty}
+.title{font-size:23px;font-weight:900;line-height:1.1;letter-spacing:-.01em}
+.tag{font-size:16px;line-height:1.35;color:#d9d2e9}
+.play{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;margin-top:12px;
+ border-radius:14px;font-weight:900;font-size:19px;letter-spacing:.06em;text-transform:uppercase;color:#1a0a00;
+ background:linear-gradient(180deg,#ffe36a,#ff9d00);box-shadow:0 5px 0 #a24a00}
+.card:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:0 14px 0 rgba(0,0,0,.45),0 0 44px var(--glow)}
+.card:active{transform:translateY(6px);box-shadow:0 4px 0 rgba(0,0,0,.45),0 0 20px var(--glow)}
+.card:focus-visible{outline:4px solid #fff;outline-offset:4px}
+.robo{--c1:#3a3a3a;--c2:#e0321f;--glow:rgba(255,60,30,.55)}
+/* ---- Rosado Nights feature card ---- */
+.rosado{--c1:#ff2bd6;--c2:#19d3ff;--glow:rgba(255,43,214,.5);cursor:default;
+ background:linear-gradient(135deg,#ff2bd6,#8a3cff 50%,#19d3ff);
+ box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 26px rgba(255,43,214,.55),0 0 46px rgba(25,211,255,.35);animation:neon 4s ease-in-out infinite}
+.rosado:hover,.rosado:active{transform:none}
+.rosado .in{background:linear-gradient(180deg,#2a1150 0%,#1a0b33 55%,#0d1a3a 100%)}
+.grid>*{min-width:0}
+.poster{position:relative;aspect-ratio:4/5;overflow:hidden;background:#1a0b33}
+.poster img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.poster::after{content:"";position:absolute;inset:auto 0 0 0;height:22%;background:linear-gradient(transparent,#1a0b33)}
+.soon-chip{position:absolute;top:12px;right:12px;z-index:1;font-size:12px;font-weight:900;letter-spacing:.18em;color:#fff;padding:6px 11px;border-radius:999px;
+ background:rgba(20,6,40,.7);border:2px solid #19d3ff;box-shadow:0 0 12px rgba(25,211,255,.7)}
+.rosado .title{font-size:26px;text-transform:uppercase;letter-spacing:.04em;color:#ffe9fb;
+ text-shadow:0 0 6px #ff2bd6,0 0 16px #ff2bd6,0 0 30px rgba(255,43,214,.6);animation:sign 5s linear infinite}
+.rosado .tag{color:#bfefff;font-weight:600}
+.rosado .play{color:#fff;background:linear-gradient(180deg,#3a1670,#22104a);border:2px solid #19d3ff;
+ box-shadow:0 5px 0 #0b0520,0 0 16px rgba(25,211,255,.55);text-shadow:0 0 8px #19d3ff}
+@media (min-width:640px){
+ .rosado{grid-column:1/-1}
+ .card.rosado .in{flex-direction:row}
+ .rosado .poster{width:min(42%,340px);flex:none}
+ .rosado .poster::after{display:none}
+ .rosado .poster img{-webkit-mask-image:linear-gradient(90deg,#000 60%,transparent);mask-image:linear-gradient(90deg,#000 60%,transparent)}
+ .rosado .poster{background:transparent}
+ .card.rosado .body{position:relative;overflow:hidden;
+  background:
+      radial-gradient(circle at 78% 112%,#ffcf4a 0,#ff5fa2 16%,rgba(255,43,214,.35) 30%,transparent 46%)}
+ .card.rosado .body::before{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;
+  background-image:linear-gradient(rgba(25,211,255,.35) 2px,transparent 2px),linear-gradient(90deg,rgba(255,43,214,.3) 2px,transparent 2px);
+  background-size:100% 18px,44px 100%;-webkit-mask-image:linear-gradient(transparent,#000),linear-gradient(90deg,transparent,#000 35%);-webkit-mask-composite:source-in;mask-image:linear-gradient(transparent,#000),linear-gradient(90deg,transparent,#000 35%);mask-composite:intersect}
+ .card.rosado .body>*{position:relative}
+ .card.rosado .body{justify-content:center;padding:26px 30px;gap:10px}
+ .rosado .title{font-size:clamp(28px,4.2vw,44px)}
+ .rosado .tag{font-size:19px}
+ .rosado .play{margin-top:14px}
+}
+@media (min-width:1000px){.wrap{max-width:940px}}
+@keyframes neon{0%,100%{box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 26px rgba(255,43,214,.55),0 0 46px rgba(25,211,255,.35)}
+ 50%{box-shadow:0 10px 0 rgba(0,0,0,.45),0 0 34px rgba(255,43,214,.75),0 0 62px rgba(25,211,255,.5)}}
+@keyframes sign{0%,18%,22%,62%,64%,100%{opacity:1}20%,63%{opacity:.55}}
+footer{margin-top:34px;text-align:center;font-weight:700;color:#9d92b5;font-size:15px}
+footer b{color:#2fd27a}
+@keyframes flicker{0%,100%{filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 22px rgba(255,90,0,.6))}50%{filter:drop-shadow(0 4px 0 #5a0d00) drop-shadow(0 0 38px rgba(255,140,0,.9))}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes wobble{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes blink{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="hoops top" aria-hidden="true"></div>
+<main class="wrap">
+ <header>
+  <div class="badge"><span class="dot"></span>Press Start</div>
+  <h1><span class="l1">Leandro's</span><span class="l2">Games</span></h1>
+  <p class="sub">Pick a game. Stomp, roar, and have fun!</p>
+ </header>
+
+ <div class="grid">
+  <a class="card" href="dino-world/">
+   <div class="in">
+    <div class="art" aria-hidden="true">
+     <svg viewBox="0 0 160 160">
+      <ellipse cx="80" cy="146" rx="52" ry="7" fill="#000" opacity=".35"/>
+      <path d="M24 108c10-4 22-6 30-14l4-30c4-20 22-34 44-34 20 0 34 12 34 28 0 10-6 16-16 18l-16 2-2 14c0 18-8 36-24 44H58l-2-12c-12-2-24-6-32-16z" fill="#4fc23a"/>
+      <path d="M58 76l-8-8 12-4zM70 56l-6-10 13-1zM84 42l-2-12 12 4z" fill="#ffcc00"/>
+      <circle cx="114" cy="50" r="7" fill="#fff"/><circle cx="116" cy="50" r="3.5" fill="#111"/>
+      <path d="M112 72c6 2 12 2 18-1" stroke="#1b5e20" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M68 136v8h12v-10M88 128v16h12v-18" fill="#3a9a2c"/>
+      <path d="M96 94l14 4-4 6" stroke="#3a9a2c" stroke-width="7" fill="none" stroke-linecap="round"/>
+     </svg>
+    </div>
+    <div class="body">
+     <div class="title">Leandro's Dinosaur World</div>
+     <div class="tag">Explore the jungle and meet giant dinos!</div>
+     <span class="play">▶ Play</span>
+    </div>
+   </div>
+  </a>
+
+  <a class="card robo" href="robo-dino-island/">
+   <div class="in">
+    <div class="art" aria-hidden="true">
+     <svg viewBox="0 0 160 160">
+      <ellipse cx="80" cy="146" rx="52" ry="7" fill="#000" opacity=".35"/>
+      <rect x="40" y="70" width="70" height="56" rx="10" fill="#9aa3ad"/>
+      <rect x="48" y="80" width="30" height="20" rx="4" fill="#3b4148"/>
+      <circle cx="56" cy="90" r="4" fill="#ff3b1f"/><circle cx="70" cy="90" r="4" fill="#ffcc00"/>
+      <rect x="78" y="30" width="56" height="42" rx="10" fill="#c3cbd3"/>
+      <rect x="86" y="40" width="22" height="12" rx="3" fill="#111"/><rect x="90" y="43" width="10" height="6" rx="2" fill="#ff3b1f"/>
+      <path d="M100 64h30v6h-30z" fill="#7a838c"/>
+      <path d="M104 64v5M112 64v5M120 64v5" stroke="#fff" stroke-width="3"/>
+      <path d="M98 30l6-14 4 14M114 30l6-12 4 12" fill="#e0321f"/>
+      <path d="M40 104l-22 8 4-14 18-6z" fill="#7a838c"/>
+      <rect x="52" y="124" width="14" height="18" rx="3" fill="#5f666e"/><rect x="86" y="124" width="14" height="18" rx="3" fill="#5f666e"/>
+      <path d="M110 90l14 6-4 8-12-4" fill="#7a838c"/>
+      <circle cx="24" cy="40" r="3" fill="#ffcc00"/><path d="M20 52l8-4M132 120l10-4M140 108l6 2" stroke="#ffcc00" stroke-width="3" stroke-linecap="round"/>
+     </svg>
+    </div>
+    <div class="body">
+     <div class="title">Leandro's Robo Dino Island</div>
+     <div class="tag">Build robot dinos and battle on the island!</div>
+     <span class="play">▶ Play</span>
+    </div>
+   </div>
+  </a>
+
+  <div class="card rosado" role="group" aria-label="Rosado Nights, coming soon">
+   <div class="in">
+    <div class="poster">
+     <span class="soon-chip">NEW</span>
+     <picture>
+      <source srcset="rosado-nights/cover.webp" type="image/webp">
+      <img src="rosado-nights/cover.jpg" width="600" height="900" alt="Rosado Nights poster: a man in a palm-print shirt under a neon Miami night sky" loading="lazy" decoding="async">
+     </picture>
+    </div>
+    <div class="body">
+     <div class="title">Rosado Nights</div>
+     <div class="tag">Neon nights. Palm trees. Coming soon.</div>
+     <span class="play">★ Coming Soon</span>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <footer>Made for <b>Leandro</b> · Ready, set, ROAR!</footer>
+</main>
+<div class="hoops" aria-hidden="true"></div>
+</body>
+</html>
