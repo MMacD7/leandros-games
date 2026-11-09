@@ -86,7 +86,7 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
-* **v5.8.1: a fuller Rex Costume and Thunder Lion.** Same rides and buttons. The costume rider has a shaded face, straw hat, brown shirt, olive trousers and dark boots. The lion has a mane, a muzzle and a four-legged walk. Leandro still wears green and white hoops and white shorts on the lion. Jungle Island, the farm, and **GO TO WAR!!** stay.
+* **v5.8.2: a clearer T-rex costume, a lankier lion, farm CHOMP, and jagged thunder.** On the farm, while riding the lion, tap **CHOMP** near an animal. It shrinks into his mouth with a GULP!, then pops back out unharmed. Ricky and Bobby are never eaten. **WAR** still shouts **GO TO WAR!!** and now throws branching lightning that only makes things dizzy.
 
 ## Modes
 * **Explore the Island**: free roam.

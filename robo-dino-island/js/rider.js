@@ -66,6 +66,8 @@ export class Rider {
     const hair = add(head, new THREE.SphereGeometry(0.222, 18, 10, 0, Math.PI * 2, 0, 1.42), m.hair, 0, 0.215, -0.012); hair.rotation.x = -0.22; hair.scale.set(1.02, 1, 1);
     const top = add(head, new THREE.SphereGeometry(0.15, 12, 8), m.hair, 0, 0.385, 0.05); top.scale.set(1.05, 0.42, 1.05); top.rotation.x = 0.25;
     const tuft = add(head, new THREE.SphereGeometry(0.07, 8, 6), m.hair, 0.03, 0.4, 0.15); tuft.scale.set(1.5, 0.5, 0.8); tuft.rotation.z = -0.2;
+    add(head, new THREE.SphereGeometry(0.09, 8, 6), m.hair, -0.12, 0.3, -0.04).scale.set(0.7, 0.85, 0.8);
+    add(head, new THREE.SphereGeometry(0.09, 8, 6), m.hair, 0.14, 0.3, -0.02).scale.set(0.7, 0.85, 0.8);
     for (const s of [-1, 1]) { add(head, new THREE.SphereGeometry(0.05, 8, 6), m.skin, s * 0.205, 0.19, 0).scale.set(0.5, 1, 0.8);
       const e = add(head, new THREE.SphereGeometry(0.032, 10, 8), m.eye, s * 0.075, 0.225, 0.18); e.scale.set(1, 1.15, 0.6);
       add(head, new THREE.SphereGeometry(0.01, 6, 4), m.white, s * 0.075 + 0.01, 0.237, 0.2);

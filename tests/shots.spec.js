@@ -25,15 +25,15 @@ test('close-up iPhone landscape shots', async ({ page }) => {
   await ready(page);
   await page.locator('#b-garage').click();
   await poll(page, () => G.screen === 'garage');
-  await page.evaluate(() => G.frameGarage({ zoom: 0.46, yaw: 0.85 }));
+  await page.evaluate(() => G.frameGarage({ zoom: 0.38, yaw: 0.7 }));
   await page.waitForTimeout(500);
-  await page.screenshot({ path: OUT + '/v581-lion-garage-iphone.png' });
+  await page.screenshot({ path: OUT + '/v582-lion-garage-iphone.png' });
 
   await page.locator('#jg-costume').click();
   await poll(page, () => G.save.jungleCostume === true);
-  await page.evaluate(() => G.frameGarage({ zoom: 0.46, yaw: 1.05 }));
+  await page.evaluate(() => G.frameGarage({ zoom: 0.34, yaw: 0.95 }));
   await page.waitForTimeout(500);
-  await page.screenshot({ path: OUT + '/v581-costume-garage-iphone.png' });
+  await page.screenshot({ path: OUT + '/v582-costume-garage-iphone.png' });
   await page.evaluate(() => G.frameGarage(null));
 
   await page.locator('#g-back').click();
@@ -50,14 +50,14 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     const look = new THREE.Vector3();
     g.camHook = (cam) => {
       p.mech.rider.getWorldPosition(look); look.y += 0.05;
-      const yaw = p.yaw + 0.7, dist = 3.6, pitch = 0.28;
+      const yaw = p.yaw + 0.85, dist = 4.8, pitch = 0.32;
       cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
       cam.lookAt(look);
     };
     G.sim(0.08);
   });
   await page.waitForTimeout(250);
-  await page.screenshot({ path: OUT + '/v581-costume-jungle-iphone.png' });
+  await page.screenshot({ path: OUT + '/v582-costume-jungle-iphone.png' });
 
   await page.evaluate(() => {
     G.game.camHook = null; G.save.jungleCostume = false; G.save.jungleLion = true; G.save.farmLion = true;
@@ -71,7 +71,7 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     const look = new THREE.Vector3();
     g.camHook = (cam) => {
       g.rider.head.getWorldPosition(look);
-      const yaw = p.yaw + 0.65, dist = 4.2, pitch = 0.3;
+      const yaw = p.yaw + 0.75, dist = 5.2, pitch = 0.34;
       cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
       cam.lookAt(look);
     };
@@ -79,7 +79,7 @@ test('close-up iPhone landscape shots', async ({ page }) => {
   });
   expect(await page.evaluate(() => G.game.player.def.lion === true)).toBe(true);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: OUT + '/v581-lion-jungle-iphone.png' });
+  await page.screenshot({ path: OUT + '/v582-lion-jungle-iphone.png' });
 
   await page.evaluate(() => { G.game.camHook = null; });
   await go(page, 'farm');
@@ -96,7 +96,7 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     const look = new THREE.Vector3();
     g.camHook = (cam) => {
       F.farmLion.body.getWorldPosition(look); look.y += 0.7;
-      const yaw = p.yaw + 1.15, dist = 9.2, pitch = 0.38;
+      const yaw = p.yaw + 1.25, dist = 7.4, pitch = 0.36;
       cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
       cam.lookAt(look);
     };
@@ -104,5 +104,25 @@ test('close-up iPhone landscape shots', async ({ page }) => {
   });
   await page.waitForTimeout(650);
   expect(await page.evaluate(() => document.getElementById('shout').textContent)).toBe('GO TO WAR!!');
-  await page.screenshot({ path: OUT + '/v581-lion-farm-war-iphone.png' });
+  await page.screenshot({ path: OUT + '/v582-lion-farm-war-iphone.png' });
+  await page.evaluate(() => {
+    const F = G.farm, p = G.game.player, g = G.game, THREE = G.THREE;
+    const chick = F.animals.find(a => a.kind === 'chicken');
+    p.pos.x = chick.pos.x + 1.2; p.pos.z = chick.pos.z; p.groundY();
+    F.syncFarmLion(p, 0, false);
+    F.chompCd = 0;
+    F.lionChomp(p);
+    G.sim(0.18);
+    document.getElementById('toast').classList.remove('show');
+    const look = new THREE.Vector3();
+    g.camHook = (cam) => {
+      F.farmLion.head.getWorldPosition(look);
+      const yaw = p.yaw + 0.9, dist = 4.6, pitch = 0.3;
+      cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
+      cam.lookAt(look);
+    };
+    G.sim(0.05);
+  });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: OUT + '/v582-lion-farm-chomp-iphone.png' });
 });

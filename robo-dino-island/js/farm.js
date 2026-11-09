@@ -362,7 +362,7 @@ function foodMesh(kind) {
 }
 
 // ---------------- one farm animal ----------------
-const BUSY = new Set(['faint', 'bounce', 'eat', 'happy', 'fart', 'poop', 'ridden', 'rodeo', 'tickled', 'wait', 'title']);
+const BUSY = new Set(['faint', 'bounce', 'eat', 'happy', 'fart', 'poop', 'ridden', 'rodeo', 'tickled', 'wait', 'title', 'gulp']);
 const LEG = { cow: 1.0, pig: 0.42, chicken: 0.3, sheep: 0.66, goat: 0.68, horse: 1.2 };
 class Animal {
   constructor(F, kind, i) {
@@ -387,6 +387,8 @@ class Animal {
     const k = Math.max(0.2, Math.cos(Math.min(1.5, Math.abs(angDiff(this.yaw, want))))); this.speed = lerp(this.speed, L > 0.4 ? spd * k : 0, Math.min(1, dt * 4)); return L; }
   face(x, z, dt, k = 6) { this.yaw += angDiff(this.yaw, Math.atan2(x - this.pos.x, z - this.pos.z)) * Math.min(1, dt * k); }
   update(dt, title) {
+    if (this.gulp) return this.updateGulp(dt);
+    if (this.dizzyT > 0) { this.dizzyT -= dt; this.yaw += dt * 10; this.speed = 0; }
     const F = this.F, K = this.K, T = (this.t += dt); this.fullT -= dt; let headW = 0, hopW = 0, tailW = 0, wigW = 0, flap = 0;
     switch (this.state) {
       case 'idle': this.speed = lerp(this.speed, 0, Math.min(1, dt * 5)); headW = this.kind === 'chicken' ? Math.max(0, Math.sin(T * 7)) * 0.9 : 0.75 * smooth(0.5, 1.2, T % 6) * (1 - smooth(4.5, 5.4, T % 6));
@@ -451,6 +453,41 @@ class Animal {
     const want = !F.fed.has(this) && !this.busy && this.state !== 'ridden' && F.active && F.kidPos && Math.hypot(this.pos.x - F.kidPos.x, this.pos.z - F.kidPos.z) < 26 && this.fullT <= 0;
     const s0 = this.bub.scale.x, s1 = want ? 0.95 + (this.kind === 'chicken' ? -0.25 : 0) : 0; const ns = lerp(s0, s1, Math.min(1, dt * 8)); this.bub.scale.setScalar(ns); this.bub.visible = ns > 0.02;
     if (this.bub.visible) this.bub.position.set(this.pos.x, this.pos.y + this.h * (this.kind === 'chicken' ? 1.3 : 1) + 0.75 + Math.sin(F.t * 3 + this.idx) * 0.1, this.pos.z);
+  }
+  // v5.8.2 cartoon gulp: shrink into the lion's mouth, then pop back out. Nobody is hurt.
+  updateGulp(dt) {
+    const g = this.gulp, F = this.F, R = this.root; g.t += dt; R.visible = true;
+    const to = g.to;
+    if (g.phase === 'in') {
+      const u = Math.min(1, g.t / 0.45);
+      this.pos.lerpVectors(g.from, to, u);
+      const s = Math.max(0.08, 1 - u * 0.92);
+      R.scale.setScalar(s);
+      R.position.set(this.pos.x, this.pos.y + 0.4 * (1 - u), this.pos.z);
+      R.rotation.y += dt * 6;
+      if (u >= 1) { g.phase = 'hold'; g.t = 0; R.visible = false; }
+    } else if (g.phase === 'hold') {
+      this.pos.copy(to);
+      if (g.t >= g.hold) {
+        g.phase = 'out'; g.t = 0; R.visible = true;
+        const side = g.side || 1;
+        this.pos.set(to.x + side * 1.8, F.W.height(to.x + side * 1.8, to.z + 0.4), to.z + 0.4);
+        const burp = Math.random() < 0.5;
+        if (burp) { sfx.boing(0.7, 0.55); F.g.hud.shout('BURP!', 1.6); } else { sfx.fart('tiny', 0.8); F.g.hud.shout('TOOT!', 1.6); }
+        F.g.hud.toast(burp ? '😋 BURP! Out you pop!' : '💨 Toot! The lion let them go!');
+        if (F.farmLion) F.farmLion.cheek = 0.2;
+      }
+    } else {
+      const u = Math.min(1, g.t / 0.45);
+      R.scale.setScalar(0.15 + u * 0.85);
+      R.position.set(this.pos.x, this.pos.y + Math.sin(u * Math.PI) * 1.1, this.pos.z);
+      R.rotation.y += dt * 4;
+      if (u >= 1) {
+        this.gulp = null; R.scale.set(1, 1, 1); R.visible = true;
+        const h = this.homePoint(); this.place(h.x, h.z); this.set('idle'); this.dur = 2;
+        F.n.pops = (F.n.pops || 0) + 1;
+      }
+    }
   }
   worldPt(local, out = V()) { this.root.updateMatrixWorld(); return out.copy(local).applyMatrix4(this.root.matrixWorld); }
   mouthPt(out = V()) { this.head.updateMatrixWorld(); return out.copy(this.mouth).applyMatrix4(this.head.matrixWorld); }
@@ -532,6 +569,7 @@ export class FarmLife {
     const ride = this.riding ? 'off' : this.ridingLion ? 'loff' : this.driving ? 'toff' : (this.onCastle(p.pos.x, p.pos.z) || this.castleHop) ? 'jump' : this.lionNear(p) && !this.horseNear(p) ? 'lnear' : this.horseNear(p) ? 'near' : this.tractorNear(p) ? 'tnear' : 'far'; if (ride !== this._rl) { this._rl = ride; const b = document.querySelector('#a-missile span'), el = $('a-missile');
       if (b) b.innerHTML = ride === 'off' ? '🐴<br>HOP OFF' : ride === 'loff' ? '🦁<br>HOP OFF' : ride === 'toff' ? '🚜<br>HOP OFF' : ride === 'tnear' ? '🚜<br>DRIVE' : ride === 'jump' ? '🤸<br>JUMP' : ride === 'lnear' ? '🦁<br>RIDE' : '🐴<br>RIDE'; if (el) el.classList.toggle('glow', ride === 'near' || ride === 'lnear' || ride === 'tnear' || ride === 'jump'); const bb = document.querySelector('#a-boost span'); if (bb) bb.innerHTML = (this.riding || this.ridingLion) ? 'GALLOP' : this.driving ? 'FAST' : 'RUN';
       const tb = document.querySelector('#a-melee span'); if (tb) tb.innerHTML = this.driving ? '📯<br>HONK' : this.ridingLion ? '⚡<br>WAR' : '💨<br>TOOT'; }
+    if (this.ridingLion) { const cb = document.querySelector('#a-laser span'); if (cb) cb.innerHTML = '🦷<br>CHOMP'; }
     if (this.hintT > 0) this.hintT -= dt;
   }
   inMud(x, z) { for (const d of this.W.farmData.mud) if (Math.hypot(x - d.x, z - d.z) < d.r * 0.85) return d; return null; }
@@ -541,11 +579,35 @@ export class FarmLife {
   // ---------- controls (called from Game.update on the farm) ----------
   controls(p, inp, nL, nM, nB) {
     p.boostE = p.st.boost; // Leandro never runs out of puff
-    if (nL) this.feed(p); if (nM && !this.riding && !this.ridingLion && !this.driving && (this.onCastle(p.pos.x, p.pos.z) || this.castleHop)) { this.castleJump(p); nM = 0; } // v5.6.1: on the castle JUMP always wins (a horse or tractor parked nearby used to steal it)
+    if (nL && this.ridingLion) { if (inp && inp.pressed && inp.pressed.laser) this.lionChomp(p); } else if (nL) this.feed(p); if (nM && !this.riding && !this.ridingLion && !this.driving && (this.onCastle(p.pos.x, p.pos.z) || this.castleHop)) { this.castleJump(p); nM = 0; } // v5.6.1: on the castle JUMP always wins (a horse or tractor parked nearby used to steal it)
     // v5.6.1: RIDE / HOP OFF / DRIVE only on a fresh press (plus a short cooldown). Holding the button used to auto-repeat every
     // 0.22 s, so a kid keeping a finger on HOP OFF got off and straight back on the horse (or tractor) and could never get down.
     if (nM && (!(inp && inp.pressed && inp.pressed.missile) || this.t < (this.rideCdT || 0))) nM = 0;
     if (nM) { this.rideCdT = this.t + 0.6; if (this.riding) this.dismount(); else if (this.ridingLion) this.dismountLion(); else if (this.driving) this.hopOffTractor(); else if (this.lionNear(p) && !this.horseNear(p)) this.mountLion(p); else if (this.horseNear(p)) this.tryMount(p); else if (this.tractorNear(p)) this.driveTractor(p); else if (this.g.save && this.g.save.farmLion) { if (this.hintT <= 0) { this.hintT = 1.6; this.toast('🦁 Walk up to the lion in the yard, or the horse, then tap RIDE!'); } } else this.tryMount(p); } if (nB) { if (this.driving) this.honk(); else if (this.ridingLion) this.g.thunderButt(p); else this.toot(p); }
+  }
+  edible(a) {
+    if (!a || a.gulp || a.state === 'ridden' || a.state === 'gulp') return false;
+    const id = ((a.kind || '') + ' ' + (a.name || '') + ' ' + (a.id || '')).toLowerCase();
+    if (id.includes('ricky') || id.includes('bobby') || id.includes('westie')) return false;
+    return true;
+  }
+  nearestChomp(p) { let best = null, bd = 6.2; for (const a of this.animals) { if (!this.edible(a)) continue; const d = Math.hypot(a.pos.x - p.pos.x, a.pos.z - p.pos.z); if (d < bd) { bd = d; best = a; } } return best; }
+  lionChomp(p = this.kid) {
+    if (!p || !this.ridingLion || !this.farmLion) return false;
+    if (this.t < (this.chompCd || 0)) return false;
+    const a = this.nearestChomp(p);
+    if (!a) { if (this.hintT <= 0) { this.hintT = 1.4; this.toast('🦷 Walk up to a farm animal, then tap CHOMP!'); } return false; }
+    this.chompCd = this.t + 1.05;
+    const to = V(); this.farmLion.head.getWorldPosition(to);
+    a.gulp = { t: 0, phase: 'in', hold: 2.2 + Math.random() * 0.7, from: a.pos.clone(), to: to.clone(), side: Math.random() < 0.5 ? -1 : 1 };
+    a.speed = 0; a.set('gulp');
+    this.n.gulps = (this.n.gulps || 0) + 1;
+    this.farmLion.cheek = 1; this.farmLion.jaw = 1;
+    sfx.whoosh(0.75); sfx.plop(0.9);
+    this.g.hud.shout('GULP!', 1.6);
+    this.g.hud.toast(a.K.emoji + ' GULP! +10');
+    if (this.g.addBolts) this.g.addBolts(10);
+    return a;
   }
   feed(p = this.kid) {
     if (!p) return false; const a = this.nearFood(p);

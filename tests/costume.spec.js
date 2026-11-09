@@ -68,11 +68,11 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   await ready(page);
   await dismissRotate(page);
 
-  await expect(page.locator('#ver')).toHaveText('v5.8.1');
+  await expect(page.locator('#ver')).toHaveText('v5.8.2');
   const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
   expect(sw).toContain('./js/costume.js');
   expect(sw).toContain('./js/lion.js');
-  expect(sw).not.toContain('robo-dino-island-6d9851d5e1');
+  expect(sw).not.toContain('robo-dino-island-df4f058c7b');
   const lionSrc = await page.evaluate(async () => (await fetch('./js/lion.js')).text());
   expect(lionSrc.toLowerCase()).not.toContain('thundercat');
   expect(sw).toMatch(/const CACHE = 'robo-dino-island-[0-9a-f]{10}'/);
@@ -129,7 +129,7 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
       costume: !!p.def.costume, lion: !!p.def.lion, celtic: !!G.game.rider.mounted,
       shirt: hex.has(0x8a4b2a), olive: hex.has(0x5f7340), boot: hex.has(0x241c16), straw: hex.has(0xf3e2a0),
       body: hex.has(0xf04a28), blue: hex.has(0x1a3d8f), hoop: [...hex].includes(0xf7f7f4) && names.some(n => /shirt/i.test(n)) && false,
-      hat: names.includes('costume-hat'), trousers: names.includes('costume-trousers'), boots: names.includes('costume-boots'),
+      hat: names.includes('costume-hat'), trousers: names.includes('costume-trousers'), boots: names.includes('costume-boots'), snout: names.includes('rex-snout'), stripe: names.includes('rex-back'),
       backpack: names.some(n => /backpack/i.test(n)),
       legsApart: Math.abs(legL.x - legR.x) > 0.2, legsLow: boot.y < seat.y - 0.25,
       headAbove: head.y > body.y,
@@ -146,6 +146,8 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   expect(look.body).toBe(true);
   expect(look.blue).toBe(true);
   expect(look.hat).toBe(true);
+  expect(look.snout).toBe(true);
+  expect(look.stripe).toBe(true);
   expect(look.trousers).toBe(true);
   expect(look.boots).toBe(true);
   expect(look.backpack).toBe(false);
@@ -203,6 +205,53 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   expect(war.legs).toBe(4);
   expect(war.rear).toBe(true);
   expect(war.whisker).toBe(true);
+  const bolt = await page.evaluate(() => {
+    const g = G.game, F = G.farm, p = g.player;
+    g._warUntil = performance.now() + 8000;
+    const before = g.wars;
+    const again = g.thunderButt(p);
+    const blocked = again === false && g.wars === before;
+    const pig = F.animals.find(a => a.kind === 'pig');
+    pig.pos.x = p.pos.x + 2; pig.pos.z = p.pos.z; pig.dizzyT = 0;
+    g._warUntil = 0;
+    g.thunderButt(p);
+    const dogs = (g.westies && g.westies.dogs) || [];
+    return { blocked, dizzy: pig.dizzyT > 0, dogs: dogs.length, zaps: g.fx.zaps.length };
+  });
+  expect(bolt.blocked).toBe(true);
+  expect(bolt.dizzy).toBe(true);
+  expect(bolt.zaps).toBeGreaterThan(4);
+  const gulp = await page.evaluate(() => {
+    const F = G.farm, p = G.game.player, g = G.game;
+    const chick = F.animals.find(a => a.kind === 'chicken');
+    p.pos.x = chick.pos.x + 1.1; p.pos.z = chick.pos.z; p.groundY();
+    F.syncFarmLion(p, 0, false);
+    F.chompCd = 0;
+    const label = document.querySelector('#a-laser span').innerText;
+    const bolts0 = g.save.bolts;
+    const a = F.lionChomp(p);
+    const id = a && a.id;
+    G.sim(0.2);
+    const who = F.animals.find(x => x.id === id) || chick;
+    const dogs = (g.westies && g.westies.dogs) || [];
+    return { ok: !!a, id, label, mid: who.root.scale.x, gulp: who.state === 'gulp', shout: document.getElementById('shout').textContent, bolts: g.save.bolts > bolts0, dogs: dogs.every(d => !d.gulp), visible: who.root.visible };
+  });
+  expect(gulp.ok).toBe(true);
+  expect(gulp.label).toMatch(/CHOMP/);
+  expect(gulp.gulp).toBe(true);
+  expect(gulp.mid).toBeLessThan(0.95);
+  expect(gulp.shout).toBe('GULP!');
+  expect(gulp.bolts).toBe(true);
+  expect(gulp.dogs).toBe(true);
+  expect(gulp.visible).toBe(true);
+  await page.evaluate(() => G.sim(4.2));
+  const back = await page.evaluate(() => {
+    const chick = G.farm.animals.find(a => a.state === 'gulp') || G.farm.animals.find(a => a.kind === 'chicken');
+    return { gulp: !chick.gulp, scale: chick.root.scale.x, visible: chick.root.visible };
+  });
+  expect(back.gulp).toBe(true);
+  expect(back.visible).toBe(true);
+  expect(back.scale).toBeGreaterThan(0.9);
 
   await go(page, 'jungle');
   expect(await page.evaluate(() => G.game.player.def.costume === true && G.game.player.def.lion !== true)).toBe(true);

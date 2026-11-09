@@ -55,10 +55,10 @@ export class LionMech {
       const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; if (name) o.name = name; parent.add(o); return o;
     };
     const body = this.body = new THREE.Group(); obj.add(body);
-    const torso = add(body, new THREE.SphereGeometry(1, 20, 14), fur, 0, 1.05, 0.02, 'lion-chest'); torso.scale.set(0.62, 0.52, 1.18);
-    add(body, new THREE.SphereGeometry(0.42, 14, 10), fur, -0.28, 1.12, 0.15).scale.set(0.7, 0.85, 0.7);
-    add(body, new THREE.SphereGeometry(0.42, 14, 10), fur, 0.28, 1.12, 0.15).scale.set(0.7, 0.85, 0.7);
-    add(body, new THREE.SphereGeometry(0.46, 14, 10), fur, 0, 1.08, -0.55).scale.set(1.05, 0.9, 0.85);
+    const torso = add(body, new THREE.CapsuleGeometry(0.42, 0.9, 4, 10), fur, 0, 1.02, -0.05, 'lion-chest'); torso.rotation.x = Math.PI / 2; torso.scale.set(1.05, 1, 1);
+    add(body, new THREE.SphereGeometry(0.36, 12, 10), fur, -0.28, 1.12, 0.42).scale.set(0.85, 0.9, 0.7);
+    add(body, new THREE.SphereGeometry(0.36, 12, 10), fur, 0.28, 1.12, 0.42).scale.set(0.85, 0.9, 0.7);
+    add(body, new THREE.SphereGeometry(0.4, 12, 10), fur, 0, 1.08, -0.72).scale.set(1.15, 0.95, 0.8);
     const tum = add(body, new THREE.SphereGeometry(0.4, 14, 10), belly, 0, 0.72, 0.12); tum.scale.set(0.75, 0.5, 1.2);
     add(body, new THREE.SphereGeometry(0.32, 12, 10), fur, 0, 1.22, 0.78).scale.set(0.85, 0.7, 0.8);
 
@@ -79,6 +79,7 @@ export class LionMech {
       const earG = new THREE.Group(); earG.position.set(s * 0.26, 0.32, -0.02); earG.rotation.z = s * -0.35; head.add(earG);
       add(earG, new THREE.SphereGeometry(0.14, 10, 8), fur, 0, 0.06, 0).scale.set(0.5, 1, 0.32);
       add(earG, new THREE.SphereGeometry(0.07, 8, 6), M(0xf0a0a8), 0, 0.05, 0.03).scale.set(0.4, 0.65, 0.18);
+      add(head, new THREE.BoxGeometry(0.16, 0.04, 0.06), dark, s * 0.15, 0.2, 0.28).rotation.z = s * -0.2;
       add(head, new THREE.SphereGeometry(0.09, 10, 8), white, s * 0.15, 0.1, 0.3);
       const iris = add(head, new THREE.SphereGeometry(0.055, 10, 8), amber, s * 0.155, 0.095, 0.36, 'lion-eye'); iris.scale.set(1, 1.05, 0.55);
       const pupil = add(head, new THREE.SphereGeometry(0.03, 8, 6), eye, s * 0.158, 0.09, 0.4); pupil.scale.set(0.8, 1.2, 0.5);
@@ -102,15 +103,15 @@ export class LionMech {
     const spots = [[-0.34, 0.55, 1], [0.34, 0.55, 1], [-0.32, -0.62, -1], [0.32, -0.62, -1]];
     for (const [x, z] of spots) {
       const g = new THREE.Group(); g.position.set(x, 1.02, z); obj.add(g);
-      add(g, new THREE.CapsuleGeometry(0.12, 0.22, 3, 7), fur, 0, -0.16, 0);
-      const knee = new THREE.Group(); knee.position.set(0, -0.32, 0); g.add(knee);
-      add(knee, new THREE.CapsuleGeometry(0.09, 0.2, 3, 6), fur, 0, -0.16, 0);
-      const ft = add(knee, new THREE.SphereGeometry(0.15, 10, 8), paw, 0, -0.34, 0.05); ft.scale.set(1.15, 0.48, 1.35);
+      add(g, new THREE.CapsuleGeometry(0.11, 0.28, 3, 7), fur, 0, -0.2, 0);
+      const knee = new THREE.Group(); knee.position.set(0, -0.4, 0); g.add(knee);
+      add(knee, new THREE.CapsuleGeometry(0.08, 0.26, 3, 6), fur, 0, -0.18, 0);
+      const ft = add(knee, new THREE.BoxGeometry(0.2, 0.08, 0.28), paw, 0, -0.38, 0.06, 'lion-paw');
       this.legs.push({ g, knee });
     }
     this.tail = new THREE.Group(); this.tail.position.set(0, 1.12, -1.05); this.tail.name = 'lion-tail'; obj.add(this.tail);
     add(this.tail, new THREE.CapsuleGeometry(0.055, 0.85, 3, 6), fur, 0, 0.2, -0.38).rotation.x = 0.85;
-    add(this.tail, new THREE.SphereGeometry(0.18, 10, 8), tuft, 0, 0.55, -0.72, 'lion-tuft');
+    add(this.tail, new THREE.SphereGeometry(0.2, 10, 8), M(0x3a2412, { roughness: 0.9 }), 0, 0.55, -0.78, 'lion-tuft');
 
     this.rear = new THREE.Group(); this.rear.name = 'lion-rear'; this.rear.position.set(0, 0.95, -1.12); obj.add(this.rear);
     const cloudMat = M(0xf7fbff, { roughness: 0.45, emissive: 0x9ecbff, emissiveIntensity: 0.35 });
@@ -163,6 +164,8 @@ export class LionMech {
     for (const s of this.sparks) { s.scale.setScalar(0.65 + pulse * 0.55); s.material.opacity = 0.35 + pulse * 0.6; }
     if (this.cloud) { this.cloud.position.y = Math.sin(this.t * 3) * 0.03 + (this.thunderT > 0 ? 0.12 : 0); this.cloud.rotation.z = Math.sin(this.t * 8) * (this.thunderT > 0 ? 0.22 : 0.03); }
     if (this.thunderT > 0) this.tail.rotation.x = -0.85;
+    this.cheek = Math.max(0, (this.cheek || 0) - dt * 0.4);
+    this.head.scale.setScalar(1 + this.cheek * 0.16);
     if (this.happy > 0) this.head.rotation.z = Math.sin(this.t * 8) * 0.08;
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3);
     this.mats.plate.emissive.setRGB(this.flash > 0.2 ? 0.28 : 0, this.flash > 0.2 ? 0.16 : 0, 0);

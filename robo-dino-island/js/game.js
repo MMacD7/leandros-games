@@ -152,7 +152,7 @@ export class Game {
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
   mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && p.def.costume) return; // Rex Costume has its own rider. The hooped kit stays off it.
     if (!(p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean))) return; // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
-    if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.12, spread: 0.95, shinOut: 0.32, seatW: 0.46 }); else R.mount(p.mech); }
+    if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.12, spread: 1.05, shinOut: 0.42, seatW: 0.46 }); else R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }
 
@@ -396,35 +396,50 @@ export class Game {
     for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length(); tmp.y = 0; tmp.normalize();
       if (dist < 22 * s + 8 && tmp.dot(fwd) > -0.15) { this.stun(e, d.st.roar || 1); if (e !== this.player) { e.hit(4, d.pos, d); e.knock.addScaledVector(tmp, 7); } } }
   }
-  // v5.7.1 cartoon thunder from the lion's rear. Silly sparks only: nobody is hurt.
+  // v5.8.2 jagged thunder. A funny dizzy spin only: no damage, no scary hit.
   thunderButt(d) {
     if (!d || !d.alive) return;
-    const back = d.forward(new THREE.Vector3()).multiplyScalar(-1);
+    const now = performance.now();
+    if (d === this.player && now < (this._warUntil || 0)) return false;
+    if (d === this.player) this._warUntil = now + 1200;
+    const fwd = d.forward(new THREE.Vector3()), back = fwd.clone().multiplyScalar(-1);
     const mount = this.farm && this.farm.ridingLion && this.farm.farmLion;
     const origin = mount && mount.socketPos ? mount.socketPos('rear', new THREE.Vector3()) : (d.mech && d.mech.socketPos ? d.mech.socketPos('rear', new THREE.Vector3()) : d.pos.clone());
-    const glow = mount || d.mech; if (glow) glow.thunderT = 0.8;
-    d.roar = 0.8; d.jaw = 0.2;
+    const glow = mount || d.mech; if (glow) glow.thunderT = 0.9;
+    d.roar = 0.6;
     this.wars = (this.wars || 0) + 1;
-    sfx.thunder(d === this.player ? 0.85 : 0.3);
-    sfx.zap(d === this.player ? 0.65 : 0.2);
-    sfx.bigRoar(0.72, d === this.player ? 0.4 : 0.12, false);
-    const gold = { r: 1, g: 0.95, b: 0.45 }, blue = { r: 0.55, g: 0.8, b: 1 };
-    for (let i = 0; i < 5; i++) {
-      const side = new THREE.Vector3(-back.z, 0, back.x);
-      const end = origin.clone().addScaledVector(back, 6 + i * 1.5).addScaledVector(side, (i - 2) * 1.15);
-      end.y = origin.y + (i % 2 ? 1.6 : 0.2);
-      this.fx.zap(origin.clone(), end, i % 2 ? gold : blue, i === 2 ? 1.15 : 0.78, 1.35, 0.2);
-    }
-    this.fx.ring(origin.clone(), 3.4, 0xfff2a0);
-    this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.28 : 0.08);
+    sfx.thunder(d === this.player ? 1 : 0.35);
+    sfx.zap(d === this.player ? 0.9 : 0.3);
+    const white = { r: 1, g: 1, b: 1 }, gold = { r: 1, g: 0.92, b: 0.35 }, cyan = { r: 0.45, g: 0.85, b: 1 };
+    const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    const shoot = (dir, len, lift) => {
+      const end = origin.clone().addScaledVector(dir, len); end.y = origin.y + lift;
+      this.fx.zap(origin.clone(), end, cyan, 0.34, 0.42, 0.2);
+      this.fx.zap(origin.clone(), end, gold, 0.16, 0.36, 0.16);
+      this.fx.zap(origin.clone(), end, white, 0.07, 0.28, 0.1);
+      const mid = origin.clone().lerp(end, 0.55);
+      const branch = mid.clone().addScaledVector(side, (Math.random() < 0.5 ? -1 : 1) * 2.2); branch.y += 0.8;
+      this.fx.zap(mid, branch, cyan, 0.14, 0.3, 0.22);
+      return end;
+    };
+    const ends = [shoot(back, 7.5, 0.4), shoot(fwd, 6.5, 0.8)];
+    this.later(0.08, () => { if (!d.alive) return; shoot(back, 6.2, 1.1); });
+    this.later(0.16, () => { if (!d.alive) return; shoot(fwd, 5.4, 0.2); });
+    if (this.fx.sparks) this.fx.sparks(origin.clone(), 8, { r: 0.7, g: 0.9, b: 1 }, 0.7);
+    this.fx.ring(origin.clone(), 2.4, 0xb7f0ff);
+    this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.42 : 0.12);
     if (d === this.player) {
-      this.hud.shout('GO TO WAR!!', 2.4);
-      this.hud.toast('⚡ Thunderbolts! Just silly sparks. Nobody gets hurt.');
+      this.hud.flash();
+      this.hud.shout('GO TO WAR!!', 2.2);
+      this.hud.toast('⚡ Thunderbolts! A silly dizzy spin. Nobody gets hurt.');
       this.hud.say('Go to war!', { prio: 3, cd: 900, replace: true });
     }
-    if (this.farm && d.def && d.def.farmKid && this.farm.animals) {
-      for (const a of this.farm.animals) if (a.pos && a.pos.distanceTo(d.pos) < 9) this.farm.startle(a, d.pos, 0.7);
-    }
+    const dizzyAt = (pos) => {
+      for (const e of this.enemies) { if (!e.alive || e === this.player) continue; if (e.pos.distanceTo(pos) < 8) { const hp = e.hp; e.spinT = 1.5; e.hp = hp; } }
+      if (this.farm && this.farm.animals) for (const a of this.farm.animals) if (a.pos && a.pos.distanceTo(pos) < 8 && !a.gulp && !/ricky|bobby/i.test(a.kind + (a.name || ''))) a.dizzyT = 1.4;
+    };
+    dizzyAt(d.pos); for (const end of ends) dizzyAt(end);
+    return true;
   }
   stun(e, t) { if (e === this.player) { e.slowT = Math.max(e.slowT || 0, Math.min(t, 0.7)); return; } e.stunT = Math.max(e.stunT || 0, t); e.act = null; e.chargeA = e.whipA = e.rearA = 0; e.air = 0; }
   special(d, target) {
@@ -842,7 +857,8 @@ export class Game {
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const e = this.enemies[i];
       if (e.gone) { e.remove(); this.enemies.splice(i, 1); continue; } // v5: stampede runners leave the map
-      if (e.alive) { if (this.battle && this.battle.over) { e.move(dt, tmp.set(0, 0, 0), 0, false); e.breathT = 0; } else this.think(e, dt); }
+      if (e.alive && e.spinT > 0) { e.spinT -= dt; e.yaw += dt * 12; e.speedNow = 0; if (Math.random() < dt * 10) this.fx.dizzy(e, true); }
+      else if (e.alive) { if (this.battle && this.battle.over) { e.move(dt, tmp.set(0, 0, 0), 0, false); e.breathT = 0; } else this.think(e, dt); }
       else { e.koT += dt;
         if (e.real) { if (Math.random() < dt * 6) this.fx.dizzy(e, true); }
         else { if (Math.random() < 0.25) this.fx.sparks(e.center.clone(), 2, { r: 1, g: 0.5, b: 0.2 }, 0.5);

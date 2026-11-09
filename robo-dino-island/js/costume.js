@@ -49,7 +49,7 @@ export class CostumeRex {
     this.def = def; this.wild = false; this.real = true; this.quad = false; this.flyer = false;
     this.phase = 0; this.t = 0; this.flash = 0; this.ko = 0; this.roar = 0;
     const T = tex();
-    const bodyC = M(0xf04a28, { map: T.sheen, roughness: 0.42 });
+    const bodyC = M(0xf04a28, { map: T.sheen, roughness: 0.28, metalness: 0.04 });
     const belly = M(0xff8a55, { map: T.sheen, roughness: 0.48 });
     const blue = M(0x1a3d8f, { map: T.sheen, roughness: 0.4 });
     const speck = M(0xffb03a, { roughness: 0.5 });
@@ -69,44 +69,53 @@ export class CostumeRex {
       const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; if (name) o.name = name; parent.add(o); return o;
     };
     const body = this.body = new THREE.Group(); obj.add(body);
-    const torso = add(body, new THREE.SphereGeometry(1, 22, 16), bodyC, 0, 1.12, 0.02, 'rex-body'); torso.scale.set(0.74, 0.6, 1.18);
-    const tum = add(body, new THREE.SphereGeometry(0.48, 14, 10), belly, 0, 0.78, 0.22); tum.scale.set(0.72, 0.48, 1.05);
-    const back = add(body, new THREE.SphereGeometry(0.42, 14, 10), blue, 0, 1.48, -0.02, 'rex-back'); back.scale.set(0.55, 0.28, 1.55);
-    const specks = [[0.28, 1.35, 0.4], [-0.32, 1.28, -0.1], [0.12, 1.5, -0.4], [-0.16, 1.42, 0.48], [0.36, 1.18, -0.28], [-0.08, 1.22, 0.55]];
-    for (const [x, y, z] of specks) { const s = add(body, new THREE.SphereGeometry(0.09, 8, 6), speck, x, y, z, 'rex-speckle'); s.scale.set(1, 0.65, 1); }
+    const torso = add(body, new THREE.CapsuleGeometry(0.48, 1.15, 5, 10), bodyC, 0, 1.05, -0.05, 'rex-body'); torso.rotation.x = Math.PI / 2; torso.scale.set(1.15, 1, 1);
+    add(body, new THREE.CapsuleGeometry(0.32, 0.35, 4, 8), belly, 0, 0.72, 0.15).rotation.x = Math.PI / 2;
+    const neck = add(body, new THREE.CapsuleGeometry(0.2, 0.42, 3, 8), bodyC, 0, 1.28, 0.72); neck.rotation.x = -0.85;
+    const back = add(body, new THREE.BoxGeometry(0.34, 0.18, 2.15), blue, 0, 1.58, -0.05, 'rex-back');
+    add(body, new THREE.BoxGeometry(0.04, 0.03, 2.05), M(0x0d2460), 0.16, 1.66, -0.05);
+    add(body, new THREE.BoxGeometry(0.04, 0.03, 2.05), M(0x0d2460), -0.16, 1.66, -0.05);
+    const specks = [[0.42, 1.15, 0.35], [-0.46, 1.05, -0.2], [0.38, 1.2, -0.55], [-0.4, 0.95, 0.45], [0.5, 0.9, 0.05], [-0.22, 1.35, 0.15]];
+    for (const [x, y, z] of specks) { const s = add(body, new THREE.SphereGeometry(0.07, 7, 5), speck, x, y, z, 'rex-speckle'); s.scale.set(1.2, 0.55, 1); }
 
-    const head = this.head = new THREE.Group(); head.position.set(0, 1.68, 1.18); head.name = 'rex-head'; obj.add(head);
-    add(head, new THREE.SphereGeometry(0.4, 16, 12), bodyC, 0, 0.06, 0.02).scale.set(1.05, 0.92, 1.12);
-    const crown = add(head, new THREE.SphereGeometry(0.34, 12, 8), blue, 0, 0.24, -0.04, 'rex-crown'); crown.scale.set(0.9, 0.42, 0.95);
-    add(head, new THREE.SphereGeometry(0.18, 12, 8), belly, 0, -0.06, 0.36).scale.set(0.8, 0.55, 0.95);
-    this.mouth = new THREE.Group(); this.mouth.position.set(0, -0.14, 0.4); this.mouth.name = 'rex-mouth'; head.add(this.mouth);
-    add(this.mouth, new THREE.TorusGeometry(0.1, 0.022, 6, 12, Math.PI), smile, 0, 0, 0.04).rotation.x = 0.15;
-    for (let i = -1; i <= 1; i++) add(this.mouth, new THREE.BoxGeometry(0.035, 0.045, 0.02), white, i * 0.05, 0.02, 0.1, 'rex-tooth');
+    const head = this.head = new THREE.Group(); head.position.set(0, 1.72, 1.28); head.name = 'rex-head'; obj.add(head);
+    add(head, new THREE.BoxGeometry(0.62, 0.46, 0.55), bodyC, 0, 0.08, -0.02);
+    const snout = add(head, new THREE.BoxGeometry(0.4, 0.26, 0.78), bodyC, 0, -0.02, 0.58, 'rex-snout'); snout.scale.set(1, 0.9, 1);
+    add(head, new THREE.BoxGeometry(0.66, 0.12, 0.28), bodyC, 0, 0.32, 0.12, 'rex-brow');
+    const crown = add(head, new THREE.BoxGeometry(0.5, 0.16, 0.7), blue, 0, 0.4, 0.02, 'rex-crown');
+    this.mouth = new THREE.Group(); this.mouth.position.set(0, -0.16, 0.48); this.mouth.name = 'rex-jaw'; head.add(this.mouth);
+    add(this.mouth, new THREE.BoxGeometry(0.36, 0.12, 0.62), belly, 0, 0, 0.08);
+    for (let i = -2; i <= 2; i++) add(head, new THREE.BoxGeometry(0.045, 0.07, 0.03), white, i * 0.07, -0.08, 0.78, 'rex-tooth');
+    for (let i = -1; i <= 1; i++) add(this.mouth, new THREE.BoxGeometry(0.04, 0.05, 0.03), white, i * 0.08, 0.06, 0.32, 'rex-tooth');
     for (const s of [-1, 1]) {
-      const eye = add(head, new THREE.SphereGeometry(0.085, 12, 8), eyeC, s * 0.15, 0.1, 0.32, 'rex-eye'); eye.scale.set(1.05, 1.15, 0.65);
-      add(head, new THREE.SphereGeometry(0.038, 8, 6), pupil, s * 0.155, 0.09, 0.39);
-      add(head, new THREE.SphereGeometry(0.015, 6, 4), white, s * 0.175, 0.12, 0.42);
+      const eye = add(head, new THREE.SphereGeometry(0.07, 10, 8), eyeC, s * 0.2, 0.16, 0.22, 'rex-eye'); eye.scale.set(1, 1.1, 0.7);
+      add(head, new THREE.SphereGeometry(0.032, 8, 6), pupil, s * 0.205, 0.15, 0.27);
+      add(head, new THREE.SphereGeometry(0.012, 6, 4), white, s * 0.22, 0.18, 0.3);
     }
 
     this.arms = [];
     for (const s of [-1, 1]) {
-      const a = new THREE.Group(); a.position.set(s * 0.5, 1.18, 0.48); obj.add(a);
-      add(a, new THREE.CapsuleGeometry(0.065, 0.16, 3, 6), bodyC, 0, -0.1, 0.06).rotation.x = -0.9;
-      add(a, new THREE.SphereGeometry(0.07, 8, 6), bodyC, 0, -0.22, 0.16);
+      const a = new THREE.Group(); a.position.set(s * 0.42, 1.15, 0.42); obj.add(a);
+      add(a, new THREE.CapsuleGeometry(0.05, 0.12, 2, 6), bodyC, 0, -0.08, 0.08).rotation.x = -1.1;
+      add(a, new THREE.ConeGeometry(0.035, 0.1, 5), bodyC, s * 0.04, -0.2, 0.16).rotation.x = 1.2;
+      add(a, new THREE.ConeGeometry(0.03, 0.08, 5), bodyC, s * -0.02, -0.18, 0.18).rotation.x = 1.1;
       this.arms.push(a);
     }
     this.legs = [];
     for (const s of [-1, 1]) {
-      const g = new THREE.Group(); g.position.set(s * 0.3, 0.88, 0.12); obj.add(g);
-      add(g, new THREE.CapsuleGeometry(0.15, 0.28, 3, 7), bodyC, 0, -0.22, 0);
-      const knee = new THREE.Group(); knee.position.y = -0.4; g.add(knee);
-      add(knee, new THREE.CapsuleGeometry(0.11, 0.18, 3, 6), bodyC, 0, -0.14, 0.02);
-      const ft = add(knee, new THREE.SphereGeometry(0.18, 10, 8), bodyC, 0, -0.32, 0.1); ft.scale.set(1.1, 0.42, 1.4);
+      const g = new THREE.Group(); g.position.set(s * 0.34, 1.05, -0.25); g.rotation.x = -0.7; obj.add(g);
+      add(g, new THREE.CapsuleGeometry(0.16, 0.32, 3, 7), bodyC, 0, -0.22, 0);
+      const knee = new THREE.Group(); knee.position.set(0, -0.42, 0); knee.rotation.x = 1.35; g.add(knee);
+      add(knee, new THREE.CapsuleGeometry(0.11, 0.28, 3, 6), bodyC, 0, -0.2, 0);
+      const ft = add(knee, new THREE.BoxGeometry(0.28, 0.1, 0.42), bodyC, 0, -0.4, 0.12); ft.name = 'rex-foot';
+      for (const c of [-0.09, 0, 0.09]) add(knee, new THREE.ConeGeometry(0.035, 0.1, 5), M(0xf6e2c4), c, -0.42, 0.3);
       this.legs.push({ g, knee });
     }
-    this.tail = new THREE.Group(); this.tail.position.set(0, 1.12, -1.08); this.tail.name = 'rex-tail'; obj.add(this.tail);
-    add(this.tail, new THREE.CapsuleGeometry(0.11, 0.72, 3, 8), bodyC, 0, 0.16, -0.36).rotation.x = 0.65;
-    add(this.tail, new THREE.SphereGeometry(0.1, 8, 6), blue, 0, 0.48, -0.66);
+    this.tail = new THREE.Group(); this.tail.position.set(0, 1.15, -0.85); this.tail.name = 'rex-tail'; obj.add(this.tail);
+    const t1 = add(this.tail, new THREE.CapsuleGeometry(0.2, 0.45, 3, 8), bodyC, 0, 0.05, -0.35); t1.rotation.x = Math.PI / 2;
+    const t2 = add(this.tail, new THREE.CapsuleGeometry(0.12, 0.4, 3, 7), bodyC, 0, 0.12, -0.95); t2.rotation.x = 1.2;
+    const t3 = add(this.tail, new THREE.CapsuleGeometry(0.06, 0.28, 2, 6), bodyC, 0, 0.28, -1.4); t3.rotation.x = 0.8;
+    add(this.tail, new THREE.BoxGeometry(0.16, 0.08, 1.7), blue, 0, 0.28, -0.85, 'rex-tail-stripe');
 
     this.seat = new THREE.Group(); this.seat.name = 'costume-seat'; this.seat.position.set(0, 1.7, -0.02); obj.add(this.seat);
     const rider = this.rider = new THREE.Group(); rider.name = 'costume-rider'; this.seat.add(rider);
@@ -129,9 +138,9 @@ export class CostumeRex {
     add(rider, new THREE.SphereGeometry(0.028, 8, 6), skin, 0, 0.78, 0.2);
     add(rider, new THREE.TorusGeometry(0.055, 0.012, 6, 10, Math.PI), smile, 0, 0.72, 0.175).rotation.x = 0.2;
     const hat = new THREE.Group(); hat.name = 'costume-hat'; hat.position.set(0, 0.98, 0.02); rider.add(hat);
-    const brim = add(hat, new THREE.CylinderGeometry(0.36, 0.38, 0.028, 18), straw, 0, 0, 0, 'costume-hat-brim'); brim.scale.set(1, 1, 0.92);
-    add(hat, new THREE.CylinderGeometry(0.34, 0.34, 0.012, 16), M(0xc9a15a, { roughness: 0.8 }), 0, -0.012, 0);
-    add(hat, new THREE.CylinderGeometry(0.16, 0.19, 0.18, 14), straw, 0, 0.1, 0, 'costume-hat-crown');
+    const brim = add(hat, new THREE.CylinderGeometry(0.38, 0.34, 0.03, 18), straw, 0, 0, 0.02, 'costume-hat-brim'); brim.scale.set(1, 1, 0.86); brim.rotation.x = -0.22;
+    add(hat, new THREE.TorusGeometry(0.16, 0.035, 6, 10, Math.PI), straw, 0, -0.02, 0.28).rotation.x = 0.4;
+    add(hat, new THREE.CylinderGeometry(0.16, 0.2, 0.16, 12), straw, 0, 0.1, 0, 'costume-hat-crown').scale.set(0.72, 1, 1.05);
     add(hat, new THREE.CylinderGeometry(0.192, 0.192, 0.045, 14), M(0x8a5a28, { roughness: 0.6 }), 0, 0.04, 0, 'costume-band');
     for (const s of [-1, 1]) {
       const cord = add(hat, new THREE.CylinderGeometry(0.01, 0.01, 0.34, 5), M(0xc8b48a), s * 0.14, -0.14, 0.06, 'costume-cord');
@@ -149,7 +158,7 @@ export class CostumeRex {
     }
     this.dangle = [];
     for (const s of [-1, 1]) {
-      const leg = new THREE.Group(); leg.name = 'costume-leg'; leg.position.set(s * 0.14, 0.12, 0.04); rider.add(leg);
+      const leg = new THREE.Group(); leg.name = 'costume-leg'; leg.position.set(s * 0.34, 0.08, 0.02); rider.add(leg);
       add(leg, new THREE.CapsuleGeometry(0.075, 0.22, 3, 6), olive, 0, -0.16, 0.02);
       const knee = new THREE.Group(); knee.position.set(0, -0.32, 0.02); knee.rotation.x = 0.35; leg.add(knee);
       add(knee, new THREE.CapsuleGeometry(0.06, 0.24, 3, 6), olive, 0, -0.16, 0.02, 'costume-trousers');
