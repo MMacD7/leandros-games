@@ -86,6 +86,7 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
+* **v5.8: Rex Costume on Jungle Island.** In Dino Garage, under **LIONS GO TO WAR!**, tap **Rex Costume**. It is an original cartoon inflatable T-rex: orange with a dark blue back and crown, orange speckles, and yellow-green eyes. The rider wears a pale straw hat with a chin cord, a brown T-shirt, olive trousers and dark boots, and the legs hang down the sides. No photo and no logos. The hooped-kit Leandro stays on the thunder lion. The costume is Jungle Island only. The farm lion, horse and tractor stay.
 
 ## Modes
 * **Explore the Island**: free roam.

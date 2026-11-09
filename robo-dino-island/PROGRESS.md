@@ -200,3 +200,8 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Ricky and Bobby's farm intro now reads exactly "Look it's Ricky and Bobby, they are going to POOP!" (on-screen shout, and the spoken line says "poop"). It used to say "POOOOPY". Other poop jokes and Bad David's lines are unchanged.
 - [x] Farm test expectation updated (shout text plus the spoken line). Version v5.6.2, and sw.js regenerated.
 
+## v5.8 (Nov 9, 2026): Rex Costume on Jungle Island
+- [x] Card under **LIONS GO TO WAR!**, saved as `jungleCostume`. It does not turn off the thunder lion or the farm lion. On Jungle Island it is the character you play. The farm still uses the lion when that card is on.
+- [x] Original cartoon inflatable T-rex (orange, dark blue back and crown, orange speckles, yellow-green eyes) and a cartoon rider: pale straw hat with chin cord, brown shirt, olive trousers, dark boots, dangling legs. No photo, no logos. The hooped kit is not used on this character.
+- [x] Version v5.8, and sw.js regenerated.
+

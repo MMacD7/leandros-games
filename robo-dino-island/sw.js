@@ -2,7 +2,7 @@
    Pages and code (html/js/css/manifest) are network-first with a cache fallback, so new versions show up right away when online
    and the game still works offline. Big assets (textures, sky, icons, vendored three.js) are cache-first; they are re-downloaded
    whenever this file's cache name changes. */
-const CACHE = 'robo-dino-island-5a983960b6';
+const CACHE = 'robo-dino-island-6d9851d5e1';
 const FILES = ['./',
   './assets/hdri/sky_1k.hdr',
   './assets/hdri/sky_2k.jpg',
@@ -24,6 +24,7 @@ const FILES = ['./',
   './js/audio.js',
   './js/beast.js',
   './js/city.js',
+  './js/costume.js',
   './js/data.js',
   './js/farm.js',
   './js/fx.js',
