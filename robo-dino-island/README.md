@@ -87,6 +87,7 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
 * **v5.7: a friendly lion on Jungle Island.** In the Dino Garage, open **🌴 Jungle Island** and tap **Friendly Lion**. On Jungle Island, Leandro starts out riding the lion (green and white hooped kit, white shorts, no crest or backpack). Steer with the stick, hold **GALLOP** to run, **ROAR** and **NUZZLE** are gentle. Hop back to any other dino tab to keep your old pick for the other worlds. Dragon Peak, Mega City, Deep Sea and the farm (including the horse and the tractor) are unchanged. The choice is saved.
+* **v5.8: Rex Costume, a second Jungle Island character.** Under the lion card, tap **Rex Costume**. It is an original cartoon inflatable T-rex: bright orange-red with a deep blue back and crown, orange speckles and yellow-green eyes. The rider wears a pale straw safari hat with a chin cord, a brown T-shirt, olive trousers and dark boots, and the legs hang down the sides. It is not the Celtic-kit Leandro, and it has no logos. Picking it turns the lion off, and picking the lion turns the costume off. Only Jungle Island uses it.
 
 ## Modes
 * **Explore the Island**: free roam.

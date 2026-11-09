@@ -205,3 +205,8 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] On Jungle Island only, Leandro rides an original cartoon lion (Celtic hoops, white shorts, no crest or backpack). He starts already riding. Stick to steer, GALLOP / ROAR / NUZZLE / PAW. Other levels, the farm horse and the tractor are unchanged.
 - [x] Version v5.7, and sw.js regenerated.
 
+## v5.8 (Nov 9, 2026): Rex Costume character on Jungle Island
+- [x] Second card in the Jungle Island garage section, after the lion. Saved as `jungleCostume`. Picking it turns the lion off, and picking the lion turns it off.
+- [x] Original cartoon inflatable T-rex (orange-red, deep blue back and crown, orange speckles, yellow-green eyes) with a straw-hat rider in a brown shirt, olive trousers and dark boots. Legs dangle. No photo, no logos. The Celtic-kit rider is unchanged and is not used on this character.
+- [x] Jungle Island only. Version v5.8, and sw.js regenerated.
+

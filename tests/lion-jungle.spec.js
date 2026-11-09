@@ -84,7 +84,7 @@ test('lion garage, jungle ride, all levels, touch and pause', async ({ page }, i
   await ready(page);
   await dismissRotate(page);
 
-  await expect(page.locator('#ver')).toHaveText('v5.7');
+  await expect(page.locator('#ver')).toHaveText('v5.8');
   const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
   expect(sw).toContain('./js/lion.js');
   expect(sw).not.toContain('robo-dino-island-dd7d1af7c5');
