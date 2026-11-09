@@ -200,3 +200,8 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Ricky and Bobby's farm intro now reads exactly "Look it's Ricky and Bobby, they are going to POOP!" (on-screen shout, and the spoken line says "poop"). It used to say "POOOOPY". Other poop jokes and Bad David's lines are unchanged.
 - [x] Farm test expectation updated (shout text plus the spoken line). Version v5.6.2, and sw.js regenerated.
 
+## v5.7.1 (Nov 9, 2026): LIONS GO TO WAR!
+- [x] Dino Garage opens on a section headed exactly **LIONS GO TO WAR!** The lion is no longer behind the Jungle Island tab. One Thunder Lion card saves `jungleLion` and `farmLion` together.
+- [x] The same original cartoon lion is on Jungle Island and Farty Poop Farm. Leandro wears green and white hoops and white shorts, with no crest, logo, or backpack. **⚡ WAR** fires harmless thunderbolts from the rear and shouts **GO TO WAR!!** Horse, tractor, castle, other worlds, and Ricky and Bobby's exact "Look it's Ricky and Bobby, they are going to POOP!" line stay.
+- [x] Version v5.7.1, and sw.js regenerated.
+

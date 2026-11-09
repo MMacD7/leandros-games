@@ -1,10 +1,10 @@
-// v5.7 Friendly lion: an original cartoon mount for Jungle Island. Leandro (the existing rider) sits on its back.
-// No photos, no logos, no scary teeth. Built from simple shapes.
+// v5.7.1 Thunder lion: an original cartoon battle mount. Leandro (the existing rider) sits on its back.
+// Golden fur, a friendly smile, and silly electric sparks. No photos, no logos, no crests, no scary teeth.
 import * as THREE from './vendor/three.bundle.min.js';
 
 export const LION = {
-  id: 'lion', name: 'Friendly Lion', lion: true, real: true, kind: 'lion',
-  desc: 'A gentle golden lion. Leandro rides him on Jungle Island.',
+  id: 'lion', name: 'Thunder Lion', lion: true, real: true, kind: 'lion',
+  desc: 'A friendly golden lion with cartoon thunder. Leandro rides him on Jungle Island and Farty Poop Farm.',
   hp: 150, speed: 12.5, bite: 14, biteRate: 0.48,
   special: 'nuzzle', specialName: '😺<br>NUZZLE', specialCD: 1.2, roar: 1.3,
   scale: 1, radius: 1.7, color: 0xe8a04a, accent: 0xffd56a,
@@ -64,12 +64,29 @@ export class LionMech {
     this.tail = new THREE.Group(); this.tail.position.set(0, 1.22, -1.02); obj.add(this.tail);
     add(this.tail, new THREE.CapsuleGeometry(0.06, 0.7, 3, 6), fur, 0, 0.15, -0.28).rotation.x = 0.9;
     add(this.tail, new THREE.SphereGeometry(0.16, 10, 8), tuft, 0, 0.42, -0.55);
+    // cartoon thunder cloud and sparks at the rear. Original shapes only: puffs and short bars, not a crest.
+    this.rear = new THREE.Group(); this.rear.name = 'lion-rear'; this.rear.position.set(0, 1.02, -1.08); obj.add(this.rear);
+    const cloudMat = M(0xf7fbff, { roughness: 0.45, emissive: 0x9ecbff, emissiveIntensity: 0.4 });
+    this.cloud = new THREE.Group(); this.rear.add(this.cloud);
+    add(this.cloud, new THREE.SphereGeometry(0.24, 10, 8), cloudMat, 0, 0.32, 0);
+    add(this.cloud, new THREE.SphereGeometry(0.17, 8, 6), cloudMat, 0.22, 0.24, 0.02);
+    add(this.cloud, new THREE.SphereGeometry(0.17, 8, 6), cloudMat, -0.22, 0.24, 0.02);
+    const bolt = M(0xfff4a8, { emissive: 0xfff2a0, emissiveIntensity: 1, roughness: 0.3 });
+    const zig = (x, y, rz) => { const m = add(this.cloud, new THREE.BoxGeometry(0.18, 0.05, 0.05), bolt, x, y, 0.1); m.rotation.z = rz; return m; };
+    zig(0, 0.02, 0.55); zig(0.1, -0.1, -0.65); zig(-0.02, -0.2, 0.4);
+    this.sparks = [];
+    const sparkAt = (parent, x, y, z, blue, rz) => {
+      const m = add(parent, new THREE.BoxGeometry(0.16, 0.04, 0.04), new THREE.MeshBasicMaterial({ color: blue ? 0xb7e4ff : 0xfff6c0, transparent: true, opacity: 0.95, toneMapped: false }), x, y, z);
+      m.rotation.z = rz; this.sparks.push(m); return m;
+    };
+    [[0.34, 0.3, 0.06], [-0.34, 0.28, 0.04], [0, 0.5, 0.02], [0.2, 0.08, -0.2], [-0.18, 0.1, -0.18]].forEach((p, i) => sparkAt(this.mane, p[0], p[1], p[2], i % 2 === 0, (i - 2) * 0.45));
+    this.thunderT = 0;
     // ride blanket + seat anchor (Leandro's saddle is added by the rider)
     add(body, new THREE.BoxGeometry(0.72, 0.08, 0.7), blanket, 0, 1.58, -0.22);
     this.seat = new THREE.Group(); this.seat.name = 'lion-seat'; this.seat.position.set(0, 1.62, -0.18); obj.add(this.seat);
     this.meshes = []; obj.traverse(o => { if (o.isMesh) this.meshes.push(o); });
     this.height = 2.65; this.fitR = 3.6;
-    this.sockets = { mouth: this.mouth };
+    this.sockets = { mouth: this.mouth, rear: this.rear };
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }
   footPos(i, out) { return this.legs[i % this.legs.length].getWorldPosition(out); }
@@ -89,6 +106,11 @@ export class LionMech {
     this.tail.rotation.y = Math.sin(this.t * 3 + this.phase) * (0.35 + run * 0.4);
     this.tail.rotation.x = -0.2 + Math.sin(this.t * 2) * 0.08;
     this.happy = Math.max(0, this.happy - dt);
+    this.thunderT = Math.max(0, (this.thunderT || 0) - dt);
+    const pulse = this.thunderT > 0 ? 1 : 0.4 + 0.35 * Math.abs(Math.sin(this.t * 5));
+    for (const s of this.sparks || []) { s.scale.setScalar(0.65 + pulse * 0.7); if (s.material) s.material.opacity = 0.4 + pulse * 0.6; }
+    if (this.cloud) { this.cloud.position.y = Math.sin(this.t * 3) * 0.04 + (this.thunderT > 0 ? 0.14 : 0); this.cloud.rotation.z = Math.sin(this.t * 9) * (this.thunderT > 0 ? 0.25 : 0.04); }
+    if (this.thunderT > 0) this.tail.rotation.x = -0.9;
     if (this.happy > 0) { this.head.rotation.z = Math.sin(this.t * 10) * 0.12; this.body.position.y += Math.abs(Math.sin(this.t * 8)) * 0.06; }
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3);
     this.mats.plate.emissive.setRGB(this.flash > 0.2 ? 0.35 : 0, this.flash > 0.2 ? 0.22 : 0, 0);

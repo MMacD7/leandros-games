@@ -86,6 +86,8 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
+* **v5.7** added the friendly lion on Jungle Island. Leandro rides in his green and white hoops and white shorts.
+* **v5.7.1: LIONS GO TO WAR!** Open Dino Garage and the first thing you see is the section **LIONS GO TO WAR!** One **Thunder Lion** card turns the lion on for Jungle Island and Farty Poop Farm together. Leandro keeps the green and white hoops and white shorts. Tap **⚡ WAR** and cartoon thunderbolts shoot out the back with a **GO TO WAR!!** shout. They do not hurt anyone. On the farm he starts on the lion. The stick steers and **GALLOP** runs. **HOP OFF** lets him feed the animals. The horse and the tractor still work. Ricky and Bobby's line is still "Look it's Ricky and Bobby, they are going to POOP!"
 
 ## Modes
 * **Explore the Island**: free roam.
