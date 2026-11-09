@@ -150,7 +150,7 @@ export class Game {
   }
   // v5.1 Farty Poop Farm: the living farm (animals, poop, horse, Bad David) belongs to the farm world
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
-  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && p.def.costume) return; // Rex Costume has its own rider. The hooped kit stays off it.
+  mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && (p.def.costume || p.def.lion)) { if (p.def.lion && p.mech.setRidden) p.mech.setRidden(this.save.ride !== false); return; } // The drawn lion and Rex already include Leandro.
     if (!(p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean))) return; // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
     if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.12, spread: 1.05, shinOut: 0.42, seatW: 0.46 }); else R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
@@ -413,16 +413,18 @@ export class Game {
     const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const arc = (len, lift, sideAmt) => {
       const end = origin.clone().addScaledVector(fwd, len).addScaledVector(side, sideAmt);
-      end.y = 0.35;
-      this.fx.lightning(origin.clone(), end, { life: 0.26, lift, jag: 0.15 });
-      if (this.fx.sparks) this.fx.sparks(end, 6, { r: 0.7, g: 0.95, b: 1 }, 0.4);
+      end.y = 1.6;
+      this.fx.lightning(origin.clone(), end, { life: 0.48, lift, jag: 0.2 });
+      if (this.fx.sparks) this.fx.sparks(end, 10, { r: 0.75, g: 0.95, b: 1 }, 0.7);
       const ground = end.clone(); ground.y = 0.12;
-      this.fx.ring(ground, 1.15, 0x7af6ff);
+      this.fx.ring(ground, 1.8, 0x7af6ff);
       return end;
     };
-    const ends = [arc(5.2, 1.45, 0.3)];
-    this.later(0.08, () => { if (d.alive) ends.push(arc(4.4, 1.8, -0.85)); });
-    this.later(0.16, () => { if (d.alive) ends.push(arc(6.1, 1.1, 0.95)); });
+    const sky = origin.clone().addScaledVector(side, 3.2); sky.y += 7;
+    this.fx.lightning(origin.clone(), sky, { life: 0.48, lift: 0.8, jag: 0.22 });
+    const ends = [arc(6.2, 3.2, 1.6), arc(5.4, 2.6, -2.2)];
+    this.later(0.07, () => { if (d.alive) ends.push(arc(4.8, 3.4, -0.6)); });
+    this.later(0.14, () => { if (d.alive) ends.push(arc(7.2, 2.2, 2.4)); });
     if (this.fx.sparks) this.fx.sparks(origin.clone(), 8, { r: 0.7, g: 0.9, b: 1 }, 0.7);
     this.fx.ring(origin.clone(), 2.4, 0xb7f0ff);
     this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.42 : 0.12);

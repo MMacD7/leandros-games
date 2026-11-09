@@ -68,13 +68,15 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   await ready(page);
   await dismissRotate(page);
 
-  await expect(page.locator('#ver')).toHaveText('v5.8.4');
+  await expect(page.locator('#ver')).toHaveText('v5.8.5');
   const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
   expect(sw).toContain('./js/costume.js');
   expect(sw).toContain('./js/lion.js');
-  expect(sw).not.toContain('robo-dino-island-a02ee468d2');
-  expect(sw).toContain('./assets/models/lion.glb');
-  expect(sw).toContain('./assets/models/trex.glb');
+  expect(sw).not.toContain('robo-dino-island-130703df6c');
+  expect(sw).toContain('./assets/art/lion.webp');
+  expect(sw).toContain('./assets/art/lion-rider.webp');
+  expect(sw).toContain('./assets/art/rex-rider.webp');
+  expect(sw).not.toContain('lion.glb');
   const lionSrc = await page.evaluate(async () => (await fetch('./js/lion.js')).text());
   expect(lionSrc.toLowerCase()).not.toContain('thundercat');
   expect(sw).toMatch(/const CACHE = 'robo-dino-island-[0-9a-f]{10}'/);
@@ -114,26 +116,15 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   const look = await page.evaluate(() => {
     const p = G.game.player, m = p.mech, THREE = G.THREE;
     m.obj.updateWorldMatrix(true, true);
-    const hex = new Set();
     const names = [];
-    m.obj.traverse(o => {
-      if (o.name) names.push(o.name);
-      if (!o.isMesh) return;
-      for (const mat of [].concat(o.material)) if (mat && mat.color) hex.add(mat.color.getHex());
-    });
-    const legL = new THREE.Vector3(), legR = new THREE.Vector3(), boot = new THREE.Vector3(), seat = new THREE.Vector3();
-    m.dangle[0].getWorldPosition(legL); m.dangle[1].getWorldPosition(legR);
-    m.obj.getObjectByName('costume-boots').getWorldPosition(boot);
-    m.seat.getWorldPosition(seat);
+    m.obj.traverse(o => { if (o.name) names.push(o.name); });
     const head = new THREE.Vector3(), body = new THREE.Vector3();
     m.head.getWorldPosition(head); m.body.getWorldPosition(body);
     return {
       costume: !!p.def.costume, lion: !!p.def.lion, celtic: !!G.game.rider.mounted,
-      shirt: names.includes('costume-shirt'), shorts: hex.has(0xf7f7f4), boot: hex.has(0x241c16), straw: hex.has(0xf3e2a0),
-      body: hex.has(0xf04a28), blue: hex.has(0x1a3d8f), hoop: [...hex].includes(0xf7f7f4) && names.some(n => /shirt/i.test(n)) && false,
-      hat: names.includes('costume-hat'), trousers: names.includes('costume-trousers'), boots: names.includes('costume-boots'), snout: names.includes('rex-snout'), stripe: names.includes('rex-back'),
+      art: !!(m.art && m.art.material && m.art.material.map),
+      snout: names.includes('rex-snout'), stripe: names.includes('rex-back'),
       backpack: names.some(n => /backpack/i.test(n)),
-      legsApart: Math.abs(legL.x - legR.x) > 0.2, legsLow: boot.y < seat.y - 0.25,
       headAbove: head.y > body.y,
       chomp: document.querySelector('#a-laser span').innerText, run: document.querySelector('#a-boost span').innerText,
     };
@@ -141,20 +132,10 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   expect(look.costume).toBe(true);
   expect(look.lion).toBe(false);
   expect(look.celtic).toBeFalsy();
-  expect(look.shirt).toBe(true);
-  expect(look.shorts).toBe(true);
-  expect(look.boot).toBe(true);
-  expect(look.straw).toBe(true);
-  expect(look.body).toBe(true);
-  expect(look.blue).toBe(true);
-  expect(look.hat).toBe(true);
+  expect(look.art).toBe(true);
   expect(look.snout).toBe(true);
   expect(look.stripe).toBe(true);
-  expect(look.trousers).toBe(true);
-  expect(look.boots).toBe(true);
   expect(look.backpack).toBe(false);
-  expect(look.legsApart).toBe(true);
-  expect(look.legsLow).toBe(true);
   expect(look.headAbove).toBe(true);
   expect(look.chomp).toMatch(/CHOMP/);
   expect(look.run).toMatch(/RUN/);
@@ -265,7 +246,7 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   const backToLion = await page.evaluate(() => {
     G.save.jungleCostume = false; G.game.spawnPlayer(false);
     const m = G.game.player.mech;
-    const lion = G.game.player.def.lion === true && !!G.game.rider.mounted && !!m.mane && m.legs.length === 4 && !!m.rear;
+    const lion = G.game.player.def.lion === true && m.ridden === true && !G.game.rider.mounted && !!m.mane && m.legs.length === 4 && !!m.rear;
     G.save.jungleCostume = true; G.game.spawnPlayer(false);
     return { lion, costumeAgain: G.game.player.def.costume === true };
   });

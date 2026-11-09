@@ -14,7 +14,7 @@ import { Rider } from './rider.js';
 import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
-import { preloadModels } from './models.js';
+import { preloadArt, setArtCamera } from './art.js';
 import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
@@ -78,7 +78,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
-preloadModels(mgr);
+preloadArt(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -362,7 +362,7 @@ tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
-const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (save.ride && !gMech.def.westie) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.setRidden) gMech.setRidden(save.ride !== false); if (save.ride && !gMech.def.westie && !gMech.def.lion && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
@@ -419,7 +419,8 @@ function setJunglePreview() {
   } else {
     gMech = gMechs.lion || (gMechs.lion = makeDino(LION, assets, false)); gScene.add(gMech.obj);
     gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
-    if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.12, spread: 0.95, shinOut: 0.32, seatW: 0.46 }); else gRider.unmount();
+    gRider.unmount();
+    if (gMech.setRidden) gMech.setRidden(save.ride !== false);
   }
 }
 function showLions() {
@@ -514,6 +515,7 @@ function fpsTick(dt, now) {
 let last = performance.now(), smokeT = 0, titleT = 0, frames = 0, cpuMs = 0, garageFrame = null;
 function loop(now) {
   requestAnimationFrame(loop);
+  setArtCamera(screen === 'garage' ? gCam : (game && game.camera));
   let dt = (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; if (dt <= 0) return;
   frames++;
   fpsTick(dt, now);
