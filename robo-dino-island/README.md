@@ -86,6 +86,7 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
+* **v5.8.5: painted lion and T-rex.** The lion and the Rex are the approved drawings (see CREDITS.md), shown flat to the camera. The lion is a golden hero with a huge fiery mane and no armor. Leandro rides him in hoops and white shorts, and rides the orange-and-blue inflatable T-rex in a cowboy hat. **CHOMP** and **GO TO WAR!!** stay.
 
 ## Modes
 * **Explore the Island**: free roam.

@@ -200,3 +200,29 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Ricky and Bobby's farm intro now reads exactly "Look it's Ricky and Bobby, they are going to POOP!" (on-screen shout, and the spoken line says "poop"). It used to say "POOOOPY". Other poop jokes and Bad David's lines are unchanged.
 - [x] Farm test expectation updated (shout text plus the spoken line). Version v5.6.2, and sw.js regenerated.
 
+## v5.8.1 (Nov 9, 2026): fuller Rex Costume and Thunder Lion
+- [x] Original shaded cartoon art only. No photo and no borrowed character marks.
+- [x] Rex Costume rider: kid proportions, face, straw hat with a chin cord, brown shirt, olive trousers, dark boots, hands on the rex. The inflatable T-rex keeps the orange body, blue back and crown, speckles and yellow-green eyes.
+- [x] Thunder Lion: muscular tawny body, layered mane, muzzle, whiskers, tail tuft, and a four-legged walk. Leandro still rides in green and white hoops and white shorts. WAR still shouts GO TO WAR!! on Jungle Island and the farm.
+
+## v5.8.5 (Nov 9, 2026): painted lion and Rex
+- [x] The Gobkit models are gone. The lion and the Rex are the approved drawings, with the white background removed, shown as camera-facing pictures.
+- [x] The lion has no outfit and no armor: gold fur and a huge fiery mane. Leandro on the lion, and Leandro on the Rex, use the riding drawings.
+- [x] WAR bolts are brighter branching lightning from the rear. CHOMP and the buttons are unchanged.
+
+## v5.8.4 (Nov 9, 2026): sculpted CC0 lion and T-rex
+- [x] The lion and the Rex Costume are no longer built from boxes. They use rigged CC0 models listed in CREDITS.md, with walk clips.
+- [x] The lion keeps an original fiery mane, blue-silver armor, and a plain bolt mark. The rex is recolored as an orange inflatable suit. The rider wears a cowboy hat, hoops, and white shorts.
+- [x] WAR bolts are brighter jagged streaks. CHOMP and the on-screen buttons are unchanged.
+
+## v5.8.3 (Nov 9, 2026): heroic lion, rounder rex, real lightning, buttons on screen
+- [x] Thunder Lion is an original 80s action-cartoon battle cat: fiery swept mane, golden cel shading, dark outlines, blue-silver armor with a plain bolt mark, shoulder guards, leg bands, and a cyan emblem that pulses on WAR. No borrowed logo, eye mark, or franchise name. Leandro still wears green and white hoops and white shorts.
+- [x] Rex Costume uses a lathed tapering snout and a curved jaw, with the same colors and cowboy rider.
+- [x] WAR bolts are thin jagged branching streaks with a white core and a cyan/yellow glow. They leave the rear, arc forward, flicker, and fade in under a third of a second. CHOMP is unchanged.
+- [x] Short landscape keeps every action label inside its button, including GALLOP.
+
+## v5.8.2 (Nov 9, 2026): T-rex silhouette, farm CHOMP, jagged thunder
+- [x] The Rex Costume reads as a T-rex: long snout, jaw, teeth, eye ridge, neck, horizontal body, tapering tail, bent hind legs, small arms, and a blue stripe from head to tail.
+- [x] On the farm, **CHOMP** gulps a nearby animal in a cartoon way. It pops back out unharmed. Ricky and Bobby are never eaten.
+- [x] **WAR** fires branching lightning with a crack, a flash, and a dizzy spin. Nobody is hurt.
+
