@@ -125,6 +125,15 @@ export class Rider {
     this.buildSeat(Math.max(0.3, Math.min(0.75, hw * 1.05)));
     this.setPose(0);
   }
+  // Sit Leandro on a mount that is not a dino skeleton (the Jungle Island lion). Same Celtic kit, same saddle.
+  mountAt(parent, opts = {}) {
+    this.unmount(); if (!parent) return;
+    this.real = true; this.popT = -1; this.seatGroup.visible = true;
+    this.spread = opts.spread ?? 0.95; this.shinOut = opts.shinOut ?? 0.32; this.hw = 0.42;
+    this.obj.scale.setScalar(opts.scale ?? 1.12); this.obj.position.set(0, 0, 0); this.obj.quaternion.identity(); this.obj.rotation.set(0, 0, 0);
+    parent.add(this.obj); this.mounted = opts.mech || null; this.hips.position.y = 0.13;
+    this.buildSeat(opts.seatW ?? 0.46); this.root.position.y = 0.04; this.setPose(0);
+  }
   unmount() { if (this.obj.parent) this.obj.parent.remove(this.obj); this.mounted = null; }
   buildSeat(w) {
     const m = mats(), g = this.seatGroup; while (g.children.length) g.remove(g.children[0]);
