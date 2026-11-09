@@ -393,6 +393,36 @@ export class Game {
     for (const e of this.foesOf(d)) { if (!e || !e.alive) continue; tmp.subVectors(e.pos, d.pos); const dist = tmp.length(); tmp.y = 0; tmp.normalize();
       if (dist < 22 * s + 8 && tmp.dot(fwd) > -0.15) { this.stun(e, d.st.roar || 1); if (e !== this.player) { e.hit(4, d.pos, d); e.knock.addScaledVector(tmp, 7); } } }
   }
+  // v5.7.1 cartoon thunder from the lion's rear. Silly sparks only: nobody is hurt.
+  thunderButt(d) {
+    if (!d || !d.alive) return;
+    const back = d.forward(new THREE.Vector3()).multiplyScalar(-1);
+    const mount = this.farm && this.farm.ridingLion && this.farm.farmLion;
+    const origin = mount && mount.socketPos ? mount.socketPos('rear', new THREE.Vector3()) : (d.mech && d.mech.socketPos ? d.mech.socketPos('rear', new THREE.Vector3()) : d.pos.clone());
+    const glow = mount || d.mech; if (glow) glow.thunderT = 0.8;
+    d.roar = 0.8; d.jaw = 0.2;
+    this.wars = (this.wars || 0) + 1;
+    sfx.thunder(d === this.player ? 0.85 : 0.3);
+    sfx.zap(d === this.player ? 0.65 : 0.2);
+    sfx.bigRoar(0.72, d === this.player ? 0.4 : 0.12, false);
+    const gold = { r: 1, g: 0.95, b: 0.45 }, blue = { r: 0.55, g: 0.8, b: 1 };
+    for (let i = 0; i < 5; i++) {
+      const side = new THREE.Vector3(-back.z, 0, back.x);
+      const end = origin.clone().addScaledVector(back, 6 + i * 1.5).addScaledVector(side, (i - 2) * 1.15);
+      end.y = origin.y + (i % 2 ? 1.6 : 0.2);
+      this.fx.zap(origin.clone(), end, i % 2 ? gold : blue, i === 2 ? 1.15 : 0.78, 1.35, 0.2);
+    }
+    this.fx.ring(origin.clone(), 3.4, 0xfff2a0);
+    this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.28 : 0.08);
+    if (d === this.player) {
+      this.hud.shout('GO TO WAR!!', 2.4);
+      this.hud.toast('⚡ Thunderbolts! Just silly sparks. Nobody gets hurt.');
+      this.hud.say('Go to war!', { prio: 3, cd: 900, replace: true });
+    }
+    if (this.farm && d.def && d.def.farmKid && this.farm.animals) {
+      for (const a of this.farm.animals) if (a.pos && a.pos.distanceTo(d.pos) < 9) this.farm.startle(a, d.pos, 0.7);
+    }
+  }
   stun(e, t) { if (e === this.player) { e.slowT = Math.max(e.slowT || 0, Math.min(t, 0.7)); return; } e.stunT = Math.max(e.stunT || 0, t); e.act = null; e.chargeA = e.whipA = e.rearA = 0; e.air = 0; }
   special(d, target) {
     const k = d.def.special, s = d.def.scale, fwd = new THREE.Vector3();
@@ -782,7 +812,7 @@ export class Game {
       } else if (p.real) {
         if (L) { if (p.act) p.act = null; this.bite(p, this.lock); }
         if (M) { if (p.act) p.act = null; this.special(p, this.lock); }
-        if (B) this.roarAt(p);
+        if (B) { if (p.def.lion) this.thunderButt(p); else this.roarAt(p); }
       } else {
         if (L) { this.fireLaser(p, this.lock, this.lock ? 0.02 : 0.03); if (p.def.kind === 'raptor') setTimeout(() => this.player === p && p.alive && this.fireLaser(p, this.lock, 0.05), 50); }
         for (let i = 0; i < nM; i++) this.fireMissiles(p, this.lock);
