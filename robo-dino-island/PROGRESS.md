@@ -200,3 +200,8 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Ricky and Bobby's farm intro now reads exactly "Look it's Ricky and Bobby, they are going to POOP!" (on-screen shout, and the spoken line says "poop"). It used to say "POOOOPY". Other poop jokes and Bad David's lines are unchanged.
 - [x] Farm test expectation updated (shout text plus the spoken line). Version v5.6.2, and sw.js regenerated.
 
+## v5.7 (Nov 9, 2026): friendly lion on Jungle Island
+- [x] New Dino Garage section **🌴 Jungle Island** with a Friendly Lion card. Saved as `jungleLion` on the existing save (the selected dino is left alone).
+- [x] On Jungle Island only, Leandro rides an original cartoon lion (Celtic hoops, white shorts, no crest or backpack). He starts already riding. Stick to steer, GALLOP / ROAR / NUZZLE / PAW. Other levels, the farm horse and the tractor are unchanged.
+- [x] Version v5.7, and sw.js regenerated.
+

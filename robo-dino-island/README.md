@@ -86,6 +86,7 @@ Pick a level with the big cards on the title screen: **🌴 JUNGLE ISLAND**, **�
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
+* **v5.7: a friendly lion on Jungle Island.** In the Dino Garage, open **🌴 Jungle Island** and tap **Friendly Lion**. On Jungle Island, Leandro starts out riding the lion (green and white hooped kit, white shorts, no crest or backpack). Steer with the stick, hold **GALLOP** to run, **ROAR** and **NUZZLE** are gentle. Hop back to any other dino tab to keep your old pick for the other worlds. Dragon Peak, Mega City, Deep Sea and the farm (including the horse and the tractor) are unchanged. The choice is saved.
 
 ## Modes
 * **Explore the Island**: free roam.

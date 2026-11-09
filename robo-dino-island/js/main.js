@@ -12,6 +12,7 @@ import { Input } from './input.js';
 import { music } from './music.js';
 import { Rider } from './rider.js';
 import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
+import { LION } from './lion.js';
 import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
@@ -204,7 +205,7 @@ const hud = {
   roar() { document.body.classList.remove('roaring'); void document.body.offsetWidth; document.body.classList.add('roaring'); },
   actions(def) {
     const EL = { fire: 'FIRE<br>BALL', ice: 'ICE<br>SHARD', storm: 'ZAP' };
-    const L = def.farmKid ? { laser: '🌽<br>FEED', missile: '🐴<br>RIDE', melee: '💨<br>TOOT', boost: 'RUN' } : def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
+    const L = def.farmKid ? { laser: '🌽<br>FEED', missile: '🐴<br>RIDE', melee: '💨<br>TOOT', boost: 'RUN' } : def.lion ? { laser: '🐾<br>PAW', missile: '😺<br>NUZZLE', melee: '🦁<br>ROAR', boost: 'GALLOP' } : def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
       : def.real ? { laser: 'BITE', missile: def.specialName, melee: (save.up.fire ? '🔥 ' : '') + 'ROAR', boost: 'RUN' }
       : { laser: 'LASER', missile: 'MISSILE', melee: def.robodragon ? 'FLAME<br>JETS' : def.breath ? 'FIRE<br>BREATH' : def.quake ? 'QUAKE<br>SLAM' : def.goo ? 'GOO<br>SPRAY' : 'BITE<br>STOMP', boost: def.fly ? 'CLIMB' : 'BOOST' };
     document.body.classList.toggle('breath', !!def.breath);
@@ -276,7 +277,8 @@ function show(s) {
   document.body.classList.toggle('playing', playing);
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${DINOS.filter(d => !d.wildOnly && save.owned.includes(d.id)).length}/${DINOS.filter(d => !d.wildOnly).length} dinos`; }
-  if (s === 'garage') { if (prevScreen !== 'garage') { gPicked = false; syncGarageToSelected(); let first = false; try { first = !localStorage.getItem(NEW_GARAGE_KEY); if (first) localStorage.setItem(NEW_GARAGE_KEY, '1'); } catch (e) { }
+  if (playing && game && game.player && game.player.def.lion && !game._lionTold) { game._lionTold = true; hud.toast('🦁 Leandro is riding the lion! Steer with the stick. Hold GALLOP.'); }
+  if (s === 'garage') { if (prevScreen !== 'garage') { gPicked = false; jungleDirty = false; syncGarageToSelected(); let first = false; try { first = !localStorage.getItem(NEW_GARAGE_KEY); if (first) localStorage.setItem(NEW_GARAGE_KEY, '1'); } catch (e) { }
       if (first) { gList = gTab = 'real'; gIdx = 0; hud.toast('🆕 NEW dinos first! Tap ‹ › to see them all'); } else if (level === 'farm') hud.toast('🚜 On the farm you play as Leandro! Your dino waits on the other levels.'); } refreshGarage(); }
   if (s === 'title' && game) game.mh.titleEnter();
   hud.bolts(); checkRotate(); fpsReset(); syncMusic();
@@ -372,7 +374,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && scr
 // ---------------- garage ----------------
 const gScene = new THREE.Scene(), gCam = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
 const GARAGE_YAW = 1.5; // ~3/4 front view (camera sits at yaw 0.67)
-let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo';
+let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo', jungleDirty = false;
 // v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
 const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish', 'turtle']); // v5 (+ v5.5 sea turtle)
 const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
@@ -393,7 +395,24 @@ function buildGarage() {
   const rim2 = new THREE.SpotLight(0xff5a1a, 700, 60, 0.7, 0.6, 1.6); rim2.position.set(12, 7, -11); gScene.add(rim2, rim2.target);
   syncGarageToSelected();
 }
-function syncGarageToSelected() { const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0]; gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d)); }
+function syncGarageToSelected() {
+  if (game && game.player && game.player.def && game.player.def.lion) { gTab = 'jungle'; gList = 'real'; gIdx = 0; return; }
+  const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0]; gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d));
+}
+function setJunglePreview() {
+  if (gMech) gScene.remove(gMech.obj);
+  gMech = gMechs.lion || (gMechs.lion = makeDino(LION, assets, false)); gScene.add(gMech.obj);
+  gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
+  if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.12, spread: 0.95, shinOut: 0.32, seatW: 0.46 }); else gRider.unmount();
+}
+function refreshJungle() {
+  $('g-dino').classList.add('hidden'); $('g-ups').classList.add('hidden'); $('g-jungle').classList.remove('hidden');
+  $('g-prev').parentElement.classList.add('hidden');
+  for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups', 'jungle']) { const el = $('t-' + t); if (el) el.classList.toggle('on', gTab === t); }
+  const on = !!save.jungleLion, b = $('jg-lion'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.querySelector('.jg-state').textContent = on ? '✓ Riding on Jungle Island' : 'Tap to ride';
+  setJunglePreview(); hud.bolts();
+}
 function setGarageMech() {
   const def = gListOf()[gIdx]; if (gMech) gScene.remove(gMech.obj);
   gMech = gMechs[def.id] || (gMechs[def.id] = makeDino(def, assets, false)); gScene.add(gMech.obj);
@@ -402,6 +421,8 @@ function setGarageMech() {
 }
 function refreshGarage() {
   if (!robosOn && (gTab === 'robo' || gList === 'robo')) { gTab = gList = 'real'; gIdx = 0; } // v5.6: robots are hidden while Robo Dinos is OFF
+  if (gTab === 'jungle') { refreshJungle(); return; }
+  $('g-jungle').classList.add('hidden');
   if (gTab !== 'ups') gList = gTab;
   const list = gListOf(); gIdx = Math.min(gIdx, list.length - 1); const def = list[gIdx]; setGarageMech();
   const owned = save.owned.includes(def.id), st = statsFor(def, save.up);
@@ -419,7 +440,7 @@ function refreshGarage() {
   $('g-ups').innerHTML = UPGRADES.map(u => { const l = save.up[u.id]; return `<div class="up"><span class="ic">${u.icon}</span><div><h4>${u.name}</h4><p>${u.desc}</p><span class="pips">${'●'.repeat(l)}${'○'.repeat(MAX_UP - l)}</span> <small class="lvl">Level ${l}/${MAX_UP}</small></div>
     <span class="upb"><button data-up="${u.id}" data-d="-1" ${l <= 0 ? 'disabled' : ''} aria-label="less">−</button><button data-up="${u.id}" data-d="1" ${l >= MAX_UP ? 'disabled' : ''} aria-label="more">+</button></span></div>`; }).join('');
   $('g-dino').classList.toggle('hidden', gTab === 'ups'); $('g-ups').classList.toggle('hidden', gTab !== 'ups');
-  for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups']) $('t-' + t).classList.toggle('on', gTab === t);
+  for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups', 'jungle']) { const el = $('t-' + t); if (el) el.classList.toggle('on', gTab === t); }
   $('g-prev').parentElement.classList.toggle('hidden', gTab === 'ups');
   hud.bolts();
 }
@@ -430,9 +451,17 @@ tap('t-ups', () => { gTab = 'ups'; refreshGarage(); });
 tap('t-dragon', () => { if (gList !== 'dragon') gIdx = 0; gTab = 'dragon'; refreshGarage(); });
 tap('t-dogs', () => { if (gList !== 'dogs') gIdx = 0; gTab = 'dogs'; refreshGarage(); });
 tap('t-sea', () => { if (gList !== 'sea') gIdx = 0; gTab = 'sea'; refreshGarage(); });
-tap('g-back', () => { const sel = gPicked && DINOS.find(d => d.id === save.selected); gPicked = false; if (sel && !sel.westie && !!sel.sea !== (level === 'ocean')) { // v5: sea creatures go to the Deep Sea, land dinos come back to land
+tap('t-jungle', () => { gTab = 'jungle'; refreshGarage(); });
+$('jg-lion').addEventListener('click', () => {
+  initAudio(); voice.prime(); save.jungleLion = !save.jungleLion; jungleDirty = true; persist(); sfx.ui();
+  if (save.jungleLion) voice.say("Let's go, Leandro!", { prio: 2, cd: 1500 });
+  hud.toast(save.jungleLion ? (level === 'jungle' ? '🦁 Leandro will ride the lion on Jungle Island!' : '🦁 Saved! The lion waits on Jungle Island.') : '🦁 The lion is resting. Your dino is back on Jungle Island.');
+  refreshGarage();
+});
+tap('g-back', () => { const sel = gPicked && DINOS.find(d => d.id === save.selected); const dirty = jungleDirty; jungleDirty = false; gPicked = false; if (sel && !sel.westie && !!sel.sea !== (level === 'ocean')) { // v5: sea creatures go to the Deep Sea, land dinos come back to land
     const to = sel.sea ? 'ocean' : (save.landLevel && save.landLevel !== 'ocean' ? save.landLevel : 'jungle'); show(garageFrom === 'pause' ? 'play' : 'title'); travel(to); return; }
-  if (garageFrom === 'pause') { if (game.player.def.id !== save.selected) { const hp = game.player.hp / game.player.maxHp; const pos = game.player.pos.clone(), yaw = game.player.yaw; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); } show('play'); } else { game.spawnPlayer(false); titleEnemies(); show('title'); } });
+  const applyLion = () => { if (!(level === 'jungle' && dirty) || !game.player) return false; const pos = game.player.pos.clone(), yaw = game.player.yaw; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); game.snapCam = true; return true; };
+  if (garageFrom === 'pause') { if (!applyLion() && game.player.def.id !== save.selected && !(game.player.def && game.player.def.lion)) { const pos = game.player.pos.clone(), yaw = game.player.yaw; game.spawnPlayer(!!game.battle); game.player.place(pos.x, pos.z, yaw); } show('play'); } else { game.spawnPlayer(false); titleEnemies(); show('title'); } });
 $('g-action').addEventListener('click', () => {
   initAudio(); const def = gListOf()[gIdx];
   voice.say(def.name + '!', { prio: 2, cd: 1500, replace: true }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 1, cd: 6000 });
@@ -489,7 +518,7 @@ function loop(now) {
     p.updateVisual(dt); for (const e of game.enemies) e.updateVisual(dt); game.rider.update(dt, p); if (game.rider.mounted && game.rider.waveT <= 0 && Math.random() < dt * 0.25) game.rider.wave(2.2);
     titleRoarT -= dt;
     if (titleRoarT <= 0 && rival) { const who = titleWho++ % 2 ? rival : p; who.roar = 1.7; who.jaw = 1; titleRoarT = 3.6; fx.shake = Math.max(fx.shake, 0.35); fx.roarWave(game.mouthPos(who), who.forward(new THREE.Vector3()), who.def.scale, who.mech.mats.glowColor); sfx.bigRoar(who.real ? 0.85 : 1, 0.5, !who.real);
-      if (who.real) game.mh.fieryRoar(who, false); else if (who.def.breath) game.mh.startBreath(who, 1.1); }
+      if (who.real && !who.def.lion) game.mh.fieryRoar(who, false); else if (who.def.breath) game.mh.startBreath(who, 1.1); }
     game.mh.safe = true; for (const d of [p, ...game.enemies]) if (d.breathT > 0) game.mh.updateBreath(d, dt);
     game.mh.updateTitle(dt); if (game.farm) { game.farm.update(dt, true); if (p.def.farmKid && p.mech.R.cheerT <= 0 && Math.random() < dt * 0.2) p.mech.R.cheerT = 1.4; }
     const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
