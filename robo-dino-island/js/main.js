@@ -13,6 +13,7 @@ import { music } from './music.js';
 import { Rider } from './rider.js';
 import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
 import { LION } from './lion.js';
+import { COSTUME } from './costume.js';
 import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
@@ -205,7 +206,7 @@ const hud = {
   roar() { document.body.classList.remove('roaring'); void document.body.offsetWidth; document.body.classList.add('roaring'); },
   actions(def) {
     const EL = { fire: 'FIRE<br>BALL', ice: 'ICE<br>SHARD', storm: 'ZAP' };
-    const L = def.farmKid ? { laser: '🌽<br>FEED', missile: '🐴<br>RIDE', melee: '💨<br>TOOT', boost: 'RUN' } : def.lion ? { laser: '🐾<br>PAW', missile: '😺<br>NUZZLE', melee: '⚡<br>WAR', boost: 'GALLOP' } : def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
+    const L = def.farmKid ? { laser: '🌽<br>FEED', missile: '🐴<br>RIDE', melee: '💨<br>TOOT', boost: 'RUN' } : def.lion ? { laser: '🐾<br>PAW', missile: '😺<br>NUZZLE', melee: '⚡<br>WAR', boost: 'GALLOP' } : def.costume ? { laser: '🦷<br>CHOMP', missile: 'BIG<br>BITE', melee: '🦖<br>ROAR', boost: 'RUN' } : def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
       : def.real ? { laser: 'BITE', missile: def.specialName, melee: (save.up.fire ? '🔥 ' : '') + 'ROAR', boost: 'RUN' }
       : { laser: 'LASER', missile: 'MISSILE', melee: def.robodragon ? 'FLAME<br>JETS' : def.breath ? 'FIRE<br>BREATH' : def.quake ? 'QUAKE<br>SLAM' : def.goo ? 'GOO<br>SPRAY' : 'BITE<br>STOMP', boost: def.fly ? 'CLIMB' : 'BOOST' };
     document.body.classList.toggle('breath', !!def.breath);
@@ -277,7 +278,8 @@ function show(s) {
   document.body.classList.toggle('playing', playing);
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${DINOS.filter(d => !d.wildOnly && save.owned.includes(d.id)).length}/${DINOS.filter(d => !d.wildOnly).length} dinos`; }
-  if (playing && game && game.player && game.player.def.lion && !game._lionTold) { game._lionTold = true; hud.toast('🦁 LIONS GO TO WAR! Steer with the stick. Tap ⚡ WAR.'); }
+  if (playing && game && game.player && game.player.def.costume && !game._costumeTold) { game._costumeTold = true; hud.toast('🦖 Rex Costume! Straw hat, brown shirt, olive trousers. Steer with the stick.'); }
+  else if (playing && game && game.player && game.player.def.lion && !game._lionTold) { game._lionTold = true; hud.toast('🦁 LIONS GO TO WAR! Steer with the stick. Tap ⚡ WAR.'); }
   if (s === 'garage') { if (prevScreen !== 'garage') { gPicked = false; jungleDirty = false; gTab = 'lions'; } refreshGarage(); }
   if (s === 'title' && game) game.mh.titleEnter();
   hud.bolts(); checkRotate(); fpsReset(); syncMusic();
@@ -400,13 +402,23 @@ function syncGarageToSelected() {
 function refreshLions() {
   const on = !!(save.jungleLion && save.farmLion), b = $('jg-lion'); if (!b) return;
   b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
-  const st = b.querySelector('.jg-state'); if (st) st.textContent = on ? '✓ Jungle Island and the Farm' : 'Tap to ride';
+  const st = b.querySelector('.jg-state'); if (st) st.textContent = on ? (save.jungleCostume ? '✓ On the Farm' : '✓ Jungle Island and the Farm') : 'Tap to ride';
+  const c = $('jg-costume'); if (!c) return;
+  const costumeOn = !!save.jungleCostume;
+  c.classList.toggle('on', costumeOn); c.setAttribute('aria-pressed', costumeOn ? 'true' : 'false');
+  const cs = c.querySelector('.jg-state'); if (cs) cs.textContent = costumeOn ? '✓ On Jungle Island' : 'Tap to play';
 }
 function setJunglePreview() {
   if (gMech) gScene.remove(gMech.obj);
-  gMech = gMechs.lion || (gMechs.lion = makeDino(LION, assets, false)); gScene.add(gMech.obj);
-  gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
-  if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.12, spread: 0.95, shinOut: 0.32, seatW: 0.46 }); else gRider.unmount();
+  if (save.jungleCostume) {
+    gMech = gMechs.costume || (gMechs.costume = makeDino(COSTUME, assets, false)); gScene.add(gMech.obj);
+    gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
+    gRider.unmount();
+  } else {
+    gMech = gMechs.lion || (gMechs.lion = makeDino(LION, assets, false)); gScene.add(gMech.obj);
+    gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
+    if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.12, spread: 0.95, shinOut: 0.32, seatW: 0.46 }); else gRider.unmount();
+  }
 }
 function showLions() {
   $('g-dino').classList.add('hidden'); $('g-ups').classList.add('hidden');
@@ -457,6 +469,12 @@ $('jg-lion').addEventListener('click', () => {
   save.jungleLion = next; save.farmLion = next; jungleDirty = true; persist(); sfx.ui(); gTab = 'lions';
   if (next) voice.say("Let's go, Leandro!", { prio: 2, cd: 1500 });
   hud.toast(next ? '🦁 LIONS GO TO WAR! Jungle Island and Farty Poop Farm.' : '🦁 The lion is resting. Your dino, the horse and the tractor stay.');
+  refreshGarage();
+});
+$('jg-costume').addEventListener('click', () => {
+  initAudio(); voice.prime(); save.jungleCostume = !save.jungleCostume; jungleDirty = true; persist(); sfx.ui(); gTab = 'lions';
+  if (save.jungleCostume) voice.say('Rex costume!', { prio: 2, cd: 1500 });
+  hud.toast(save.jungleCostume ? '🦖 Rex Costume on Jungle Island! The farm lion stays.' : '🦖 Rex Costume is off. Jungle Island uses the thunder lion again if he is on.');
   refreshGarage();
 });
 tap('g-back', () => { const sel = gPicked && DINOS.find(d => d.id === save.selected); const dirty = jungleDirty; jungleDirty = false; gPicked = false; if (sel && !sel.westie && !!sel.sea !== (level === 'ocean')) { // v5: sea creatures go to the Deep Sea, land dinos come back to land
@@ -519,7 +537,7 @@ function loop(now) {
     p.updateVisual(dt); for (const e of game.enemies) e.updateVisual(dt); game.rider.update(dt, p); if (game.rider.mounted && game.rider.waveT <= 0 && Math.random() < dt * 0.25) game.rider.wave(2.2);
     titleRoarT -= dt;
     if (titleRoarT <= 0 && rival) { const who = titleWho++ % 2 ? rival : p; who.roar = 1.7; who.jaw = 1; titleRoarT = 3.6; fx.shake = Math.max(fx.shake, 0.35); fx.roarWave(game.mouthPos(who), who.forward(new THREE.Vector3()), who.def.scale, who.mech.mats.glowColor); sfx.bigRoar(who.real ? 0.85 : 1, 0.5, !who.real);
-      if (who.real && !who.def.lion) game.mh.fieryRoar(who, false); else if (who.def.breath) game.mh.startBreath(who, 1.1); }
+      if (who.real && !who.def.lion && !who.def.costume) game.mh.fieryRoar(who, false); else if (who.def.breath) game.mh.startBreath(who, 1.1); }
     game.mh.safe = true; for (const d of [p, ...game.enemies]) if (d.breathT > 0) game.mh.updateBreath(d, dt);
     game.mh.updateTitle(dt); if (game.farm) { game.farm.update(dt, true); if (p.def.farmKid && p.mech.R.cheerT <= 0 && Math.random() < dt * 0.2) p.mech.R.cheerT = 1.4; }
     const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
