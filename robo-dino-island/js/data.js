@@ -196,7 +196,7 @@ const ALL_IDS = () => DINOS.map(d => d.id);
 const maxUps = () => Object.fromEntries(UPGRADES.map(u => [u.id, MAX_UP]));
 const fresh = () => ({ bolts: 0, owned: ALL_IDS(), selected: 'rex', up: maxUps(),
   kos: 0, cores: 0, bestBattle: 0, muted: false, music: true, ride: true, allUnlocked: true, level: 'jungle', voice: true,
-  jungleLion: false, farmLion: false }); // v5.7 jungle lion; v5.7.1 the same lion on the farm (does not replace the selected dino)
+  jungleLion: false, farmLion: false, jungleCostume: false }); // v5.7 lion, v5.7.1 farm lion, v5.8 Rex Costume on Jungle Island only
 
 export function loadSave() {
   try {
@@ -212,6 +212,7 @@ export function loadSave() {
     out.voice = out.voice !== false;
     out.jungleLion = out.jungleLion === true;
     out.farmLion = out.farmLion === true;
+    out.jungleCostume = out.jungleCostume === true;
     return out;
   } catch (e) { return fresh(); }
 }
