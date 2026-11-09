@@ -200,3 +200,8 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Ricky and Bobby's farm intro now reads exactly "Look it's Ricky and Bobby, they are going to POOP!" (on-screen shout, and the spoken line says "poop"). It used to say "POOOOPY". Other poop jokes and Bad David's lines are unchanged.
 - [x] Farm test expectation updated (shout text plus the spoken line). Version v5.6.2, and sw.js regenerated.
 
+## v5.8.1 (Nov 9, 2026): fuller Rex Costume and Thunder Lion
+- [x] Original shaded cartoon art only. No photo and no borrowed character marks.
+- [x] Rex Costume rider: kid proportions, face, straw hat with a chin cord, brown shirt, olive trousers, dark boots, hands on the rex. The inflatable T-rex keeps the orange body, blue back and crown, speckles and yellow-green eyes.
+- [x] Thunder Lion: muscular tawny body, layered mane, muzzle, whiskers, tail tuft, and a four-legged walk. Leandro still rides in green and white hoops and white shorts. WAR still shouts GO TO WAR!! on Jungle Island and the farm.
+
