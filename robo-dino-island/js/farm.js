@@ -762,9 +762,8 @@ export class FarmLife {
   }
   syncFarmLion(p, dt, title) {
     const L = this.farmLion; if (!L || !L.obj.visible) return;
-    if (p && p.mech && p.mech.obj) p.mech.obj.visible = !this.ridingLion;
-    if (L.setRidden) L.setRidden(!!this.ridingLion);
-    if (this.ridingLion && p) { L.obj.position.set(p.pos.x, p.pos.y, p.pos.z); L.obj.rotation.y = p.yaw; L.animate(dt, p.speedNow || 0, { turn: p.turn || 0 }); }
+    if (p && p.mech && p.mech.obj) p.mech.obj.visible = true;
+    if (this.ridingLion && p) { L.obj.position.set(p.pos.x, p.pos.y, p.pos.z); L.obj.rotation.y = p.yaw; L.animate(dt, p.speedNow || 0, { turn: p.turn || 0, jaw: L.jaw || 0, roar: L.thunderT > 0 ? 1 : 0 }); }
     else L.animate(dt, 0, {});
     if (!title && this.active && p && this.g.save.farmLion && !this._lionBoot) { this._lionBoot = true; if (!this.riding && !this.driving && !this.ridingLion) this.mountLion(p); }
   }
