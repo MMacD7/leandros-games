@@ -167,15 +167,16 @@ export class FX {
       const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 5; this.scene.add(m);
       this.zaps.push({ m, t: 0, life, flicker: true });
     };
-    pushRib(pts, { r: 0.25, g: 0.85, b: 1.15 }, 0.022);
-    pushRib(pts, { r: 1.15, g: 1.15, b: 1.1 }, 0.007);
+    pushRib(pts, { r: 0.35, g: 1.15, b: 1.7 }, 0.16);
+    pushRib(pts, { r: 1.4, g: 1.45, b: 1.5 }, 0.045);
     pushLine(pts, 0x9af6ff);
     pushLine(pts, 0xffffff);
-    pushRib(fork, { r: 1.05, g: 0.9, b: 0.28 }, 0.014);
+    pushRib(fork, { r: 1.3, g: 1.05, b: 0.35 }, 0.06);
     pushLine(fork, 0xfff0a0);
-    for (let i = 1; i < pts.length; i += 2) this.glow.spawn({ pos: pts[i], size: 0.22, size1: 0.04, life: 0.1, r: 0.55, g: 1.3, b: 1.8, alpha: 0.65 });
+    for (let i = 1; i < pts.length; i += 2) this.glow.spawn({ pos: pts[i], size: 0.85, size1: 0.2, life: 0.16, r: 0.7, g: 1.6, b: 2.4, alpha: 0.9 });
+    this.glow.spawn({ pos: b, size: 1.6, size1: 0.3, life: 0.22, r: 1.1, g: 1.8, b: 2.6, alpha: 1 });
     if (this.zaps.length > 48) { const z = this.zaps.shift(); this.scene.remove(z.m); z.m.geometry.dispose(); }
-    this.light.position.copy(b); this.light.color.setRGB(0.45, 0.9, 1); this.light.intensity = Math.max(this.light.intensity, 16); this.light.distance = Math.max(this.light.distance, 16);
+    this.light.position.copy(b); this.light.color.setRGB(0.55, 0.95, 1); this.light.intensity = Math.max(this.light.intensity, 36); this.light.distance = Math.max(this.light.distance, 28);
   }
   // frost breath puff (call every frame while breathing)
   frost(pos, dir, len = 1, power = 1) {

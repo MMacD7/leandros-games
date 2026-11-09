@@ -205,6 +205,11 @@ A backup of v4.4 was kept. Tests: v5.js (city/dogs/stampede) and v5-ocean.js (oc
 - [x] Rex Costume rider: kid proportions, face, straw hat with a chin cord, brown shirt, olive trousers, dark boots, hands on the rex. The inflatable T-rex keeps the orange body, blue back and crown, speckles and yellow-green eyes.
 - [x] Thunder Lion: muscular tawny body, layered mane, muzzle, whiskers, tail tuft, and a four-legged walk. Leandro still rides in green and white hoops and white shorts. WAR still shouts GO TO WAR!! on Jungle Island and the farm.
 
+## v5.8.4 (Nov 9, 2026): sculpted CC0 lion and T-rex
+- [x] The lion and the Rex Costume are no longer built from boxes. They use rigged CC0 models listed in CREDITS.md, with walk clips.
+- [x] The lion keeps an original fiery mane, blue-silver armor, and a plain bolt mark. The rex is recolored as an orange inflatable suit. The rider wears a cowboy hat, hoops, and white shorts.
+- [x] WAR bolts are brighter jagged streaks. CHOMP and the on-screen buttons are unchanged.
+
 ## v5.8.3 (Nov 9, 2026): heroic lion, rounder rex, real lightning, buttons on screen
 - [x] Thunder Lion is an original 80s action-cartoon battle cat: fiery swept mane, golden cel shading, dark outlines, blue-silver armor with a plain bolt mark, shoulder guards, leg bands, and a cyan emblem that pulses on WAR. No borrowed logo, eye mark, or franchise name. Leandro still wears green and white hoops and white shorts.
 - [x] Rex Costume uses a lathed tapering snout and a curved jaw, with the same colors and cowboy rider.

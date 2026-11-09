@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Robo Dinos">
 <meta name="theme-color" content="#0b1a24">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' blob:; worker-src 'self'">
 <title>Leandro's Robo Dino Island</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -71,7 +71,7 @@
     <button id="b-robo" class="btn small robo-tg" aria-pressed="true">🤖 Robo Dinos: ON</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
-  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Hero lion and sharper thunder! 🦁⚡</button><span id="ver" aria-label="Version">v5.8.3</span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Sculpted lion and T-rex! 🦁🦖</button><span id="ver" aria-label="Version">v5.8.4</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
@@ -86,9 +86,9 @@
         <span class="jg-txt"><b>Thunder Lion</b><small>Green and white hoops, white shorts. Tap ⚡ WAR and cartoon thunderbolts fly out the back.</small></span>
         <span class="jg-state">Tap to ride</span>
       </button>
-      <button id="jg-costume" class="jg-card" type="button" aria-pressed="false" aria-label="Rex Costume. Cartoon rider in a straw hat, brown shirt, olive trousers and dark boots on an orange T-rex.">
+      <button id="jg-costume" class="jg-card" type="button" aria-pressed="false" aria-label="Rex Costume. Cartoon rider in a straw hat, green and white hoops and white shorts on an orange T-rex.">
         <span class="jg-art" aria-hidden="true">🦖</span>
-        <span class="jg-txt"><b>Rex Costume</b><small>Straw hat, brown shirt, olive trousers, dark boots. Legs dangle on an orange T-rex. Jungle Island only.</small></span>
+        <span class="jg-txt"><b>Rex Costume</b><small>Cowboy hat, hoops, white shorts, orange T-rex. Jungle Island only.</small></span>
         <span class="jg-state">Tap to play</span>
       </button>
     </section>

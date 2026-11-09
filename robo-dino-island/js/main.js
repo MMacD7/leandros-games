@@ -14,6 +14,7 @@ import { Rider } from './rider.js';
 import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
+import { preloadModels } from './models.js';
 import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
@@ -77,6 +78,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
+preloadModels(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -278,7 +280,7 @@ function show(s) {
   document.body.classList.toggle('playing', playing);
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${DINOS.filter(d => !d.wildOnly && save.owned.includes(d.id)).length}/${DINOS.filter(d => !d.wildOnly).length} dinos`; }
-  if (playing && game && game.player && game.player.def.costume && !game._costumeTold) { game._costumeTold = true; hud.toast('🦖 Rex Costume! Straw hat, brown shirt, olive trousers. Steer with the stick.'); }
+  if (playing && game && game.player && game.player.def.costume && !game._costumeTold) { game._costumeTold = true; hud.toast('🦖 Rex Costume! Straw hat, hoops and white shorts. Steer with the stick.'); }
   else if (playing && game && game.player && game.player.def.lion && !game._lionTold) { game._lionTold = true; hud.toast('🦁 LIONS GO TO WAR! Steer with the stick. Tap ⚡ WAR.'); }
   if (s === 'garage') { if (prevScreen !== 'garage') { gPicked = false; jungleDirty = false; gTab = 'lions'; } refreshGarage(); }
   if (s === 'title' && game) game.mh.titleEnter();
