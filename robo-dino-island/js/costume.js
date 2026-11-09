@@ -72,19 +72,30 @@ export class CostumeRex {
     const torso = add(body, new THREE.CapsuleGeometry(0.48, 1.15, 5, 10), bodyC, 0, 1.05, -0.05, 'rex-body'); torso.rotation.x = Math.PI / 2; torso.scale.set(1.15, 1, 1);
     add(body, new THREE.CapsuleGeometry(0.32, 0.35, 4, 8), belly, 0, 0.72, 0.15).rotation.x = Math.PI / 2;
     const neck = add(body, new THREE.CapsuleGeometry(0.2, 0.42, 3, 8), bodyC, 0, 1.28, 0.72); neck.rotation.x = -0.85;
-    const back = add(body, new THREE.BoxGeometry(0.34, 0.18, 2.15), blue, 0, 1.58, -0.05, 'rex-back');
+    const back = add(body, new THREE.CapsuleGeometry(0.14, 1.7, 5, 10), blue, 0, 1.62, -0.05, 'rex-back'); back.rotation.x = Math.PI / 2;
     add(body, new THREE.BoxGeometry(0.04, 0.03, 2.05), M(0x0d2460), 0.16, 1.66, -0.05);
     add(body, new THREE.BoxGeometry(0.04, 0.03, 2.05), M(0x0d2460), -0.16, 1.66, -0.05);
     const specks = [[0.42, 1.15, 0.35], [-0.46, 1.05, -0.2], [0.38, 1.2, -0.55], [-0.4, 0.95, 0.45], [0.5, 0.9, 0.05], [-0.22, 1.35, 0.15]];
     for (const [x, y, z] of specks) { const s = add(body, new THREE.SphereGeometry(0.07, 7, 5), speck, x, y, z, 'rex-speckle'); s.scale.set(1.2, 0.55, 1); }
 
     const head = this.head = new THREE.Group(); head.position.set(0, 1.72, 1.28); head.name = 'rex-head'; obj.add(head);
-    add(head, new THREE.BoxGeometry(0.62, 0.46, 0.55), bodyC, 0, 0.08, -0.02);
-    const snout = add(head, new THREE.BoxGeometry(0.4, 0.26, 0.78), bodyC, 0, -0.02, 0.58, 'rex-snout'); snout.scale.set(1, 0.9, 1);
-    add(head, new THREE.BoxGeometry(0.66, 0.12, 0.28), bodyC, 0, 0.32, 0.12, 'rex-brow');
-    const crown = add(head, new THREE.BoxGeometry(0.5, 0.16, 0.7), blue, 0, 0.4, 0.02, 'rex-crown');
-    this.mouth = new THREE.Group(); this.mouth.position.set(0, -0.16, 0.48); this.mouth.name = 'rex-jaw'; head.add(this.mouth);
-    add(this.mouth, new THREE.BoxGeometry(0.36, 0.12, 0.62), belly, 0, 0, 0.08);
+    add(head, new THREE.SphereGeometry(0.34, 16, 14), bodyC, 0, 0.08, -0.02).scale.set(1.08, 0.92, 0.95);
+    const snoutPts = [];
+    for (let i = 0; i <= 14; i++) {
+      const t = i / 14, y = (t - 0.5) * 0.82;
+      const r = Math.max(0.02, 0.175 * Math.pow(1 - t, 0.62));
+      snoutPts.push(new THREE.Vector2(r, y));
+    }
+    const snout = add(head, new THREE.LatheGeometry(snoutPts, 18), bodyC, 0, -0.02, 0.58, 'rex-snout'); snout.rotation.x = Math.PI / 2;
+    add(head, new THREE.SphereGeometry(0.16, 12, 8), bodyC, 0, 0.26, 0.1, 'rex-brow').scale.set(1.7, 0.32, 0.7);
+    const crown = add(head, new THREE.CapsuleGeometry(0.12, 0.42, 4, 10), blue, 0, 0.32, 0.02, 'rex-crown'); crown.rotation.x = Math.PI / 2; crown.scale.set(1.15, 1, 0.7);
+    this.mouth = new THREE.Group(); this.mouth.position.set(0, -0.14, 0.46); this.mouth.name = 'rex-jaw'; head.add(this.mouth);
+    const jawPts = [];
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10, y = (t - 0.45) * 0.55;
+      jawPts.push(new THREE.Vector2(Math.max(0.02, 0.105 * Math.pow(1 - t, 0.7)), y));
+    }
+    const jaw = add(this.mouth, new THREE.LatheGeometry(jawPts, 14), belly, 0, -0.02, 0.1); jaw.rotation.x = Math.PI / 2; jaw.scale.set(1.05, 1, 0.72);
     for (let i = -2; i <= 2; i++) add(head, new THREE.BoxGeometry(0.045, 0.07, 0.03), white, i * 0.07, -0.08, 0.78, 'rex-tooth');
     for (let i = -1; i <= 1; i++) add(this.mouth, new THREE.BoxGeometry(0.04, 0.05, 0.03), white, i * 0.08, 0.06, 0.32, 'rex-tooth');
     for (const s of [-1, 1]) {

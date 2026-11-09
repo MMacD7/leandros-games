@@ -25,15 +25,15 @@ test('close-up iPhone landscape shots', async ({ page }) => {
   await ready(page);
   await page.locator('#b-garage').click();
   await poll(page, () => G.screen === 'garage');
-  await page.evaluate(() => G.frameGarage({ zoom: 0.38, yaw: 0.7 }));
+  await page.evaluate(() => G.frameGarage({ zoom: 0.48, yaw: 1.35 }));
   await page.waitForTimeout(500);
-  await page.screenshot({ path: OUT + '/v582-lion-garage-iphone.png' });
+  await page.screenshot({ path: OUT + '/v583-lion-garage-iphone.png' });
 
   await page.locator('#jg-costume').click();
   await poll(page, () => G.save.jungleCostume === true);
   await page.evaluate(() => G.frameGarage({ zoom: 0.34, yaw: 0.95 }));
   await page.waitForTimeout(500);
-  await page.screenshot({ path: OUT + '/v582-costume-garage-iphone.png' });
+  await page.screenshot({ path: OUT + '/v583-costume-garage-iphone.png' });
   await page.evaluate(() => G.frameGarage(null));
 
   await page.locator('#g-back').click();
@@ -57,7 +57,7 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     G.sim(0.08);
   });
   await page.waitForTimeout(250);
-  await page.screenshot({ path: OUT + '/v582-costume-jungle-iphone.png' });
+  await page.screenshot({ path: OUT + '/v583-costume-jungle-iphone.png' });
 
   await page.evaluate(() => {
     G.game.camHook = null; G.save.jungleCostume = false; G.save.jungleLion = true; G.save.farmLion = true;
@@ -70,8 +70,8 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     if (g.world.height(55, 165) > 0.4) p.place(55, 165, 0.5);
     const look = new THREE.Vector3();
     g.camHook = (cam) => {
-      g.rider.head.getWorldPosition(look);
-      const yaw = p.yaw + 0.75, dist = 5.2, pitch = 0.34;
+      p.mech.body.getWorldPosition(look); look.y += 0.35;
+      const yaw = p.yaw + 0.85, dist = 4.15, pitch = 0.28;
       cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
       cam.lookAt(look);
     };
@@ -79,7 +79,7 @@ test('close-up iPhone landscape shots', async ({ page }) => {
   });
   expect(await page.evaluate(() => G.game.player.def.lion === true)).toBe(true);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: OUT + '/v582-lion-jungle-iphone.png' });
+  await page.screenshot({ path: OUT + '/v583-lion-jungle-iphone.png' });
 
   await page.evaluate(() => { G.game.camHook = null; });
   await go(page, 'farm');
@@ -95,16 +95,16 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     g.thunderButt(p);
     const look = new THREE.Vector3();
     g.camHook = (cam) => {
-      F.farmLion.body.getWorldPosition(look); look.y += 0.7;
-      const yaw = p.yaw + 1.25, dist = 7.4, pitch = 0.36;
+      F.farmLion.body.getWorldPosition(look); look.y += 0.4;
+      const yaw = p.yaw + 1.35, dist = 6.2, pitch = 0.4;
       cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
       cam.lookAt(look);
     };
     G.sim(0.05);
   });
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(110);
   expect(await page.evaluate(() => document.getElementById('shout').textContent)).toBe('GO TO WAR!!');
-  await page.screenshot({ path: OUT + '/v582-lion-farm-war-iphone.png' });
+  await page.screenshot({ path: OUT + '/v583-lion-farm-war-iphone.png' });
   await page.evaluate(() => {
     const F = G.farm, p = G.game.player, g = G.game, THREE = G.THREE;
     const chick = F.animals.find(a => a.kind === 'chicken');
@@ -124,5 +124,5 @@ test('close-up iPhone landscape shots', async ({ page }) => {
     G.sim(0.05);
   });
   await page.waitForTimeout(200);
-  await page.screenshot({ path: OUT + '/v582-lion-farm-chomp-iphone.png' });
+  await page.screenshot({ path: OUT + '/v583-lion-farm-chomp-iphone.png' });
 });

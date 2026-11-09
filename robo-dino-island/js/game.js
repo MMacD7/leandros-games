@@ -402,7 +402,7 @@ export class Game {
     const now = performance.now();
     if (d === this.player && now < (this._warUntil || 0)) return false;
     if (d === this.player) this._warUntil = now + 1200;
-    const fwd = d.forward(new THREE.Vector3()), back = fwd.clone().multiplyScalar(-1);
+    const fwd = d.forward(new THREE.Vector3());
     const mount = this.farm && this.farm.ridingLion && this.farm.farmLion;
     const origin = mount && mount.socketPos ? mount.socketPos('rear', new THREE.Vector3()) : (d.mech && d.mech.socketPos ? d.mech.socketPos('rear', new THREE.Vector3()) : d.pos.clone());
     const glow = mount || d.mech; if (glow) glow.thunderT = 0.9;
@@ -410,21 +410,19 @@ export class Game {
     this.wars = (this.wars || 0) + 1;
     sfx.thunder(d === this.player ? 1 : 0.35);
     sfx.zap(d === this.player ? 0.9 : 0.3);
-    const white = { r: 1, g: 1, b: 1 }, gold = { r: 1, g: 0.92, b: 0.35 }, cyan = { r: 0.45, g: 0.85, b: 1 };
     const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const shoot = (dir, len, lift) => {
-      const end = origin.clone().addScaledVector(dir, len); end.y = origin.y + lift;
-      this.fx.zap(origin.clone(), end, cyan, 0.34, 0.42, 0.2);
-      this.fx.zap(origin.clone(), end, gold, 0.16, 0.36, 0.16);
-      this.fx.zap(origin.clone(), end, white, 0.07, 0.28, 0.1);
-      const mid = origin.clone().lerp(end, 0.55);
-      const branch = mid.clone().addScaledVector(side, (Math.random() < 0.5 ? -1 : 1) * 2.2); branch.y += 0.8;
-      this.fx.zap(mid, branch, cyan, 0.14, 0.3, 0.22);
+    const arc = (len, lift, sideAmt) => {
+      const end = origin.clone().addScaledVector(fwd, len).addScaledVector(side, sideAmt);
+      end.y = 0.35;
+      this.fx.lightning(origin.clone(), end, { life: 0.26, lift, jag: 0.15 });
+      if (this.fx.sparks) this.fx.sparks(end, 6, { r: 0.7, g: 0.95, b: 1 }, 0.4);
+      const ground = end.clone(); ground.y = 0.12;
+      this.fx.ring(ground, 1.15, 0x7af6ff);
       return end;
     };
-    const ends = [shoot(back, 7.5, 0.4), shoot(fwd, 6.5, 0.8)];
-    this.later(0.08, () => { if (!d.alive) return; shoot(back, 6.2, 1.1); });
-    this.later(0.16, () => { if (!d.alive) return; shoot(fwd, 5.4, 0.2); });
+    const ends = [arc(5.2, 1.45, 0.3)];
+    this.later(0.08, () => { if (d.alive) ends.push(arc(4.4, 1.8, -0.85)); });
+    this.later(0.16, () => { if (d.alive) ends.push(arc(6.1, 1.1, 0.95)); });
     if (this.fx.sparks) this.fx.sparks(origin.clone(), 8, { r: 0.7, g: 0.9, b: 1 }, 0.7);
     this.fx.ring(origin.clone(), 2.4, 0xb7f0ff);
     this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.42 : 0.12);

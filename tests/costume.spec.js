@@ -68,11 +68,11 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   await ready(page);
   await dismissRotate(page);
 
-  await expect(page.locator('#ver')).toHaveText('v5.8.2');
+  await expect(page.locator('#ver')).toHaveText('v5.8.3');
   const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
   expect(sw).toContain('./js/costume.js');
   expect(sw).toContain('./js/lion.js');
-  expect(sw).not.toContain('robo-dino-island-df4f058c7b');
+  expect(sw).not.toContain('robo-dino-island-8d6aebd562');
   const lionSrc = await page.evaluate(async () => (await fetch('./js/lion.js')).text());
   expect(lionSrc.toLowerCase()).not.toContain('thundercat');
   expect(sw).toMatch(/const CACHE = 'robo-dino-island-[0-9a-f]{10}'/);
@@ -188,6 +188,11 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
     return { kid: !!p.def.farmKid, costume: !!p.def.costume, ridingLion: F.ridingLion, horse: !!F.horse, tractor: !!F.tractor, hoop, whiteShorts };
   });
   expect(farm).toEqual({ kid: true, costume: false, ridingLion: true, horse: true, tractor: true, hoop: true, whiteShorts: true });
+  const gallop = await page.locator('#a-boost').boundingBox();
+  expect(gallop.x).toBeGreaterThanOrEqual(0);
+  expect(gallop.x + gallop.width).toBeLessThanOrEqual(view.width + 0.5);
+  expect(gallop.y).toBeGreaterThanOrEqual(0);
+  expect(gallop.y + gallop.height).toBeLessThanOrEqual(view.height + 0.5);
   const war = await page.evaluate(() => {
     const g = G.game, p = g.player, F = G.farm, z0 = g.fx.zaps.length;
     g.thunderButt(p);

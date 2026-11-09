@@ -118,7 +118,64 @@ export class FX {
     if (this.zaps.length > 40) { const z = this.zaps.shift(); this.scene.remove(z.m); z.m.geometry.dispose(); }
     for (let i = 0; i <= n; i += 2) this.glow.spawn({ pos: pts[i], size: 1.6 * w * 4, size1: 0.5, life: 0.12, r: col.r * 2, g: col.g * 2, b: col.b * 2, alpha: 0.9 });
     this.glow.spawn({ pos: b, size: 4, size1: 1, life: 0.14, r: col.r * 2.6, g: col.g * 2.6, b: col.b * 2.6, alpha: 1 });
-    this.light.position.copy(b); this.light.position.y += 1; this.light.color.setRGB(col.r, col.g, col.b); this.light.intensity = Math.max(this.light.intensity, 50); this.light.distance = Math.max(this.light.distance, 40);
+  }
+  // Thin jagged bolt: polyline core plus a narrow additive ribbon. Used by WAR so it stays a streak, not a slab.
+  lightning(a, b, o = {}) {
+    const life = o.life || 0.24;
+    const d = new THREE.Vector3().subVectors(b, a), L = Math.max(0.3, d.length());
+    const n = 10;
+    const side = new THREE.Vector3(-d.z, 0, d.x);
+    if (side.lengthSq() < 1e-4) side.set(1, 0, 0);
+    side.normalize();
+    const lift = o.lift == null ? 1.35 : o.lift;
+    const jag = o.jag == null ? 0.14 : o.jag;
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const bow = Math.sin(t * Math.PI) * lift;
+      const j = (i === 0 || i === n) ? 0 : (Math.random() - 0.5) * 2 * L * jag * (0.4 + 0.6 * Math.sin(t * Math.PI));
+      pts.push(a.clone().addScaledVector(d, t).addScaledVector(side, j).setY(a.y + (b.y - a.y) * t + bow));
+    }
+    const fork = [pts[4].clone()];
+    let p = fork[0];
+    const fdir = side.clone().multiplyScalar(Math.random() < 0.5 ? 1 : -1);
+    for (let k = 0; k < 3; k++) {
+      p = p.clone().addScaledVector(fdir, 0.5 + Math.random() * 0.65).add(new THREE.Vector3((Math.random() - 0.5) * 0.35, (Math.random() - 0.35) * 0.45, (Math.random() - 0.5) * 0.35));
+      fork.push(p);
+    }
+    const pushLine = (points, color) => {
+      const g = new THREE.BufferGeometry().setFromPoints(points);
+      const key = 'ln' + color;
+      let mat = this.zapMats[key];
+      if (!mat) mat = this.zapMats[key] = new THREE.LineBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
+      const line = new THREE.Line(g, mat);
+      line.frustumCulled = false; line.renderOrder = 6; this.scene.add(line);
+      this.zaps.push({ m: line, t: 0, life, flicker: true });
+    };
+    const pushRib = (points, col, w) => {
+      const pos = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        const A = points[i], B = points[i + 1], ww = w;
+        const a0 = A.clone().addScaledVector(side, ww), a1 = A.clone().addScaledVector(side, -ww);
+        const b0 = B.clone().addScaledVector(side, ww), b1 = B.clone().addScaledVector(side, -ww);
+        pos.push(a0.x, a0.y, a0.z, a1.x, a1.y, a1.z, b0.x, b0.y, b0.z, a1.x, a1.y, a1.z, b1.x, b1.y, b1.z, b0.x, b0.y, b0.z);
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      const key = 'rb' + col.r + ',' + col.g + ',' + col.b;
+      let mat = this.zapMats[key];
+      if (!mat) mat = this.zapMats[key] = new THREE.MeshBasicMaterial({ color: new THREE.Color(col.r, col.g, col.b), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false });
+      const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 5; this.scene.add(m);
+      this.zaps.push({ m, t: 0, life, flicker: true });
+    };
+    pushRib(pts, { r: 0.25, g: 0.85, b: 1.15 }, 0.022);
+    pushRib(pts, { r: 1.15, g: 1.15, b: 1.1 }, 0.007);
+    pushLine(pts, 0x9af6ff);
+    pushLine(pts, 0xffffff);
+    pushRib(fork, { r: 1.05, g: 0.9, b: 0.28 }, 0.014);
+    pushLine(fork, 0xfff0a0);
+    for (let i = 1; i < pts.length; i += 2) this.glow.spawn({ pos: pts[i], size: 0.22, size1: 0.04, life: 0.1, r: 0.55, g: 1.3, b: 1.8, alpha: 0.65 });
+    if (this.zaps.length > 48) { const z = this.zaps.shift(); this.scene.remove(z.m); z.m.geometry.dispose(); }
+    this.light.position.copy(b); this.light.color.setRGB(0.45, 0.9, 1); this.light.intensity = Math.max(this.light.intensity, 16); this.light.distance = Math.max(this.light.distance, 16);
   }
   // frost breath puff (call every frame while breathing)
   frost(pos, dir, len = 1, power = 1) {
@@ -298,7 +355,7 @@ export class FX {
     for (const S of this.scorches) if (S.m.visible) { S.t += dt; S.m.material.opacity = 0.7 * Math.min(1, S.t * 6) * Math.max(0, 1 - Math.max(0, S.t - 10) / 4); if (S.t > 14) S.m.visible = false; }
     for (let i = this.warns.length - 1; i >= 0; i--) { const w = this.warns[i]; w.t += dt; const u = w.t / w.dur, pl = 0.5 + 0.5 * Math.sin(w.t * (8 + u * 18));
       w.m.material.opacity = 0.45 + 0.5 * pl; w.f.material.opacity = 0.08 + 0.25 * u; w.f.scale.setScalar(Math.min(1, u)); if (w.t >= w.dur || w.dead) { this.scene.remove(w.m); w.m.material.dispose(); w.f.material.dispose(); this.warns.splice(i, 1); } }
-    for (let i = this.zaps.length - 1; i >= 0; i--) { const z = this.zaps[i]; z.t += dt; z.m.visible = z.t < z.life && (z.t < 0.05 || Math.random() < 0.8); if (z.t >= z.life) { this.scene.remove(z.m); z.m.geometry.dispose(); this.zaps.splice(i, 1); } }
+    for (let i = this.zaps.length - 1; i >= 0; i--) { const z = this.zaps[i]; z.t += dt; z.m.visible = z.t < z.life && (z.t < 0.04 || Math.random() < (z.flicker ? 0.62 : 0.8)); if (z.t >= z.life) { this.scene.remove(z.m); z.m.geometry.dispose(); this.zaps.splice(i, 1); } }
     this.light.intensity *= Math.max(0, 1 - dt * 7);
     this.shake = Math.max(0, this.shake - dt * 2.2);
     this.smoke.update(dt, fog); this.glow.update(dt, fog); this.fire.update(dt, fog);
