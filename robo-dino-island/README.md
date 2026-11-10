@@ -2,6 +2,8 @@
 
 An ad-free 3D browser game with five levels: a jungle island with a volcano, ruins and a sea; **Dragon Peak**, a volcanic mountain at dusk with a glowing lava sea, castle ruins and dragons; **Mega City Smash**, a sunset city full of buildings you can knock down; **Deep Sea Showdown**, an underwater level where you play as a sea creature; and **Farty Poop Farm**, a silly farm where Leandro feeds the animals and rides a horse. You play as either a **real dinosaur** (bite, roar, tail whip, horn charge, pounce) or a **robot mech dinosaur** (lasers, homing missiles, bite/stomp), or a **dragon** (fireballs, fire/frost/lightning breath, flight), and you battle a wild mix of both. A knocked-out robot falls over in a shower of sparks. A knocked-out real dino gets dizzy stars and limps off in a puff of dust. There is no gore or blood.
 
+v5.8.8 adds a 3D Brachiosaurus, the tallest dinosaur in the game. Leandro rides at the base of its neck, and its special is still the earth-shaking stomp. The Brachio-Tank mech is unchanged.
+
 * **No ads, purchases, external links, tracking or network calls.** Everything is static files from the same origin, and a CSP (`default-src 'self'`) enforces that.
 * **Everything is unlocked from the start**: all 41 playable creatures (18 real dinos, 11 robots, 4 dragons, Ricky & Bobby, and 6 sea creatures) and every upgrade at max level. Upgrade levels can be dialled up or down for free in the garage. Bolts are just a score now and don't gate anything. Older saves get everything unlocked when they load.
 * It's an installable PWA and works fully offline after the first load.

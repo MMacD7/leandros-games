@@ -4,8 +4,10 @@ import { clone } from './vendor/SkeletonUtils.js';
 
 const LION_URL = 'assets/models/lion.glb';
 const TREX_URL = 'assets/models/trex.glb';
+const BRACHIO_URL = 'assets/models/brachio.glb';
 let lionCache = null;
 let trexCache = null;
+let brachioCache = null;
 
 export function preloadLion(mgr) {
   const loader = new GLTFLoader(mgr);
@@ -25,4 +27,14 @@ export function preloadTrex(mgr) {
 export function cloneTrex() {
   if (!trexCache) throw new Error('trex model not loaded');
   return { scene: clone(trexCache.scene), animations: trexCache.animations };
+}
+
+export function preloadBrachio(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(BRACHIO_URL, gltf => { brachioCache = gltf; }, undefined, err => console.error(BRACHIO_URL, err));
+}
+
+export function cloneBrachio() {
+  if (!brachioCache) throw new Error('brachio model not loaded');
+  return { scene: clone(brachioCache.scene), animations: brachioCache.animations };
 }
