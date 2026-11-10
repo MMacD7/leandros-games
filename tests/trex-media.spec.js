@@ -56,7 +56,10 @@ test('v5.8.7 T-Rex stills and a walk clip', async ({ page }) => {
       p.mech.obj.position.copy(p.pos);
       p.mech.obj.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.yaw + Math.PI);
       p.mech.obj.updateMatrixWorld(true);
-      if (pose === 'roar' || pose === 'chomp') {
+      if (pose === 'rider') {
+        for (let i = 0; i < 8; i++) p.mech.animate(1 / 20, 4, {});
+        if (g.rider) g.rider.update(1 / 20, p);
+      } else if (pose === 'roar' || pose === 'chomp') {
         const clip = pose === 'roar' ? 'Roar' : 'Chomp';
         p.mech._clip = '';
         p.mech.play(clip, false, 1);
@@ -81,11 +84,19 @@ test('v5.8.7 T-Rex stills and a walk clip', async ({ page }) => {
       const cam = g.camera;
       cam.position.copy(mid).addScaledVector(side, dist);
       cam.lookAt(mid.x, chest.y, mid.z);
+      if (pose === 'rider' && g.rider && g.rider.head) {
+        const look = new THREE.Vector3();
+        g.rider.head.getWorldPosition(look);
+        cam.position.copy(look).addScaledVector(side, 2.6).addScaledVector(axis, 1.6);
+        cam.position.y = look.y + 0.2;
+        cam.lookAt(look);
+      }
       G.renderer.render(g.scene, cam);
     }, { speed, pose });
     await page.screenshot({ path: OUT + '/' + file });
   };
   await shoot('v587-trex-walk.png', 5, '');
+  await shoot('v587-trex-rider.png', 4, 'rider');
   await shoot('v587-trex-run.png', 12, '');
   await shoot('v587-trex-roar.png', 0, 'roar');
   await shoot('v587-trex-chomp.png', 0, 'chomp');

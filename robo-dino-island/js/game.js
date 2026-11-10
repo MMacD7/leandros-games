@@ -154,7 +154,7 @@ export class Game {
   mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && p.def.costume) return; // Rex Costume already shows Leandro. The lion is a 3D cat, so Leandro sits on the seat.
     if (!(p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean))) return; // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
     if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false });
-    else if (p.def.kind === 'trex' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.46, spread: 1.0, shinOut: 0.06, saddle: false, grip: 'neck' });
+    else if (p.def.kind === 'trex' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.52, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
     else R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }

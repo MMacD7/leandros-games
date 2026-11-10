@@ -56,11 +56,11 @@ export class Rider {
       add(foot, new THREE.BoxGeometry(0.1, 0.02, 0.06), m.sole, 0, 0.005, 0.12);
       this.legs.push({ hip, knee, foot, s }); }
     // torso
-    const torso = this.torso = new THREE.Group(); torso.position.y = 0.1; hips.add(torso);
+    const torso = this.torso = new THREE.Group(); torso.name = 'rider-torso'; torso.position.y = 0.1; hips.add(torso);
     add(torso, new THREE.BoxGeometry(0.42, 0.42, 0.26), [m.shirtPlain, m.shirtPlain, m.shirtPlain, m.shirtPlain, m.shirt, m.shirtPlain], 0, 0.22, 0);
     // (v5.3: no backpack any more, just the hooped kit)
     // head
-    const head = this.head = new THREE.Group(); head.position.y = 0.5; torso.add(head);
+    const head = this.head = new THREE.Group(); head.name = 'rider-head'; head.position.y = 0.5; torso.add(head);
     add(head, new THREE.CylinderGeometry(0.07, 0.08, 0.08, 10), m.skin, 0, -0.02, 0);
     const H = add(head, new THREE.SphereGeometry(0.21, 18, 14), m.skin, 0, 0.2, 0); H.scale.set(1, 0.98, 0.95);
     const hair = add(head, new THREE.SphereGeometry(0.222, 18, 10, 0, Math.PI * 2, 0, 1.42), m.hair, 0, 0.215, -0.012); hair.rotation.x = -0.22; hair.scale.set(1.02, 1, 1);
@@ -158,10 +158,10 @@ export class Rider {
   setPose(dt, st = {}) {
     const L = this.legs, A = this.arms, t = this.t;
     if (this.bare && this.grip === 'neck') {
-      // Astride the T-Rex, leaning onto the neck, both hands holding it.
-      for (const g of L) { g.hip.rotation.set(-0.18, 0, g.s * 0.82); g.knee.rotation.set(0.58, 0, 0); g.foot.rotation.set(0.12, 0, 0); }
-      this.torso.rotation.set(0.72, 0, 0); this.head.rotation.set(-0.18, Math.sin(t * 0.6) * 0.05, 0);
-      for (const a of A) { a.sh.rotation.set(-1.85, 0, a.s * -0.5); a.el.rotation.set(-0.35, 0, 0); }
+      // Hips on the hide, legs down both flanks, both hands on the base of the neck, face up.
+      for (const g of L) { g.hip.rotation.set(-0.42, 0, g.s * 1.05); g.knee.rotation.set(0.95, 0, 0); g.foot.rotation.set(0.08, 0, 0); }
+      this.torso.rotation.set(0.28, 0, 0); this.head.rotation.set(-0.06, Math.sin(t * 0.6) * 0.04, 0);
+      for (const a of A) { a.sh.rotation.set(-1.28, 0, a.s * -0.32); a.el.rotation.set(-0.72, 0, 0); }
       return;
     }
     if (this.bare) {

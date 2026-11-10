@@ -53,8 +53,8 @@ export class TrexMech {
     this.mouth = new THREE.Group(); this.mouth.name = 'trex-mouth';
     this.mouth.position.set(0, -0.02, 0.16); (bones.jaw || bones.head).add(this.mouth);
     this.seat = new THREE.Group(); this.seat.name = 'trex-seat';
-    // On the back, just behind the neck, parented to the spine so he leans with the gait.
-    this.seat.position.set(0, 0.02, 0.18); (bones.spine || bones.hips).add(this.seat);
+    (bones.spine || bones.hips).add(this.seat);
+    this.seatOnBack();
     this.body = new THREE.Group(); this.body.name = 'trex-body'; bones.chest.add(this.body);
     this.legs = [bones.l_foot, bones.r_foot].map(g => ({ g: g || new THREE.Group() }));
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
@@ -72,6 +72,38 @@ export class TrexMech {
     this.mats = { plate: mat, glowColor: new THREE.Color(0xffc21a) };
     this.height = size.y * s; this.fitR = Math.max(size.x, size.z) * s * 0.48;
     this.sockets = { mouth: this.mouth };
+  }
+  // Highest hide under a world x,z. Raycast is restored only for the query.
+  surfaceY(x, z) {
+    this.obj.updateMatrixWorld(true);
+    for (const m of this.meshes) delete m.raycast;
+    const ray = new THREE.Raycaster(new THREE.Vector3(x, 12, z), new THREE.Vector3(0, -1, 0), 0, 24);
+    const hits = ray.intersectObjects(this.meshes, false);
+    for (const m of this.meshes) m.raycast = () => {};
+    if (!hits.length) return null;
+    let top = -Infinity;
+    for (const h of hits) if (h.point.y > top) top = h.point.y;
+    return top;
+  }
+  // Hips sit on the shoulder hide, just behind the neck, in the spine's space.
+  seatOnBack() {
+    this.obj.updateMatrixWorld(true);
+    const chest = this.bones.chest, spine = this.bones.spine;
+    const c = new THREE.Vector3();
+    chest.getWorldPosition(c);
+    let best = null;
+    for (const dz of [-0.22, -0.12, -0.02]) {
+      for (const dx of [-0.05, 0, 0.05]) {
+        const y = this.surfaceY(c.x + dx * this.modelScale, c.z + dz * this.modelScale);
+        if (y == null) continue;
+        const p = new THREE.Vector3(c.x + dx * this.modelScale, y, c.z + dz * this.modelScale);
+        if (!best || p.y > best.y) best = p;
+      }
+    }
+    if (!best) { this.seat.position.set(0, 0.28, 0.05); return; }
+    const local = spine.worldToLocal(best.clone());
+    local.y += 0.07;
+    this.seat.position.copy(local);
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }
   footPos(i, out) { return this.legs[i % this.legs.length].g.getWorldPosition(out); }

@@ -270,15 +270,40 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
     m.obj.updateMatrixWorld(true);
     const b = footY();
     const lift = a.map((v, i) => Math.abs(b[i] - v));
+    const rider = g.rider;
+    const sunk = [];
+    if (rider && rider.mounted && rider.head && rider.torso) {
+      for (const name of ['Idle', 'Walk', 'Run', 'Roar', 'Chomp']) {
+        const act = m.actions[name];
+        if (!act) { sunk.push(name); continue; }
+        const dur = act.getClip().duration;
+        m._clip = '';
+        m.play(name, true, 1);
+        for (let i = 0; i < 6; i++) {
+          act.time = dur * i / 6;
+          m.mixer.update(0);
+          m.obj.updateMatrixWorld(true);
+          for (const part of [rider.head, rider.torso]) {
+            const box = new THREE.Box3().setFromObject(part);
+            const top = m.surfaceY((box.min.x + box.max.x) / 2, (box.min.z + box.max.z) / 2);
+            if (top == null) continue;
+            const gap = box.min.y - top;
+            const need = part === rider.head ? 0.1 : -0.03;
+            if (gap < need) sunk.push({ clip: name, i, part: part.name, gap: Math.round(gap * 1000) / 1000 });
+          }
+        }
+      }
+    } else sunk.push('no-rider');
     const rex = G.defs().find(d => d.id === 'rex');
     const ok = p.def.id === 'trex' && p.def.kind === 'trex' && m.skinned === true && p.def.radius === 2.5
       && names.includes('jaw') && names.includes('l_thigh') && names.includes('tail5')
       && clips.includes('Walk') && clips.includes('Run') && clips.includes('Roar') && clips.includes('Chomp') && clips.includes('Stagger')
       && rex && rex.kind === 'rex';
     G.save.jungleLion = true; G.save.farmLion = true; G.save.jungleCostume = true; G.save.selected = 'rex'; g.spawnPlayer(false);
-    return { ok, lift, costume: g.player.def.costume === true };
+    return { ok, lift, sunk, costume: g.player.def.costume === true };
   });
   expect(trexSmoke.ok, JSON.stringify(trexSmoke)).toBe(true);
+  expect(trexSmoke.sunk, JSON.stringify(trexSmoke.sunk)).toEqual([]);
   expect(Math.max(...trexSmoke.lift)).toBeGreaterThan(0.12);
   expect(trexSmoke.costume).toBe(true);
 
