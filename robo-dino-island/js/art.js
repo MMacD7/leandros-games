@@ -2,8 +2,6 @@
 import * as THREE from './vendor/three.bundle.min.js';
 
 export const ART = {
-  lion: 'assets/art/lion.webp',
-  lionRide: 'assets/art/lion-rider.webp',
   rex: 'assets/art/rex-rider.webp',
 };
 

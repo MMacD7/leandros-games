@@ -1,6 +1,6 @@
-// v5.8.5 Thunder Lion. The approved drawing, shown as a camera-facing picture. No armor.
+// v5.8.6 Thunder Lion. Meshy model from the approved concept, rigged in this game. No armor.
 import * as THREE from './vendor/three.bundle.min.js';
-import { ART, artMap, faceCamera, facingSign } from './art.js';
+import { cloneLion } from './models.js';
 
 export const LION = {
   id: 'lion', name: 'Thunder Lion', lion: true, real: true, kind: 'lion',
@@ -10,80 +10,114 @@ export const LION = {
   scale: 1, radius: 1.7, color: 0xe8a04a, accent: 0x39e0ff,
 };
 
-function plane(w, h, map, name) {
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
-    map, transparent: true, alphaTest: 0.28, depthWrite: true, side: THREE.DoubleSide, toneMapped: false,
-  }));
-  mesh.name = name; mesh.position.y = h * 0.5; mesh.frustumCulled = false; mesh.renderOrder = 2;
-  return mesh;
-}
+const RIM = (shader) => {
+  shader.fragmentShader = shader.fragmentShader.replace('#include <output_fragment>', `
+    float rim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.2);
+    outgoingLight += vec3(1.0, 0.72, 0.35) * rim * 0.28;
+    #include <output_fragment>`);
+};
 
 export class LionMech {
   constructor(def) {
     this.def = def; this.wild = false; this.real = true; this.quad = true; this.flyer = false; this.kid = false;
-    this.phase = 0; this.t = 0; this.flash = 0; this.ko = 0; this.roar = 0; this.happy = 0; this.cheek = 0; this.thunderT = 0;
-    this.ridden = true; this.face = 1; this._yaw = 0;
+    this.phase = 0; this.t = 0; this.flash = 0; this.ko = 0; this.roar = 0; this.happy = 0; this.cheek = 0; this.thunderT = 0; this.jaw = 0;
+    this.skinned = true; this._clip = 'Idle';
     const obj = this.obj = new THREE.Group(); obj.name = 'friendly-lion';
-    const alone = { w: 4.35, h: 2.61 };
-    const ride = { w: 4.55, h: 3.06 };
-    this.sizes = { alone, ride };
-    this.art = plane(ride.w, ride.h, artMap(ART.lionRide), 'lion-art');
-    this.motion = new THREE.Group(); obj.add(this.motion); this.motion.add(this.art);
-    this.body = new THREE.Group(); this.body.name = 'lion-body'; this.body.position.set(0, 1.15, 0); this.art.add(this.body);
-    this.head = new THREE.Group(); this.head.name = 'lion-head'; this.head.position.set(ride.w * 0.32, 0.15, 0.02); this.art.add(this.head);
-    this.mouth = new THREE.Group(); this.mouth.name = 'lion-mouth'; this.mouth.position.set(0.15, -0.05, 0.02); this.head.add(this.mouth);
-    this.mane = new THREE.Group(); this.mane.name = 'lion-mane'; this.mane.position.set(-0.15, 0.25, 0); this.head.add(this.mane);
-    const whisk = new THREE.Object3D(); whisk.name = 'lion-whisker'; whisk.position.set(0.2, -0.02, 0.02); this.head.add(whisk);
-    this.rear = new THREE.Group(); this.rear.name = 'lion-rear'; this.rear.position.set(-ride.w * 0.36, -0.15, 0.04); this.art.add(this.rear);
-    this.seat = new THREE.Group(); this.seat.name = 'lion-seat'; this.seat.position.set(-ride.w * 0.08, 0.35, 0); this.art.add(this.seat);
-    this.legs = [];
-    for (const x of [-0.7, -0.2, 0.35, 0.7]) {
-      const g = new THREE.Group(); g.position.set(x, -ride.h * 0.42, 0); this.art.add(g);
-      const knee = new THREE.Group(); g.add(knee); this.legs.push({ g, knee });
+    const { scene, animations } = cloneLion();
+    const rig = this.rig = new THREE.Group(); obj.add(rig); rig.add(scene);
+    const bones = {};
+    scene.traverse(o => {
+      if (o.isBone) bones[o.name] = o;
+      if (o.isMesh) {
+        o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; o.raycast = () => {};
+        const mats = [].concat(o.material);
+        for (const m of mats) {
+          if (!m) continue;
+          m.roughness = 0.62; m.metalness = 0.0;
+          m.emissive = new THREE.Color(0x3a1808); m.emissiveIntensity = 0.22;
+          m.onBeforeCompile = RIM;
+        }
+      }
+    });
+    this.bones = bones;
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = box.getSize(new THREE.Vector3());
+    const s = 4.2 / Math.max(size.z, size.x, 0.001);
+    rig.scale.setScalar(s);
+    box.setFromObject(rig);
+    rig.position.y -= box.min.y;
+    this.modelScale = s;
+
+    const head = bones.head;
+    const spine = bones.spine || bones.chest;
+    const hips = bones.hips;
+    this.head = new THREE.Group(); this.head.name = 'lion-head'; head.add(this.head);
+    this.mouth = new THREE.Group(); this.mouth.name = 'lion-mouth'; this.mouth.position.set(0, -0.05, 0.16); (bones.jaw || head).add(this.mouth);
+    this.mane = new THREE.Group(); this.mane.name = 'lion-mane'; head.add(this.mane);
+    const whisk = new THREE.Object3D(); whisk.name = 'lion-whisker'; whisk.position.set(0.08, 0.02, 0.18); head.add(whisk);
+    this.body = new THREE.Group(); this.body.name = 'lion-body'; spine.add(this.body);
+    this.seat = new THREE.Group(); this.seat.name = 'lion-seat'; this.seat.position.set(0, 0.1, 0.2); spine.add(this.seat);
+    this.rear = new THREE.Group(); this.rear.name = 'lion-rear'; this.rear.position.set(0, 0.08, -0.22); (bones.tail1 || hips).add(this.rear);
+    this.legs = ['fl_paw', 'fr_paw', 'bl_paw', 'br_paw'].map(name => ({ g: bones[name] || new THREE.Group(), knee: bones[name] }));
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.05, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; obj.add(shadow); this.shadow = shadow;
+
+    this.mixer = new THREE.AnimationMixer(scene);
+    this.actions = {};
+    for (const clip of animations) {
+      const act = this.mixer.clipAction(clip);
+      act.play();
+      act.setEffectiveWeight(clip.name === 'Idle' ? 1 : 0);
+      this.actions[clip.name] = act;
     }
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false }));
-    shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.04; shadow.name = 'lion-shadow'; obj.add(shadow); this.shadow = shadow;
-    this.mats = { plate: this.art.material, glowColor: new THREE.Color(0xffc14a) };
-    this.setRidden(true);
-    this.height = 2.9; this.fitR = 4.6;
+    const mat = scene.getObjectByProperty('isMesh', true);
+    this.mats = { plate: mat && mat.material, glowColor: new THREE.Color(0xffc14a) };
+    this.height = size.y * s + 1.25; this.fitR = Math.max(size.x, size.z) * s * 0.62;
     this.sockets = { mouth: this.mouth, rear: this.rear };
-    this.meshes = [this.art, shadow];
-  }
-  setRidden(on) {
-    this.ridden = !!on;
-    const s = on ? this.sizes.ride : this.sizes.alone;
-    this.art.material.map = artMap(on ? ART.lionRide : ART.lion);
-    this.art.geometry.dispose();
-    this.art.geometry = new THREE.PlaneGeometry(s.w, s.h);
-    this.art.position.y = s.h * 0.5;
-    this.head.position.x = s.w * 0.32;
-    this.rear.position.x = -s.w * 0.36;
-    this.seat.position.x = -s.w * (on ? 0.02 : 0.08);
-    this.height = s.h;
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }
   footPos(i, out) { return this.legs[i % this.legs.length].g.getWorldPosition(out); }
-  dispose() { this.art.geometry.dispose(); }
+  dispose() { this.mixer.stopAllAction(); }
+  play(name, loop, scale) {
+    const next = this.actions[name]; if (!next) return;
+    const fresh = this._clip !== name;
+    if (fresh) {
+      next.reset();
+      next.loop = loop ? THREE.LoopRepeat : THREE.LoopOnce;
+      next.clampWhenFinished = !loop;
+      next.play();
+      this._clip = name;
+    }
+    next.timeScale = scale;
+    for (const [n, act] of Object.entries(this.actions)) {
+      const target = n === name ? 1 : 0;
+      act.setEffectiveWeight(fresh || !loop ? target : act.getEffectiveWeight() * 0.62 + target * 0.38);
+    }
+    return next;
+  }
+  // One cycle of the baked clip covers this much ground, so the feet keep up with speedNow.
+  cycleDist(name) {
+    const leg = 0.92 * this.modelScale;
+    if (name === 'Run') return 4 * leg * Math.sin(35 * Math.PI / 180);
+    if (name === 'Walk') return 4 * leg * Math.sin(32 * Math.PI / 180);
+    return 1;
+  }
   animate(dt, speed, o = {}) {
     this.t += dt;
-    const moving = speed > 0.45, gallop = speed > 14;
-    this.phase += dt * (moving ? (gallop ? 14 : 9) : 2.2);
-    const bob = moving ? Math.abs(Math.sin(this.phase)) * (gallop ? 0.16 : 0.09) : Math.sin(this.t * 2.2) * 0.02;
-    this.motion.position.y = bob;
-    const yaw = this.obj.rotation.y;
-    const turn = (o && o.turn) || (yaw - this._yaw);
-    this._yaw = yaw;
-    this.face = facingSign(yaw, this.face);
-    faceCamera(this.art);
-    const lean = Math.max(-0.18, Math.min(0.18, -turn * 2.2)) + Math.sin(this.phase) * (moving ? 0.035 : 0.012);
-    this.art.rotateZ(lean);
-    const sx = this.face * (1 + bob * 0.55);
-    const sy = 1 - bob * 0.35 + (this.cheek || 0) * 0.04;
-    this.art.scale.set(sx, sy, 1);
-    this.shadow.scale.set(1.15 + bob, 1.15 + bob, 1);
-    this.shadow.material.opacity = 0.28 + bob;
-    this.happy = Math.max(0, this.happy - dt);
+    const roar = Math.max(o.roar || 0, this.thunderT > 0 ? 1 : 0, this.roar || 0);
+    const gulp = Math.max(o.jaw || 0, this.jaw || 0);
+    let name = 'Idle', loop = true, scale = 1;
+    if (gulp > 0.25) { name = 'Chomp'; loop = false; }
+    else if (roar > 0.25) { name = 'Roar'; loop = false; }
+    else if (speed > 8) { name = 'Run'; scale = Math.max(0.35, speed / this.cycleDist('Run') * 0.5); }
+    else if (speed > 0.45) { name = 'Walk'; scale = Math.max(0.35, speed / this.cycleDist('Walk') * 0.8); }
+    const act = this.play(name, loop, scale);
+    this.mixer.update(dt);
+    if (act && act.getClip()) this.phase = (act.time / act.getClip().duration) * Math.PI * 2;
+    this.jaw = Math.max(0, (this.jaw || 0) - dt * 1.6);
+    this.roar = Math.max(0, (this.roar || 0) - dt);
     this.thunderT = Math.max(0, this.thunderT - dt);
+    this.happy = Math.max(0, this.happy - dt);
     this.cheek = Math.max(0, (this.cheek || 0) - dt * 0.4);
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3);
   }

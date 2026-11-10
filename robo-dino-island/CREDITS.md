@@ -1,15 +1,14 @@
 # Credits
 
-The lion and the Rex rider are original drawings made for Robo Dino Island. They are not copied from a film, a show, or a photo. The game shows them as pictures that turn to face the camera.
-
 ## Thunder Lion
 
-- `assets/art/lion.webp` — the lion running, on his own. No outfit and no armor.
-- `assets/art/lion-rider.webp` — Leandro riding that lion, in a green and white hooped shirt and white shorts.
-- Style reference kept with the project notes: a heroic golden lion with a huge fiery mane.
+Lion 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/lion.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original lion concept. The quadruped rig and the Idle, Walk, Run, Roar, and Chomp clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- No armor, no outfit, and no logos.
 
 ## Rex Costume
 
-- `assets/art/rex-rider.webp` — Leandro in a cowboy hat, hooped shirt and white shorts, riding an orange and blue inflatable T-rex.
-
-License: original art made for this game. Safe to ship in this free browser game.
+- `assets/art/rex-rider.webp` — original drawing made for this game. Leandro in a cowboy hat, hooped shirt and white shorts, on an orange and blue inflatable T-rex.

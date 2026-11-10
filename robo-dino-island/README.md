@@ -86,6 +86,7 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
+* **v5.8.6: Meshy lion.** The lion is a textured 3D model generated with Meshy from the approved concept (see CREDITS.md), rigged here with idle, walk, run, roar, and chomp. No armor. The Rex drawing is unchanged.
 
 ## Modes
 * **Explore the Island**: free roam.

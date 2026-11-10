@@ -748,7 +748,7 @@ export class FarmLife {
     if (!p || !this.farmLion || !this.farmLion.obj.visible || this.riding || this.driving || this.ridingLion) return false;
     this.ridingLion = true; this.n.lionRides = (this.n.lionRides || 0) + 1; this.kidSpeed = this.kidSpeed || p.st.speed; p.st.speed = 13; p.radius = 1.35;
     const q = this.farmLion.obj.position; p.pos.x = q.x; p.pos.z = q.z; p.yaw = this.farmLion.obj.rotation.y; p.speedNow = 0; p.groundY();
-    p.mech.setRide(true, 1.62); this._rl = null; this.syncFarmLion(p, 0, false);
+    p.mech.setRide(true, 1.35); this._rl = null; this.syncFarmLion(p, 0, false);
     if (!quiet) { this.toast('🦁 Leandro is riding the lion! Tap ⚡ WAR. Hold GALLOP. Tap HOP OFF to feed.'); voice.say("Let's go, Leandro!", { prio: 2, cd: 2000 }); this.fx.dust(p.pos, 8, 1.5, 4); }
     return true;
   }
@@ -762,9 +762,8 @@ export class FarmLife {
   }
   syncFarmLion(p, dt, title) {
     const L = this.farmLion; if (!L || !L.obj.visible) return;
-    if (p && p.mech && p.mech.obj) p.mech.obj.visible = !this.ridingLion;
-    if (L.setRidden) L.setRidden(!!this.ridingLion);
-    if (this.ridingLion && p) { L.obj.position.set(p.pos.x, p.pos.y, p.pos.z); L.obj.rotation.y = p.yaw; L.animate(dt, p.speedNow || 0, { turn: p.turn || 0 }); }
+    if (p && p.mech && p.mech.obj) p.mech.obj.visible = true;
+    if (this.ridingLion && p) { L.obj.position.set(p.pos.x, p.pos.y, p.pos.z); L.obj.rotation.y = p.yaw; L.animate(dt, p.speedNow || 0, { turn: p.turn || 0, jaw: L.jaw || 0, roar: L.thunderT > 0 ? 1 : 0 }); }
     else L.animate(dt, 0, {});
     if (!title && this.active && p && this.g.save.farmLion && !this._lionBoot) { this._lionBoot = true; if (!this.riding && !this.driving && !this.ridingLion) this.mountLion(p); }
   }
