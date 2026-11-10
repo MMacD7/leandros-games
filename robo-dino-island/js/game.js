@@ -95,9 +95,10 @@ class Dino {
       m.obj.visible = dd < Math.min(330, (Q && Q.draw) || 400, w.drawCap ? w.drawCap / 0.75 * 0.9 : 1e9) * 0.75;
       if (!m.obj.visible) { m.obj.position.copy(this.pos); return; }
       if (far) { this._lodT = (this._lodT || 0) + dt; if (this._lodSkip = !this._lodSkip) { m.obj.position.copy(this.pos); return; } dt = this._lodT; } this._lodT = 0; }
-    const n = w.normalAt(this.pos.x, this.pos.z, tmp);
-    if (this.fly || (this.swim && this.ground < -0.8)) n.set(0, 1, 0);
-    const q = new THREE.Quaternion().setFromUnitVectors(up, n.lerp(up, this.mech.quad ? 0.35 : 0.65).normalize());
+    const n = this.def.lion && m.groundNormal ? m.groundNormal(this.pos.x, this.pos.z, this.yaw, (x, z) => w.height(x, z), tmp) : w.normalAt(this.pos.x, this.pos.z, tmp);
+    if (!this.def.lion && (this.fly || (this.swim && this.ground < -0.8))) n.set(0, 1, 0);
+    if (!this.def.lion) n.lerp(up, this.mech.quad ? 0.35 : 0.65);
+    const q = new THREE.Quaternion().setFromUnitVectors(up, n.normalize());
     this.tilt.slerp(q, Math.min(1, dt * 6));
     m.obj.position.copy(this.pos);
     m.obj.quaternion.copy(this.tilt).multiply(new THREE.Quaternion().setFromAxisAngle(up, this.yaw));
@@ -110,6 +111,7 @@ class Dino {
     const ro = this.real ? sstep(0, 0.35, this.roar) : (this.roar > 0.2 ? 1 : 0);
     m.animate(dt, this.alive ? this.speedNow : 0, { jaw: Math.max(this.jaw, this.roar > 0 ? 1 : 0), roar: ro, turn: this.turn || 0, flying: this.fly, boost: this.boosting, climb: this.climb,
       bite: Math.sin(this.biteA * Math.PI), charge: this.chargeA, whip: this.whipA, rear: this.rearA, air: this.air, pant: this.boosting ? 1 : 0, look: this.look || 0, frill: this.frillT > 0 || this.breathT > 0 });
+    if (this.alive && this.def.lion && m.seatOnGround) m.seatOnGround((x, z) => w.height(x, z));
     this.status(dt);
     // heavy footsteps: thump, dust at the foot and a camera rumble for big dinos near the camera
     if (!this.fly && this.alive && this.speedNow > 1.5 && !this.air) { const s = Math.sin(m.phase * (m.quad ? 1 : 1)); if ((s > 0) !== (this._lastS > 0)) this.g.footstep(this, s > 0 ? 0 : 1); this._lastS = s; }

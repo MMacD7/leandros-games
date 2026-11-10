@@ -28,6 +28,7 @@ export class LionMech {
     const bones = {};
     scene.traverse(o => {
       if (o.isBone) bones[o.name] = o;
+      if (o.isSkinnedMesh) this.skin = o;
       if (o.isMesh) {
         o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; o.raycast = () => {};
         const mats = [].concat(o.material);
@@ -40,6 +41,7 @@ export class LionMech {
       }
     });
     this.bones = bones;
+    this.meshes = this.skin ? [this.skin] : [];
     const box = new THREE.Box3().setFromObject(scene);
     const size = box.getSize(new THREE.Vector3());
     const s = 4.2 / Math.max(size.z, size.x, 0.001);
@@ -74,6 +76,33 @@ export class LionMech {
     this.mats = { plate: mat && mat.material, glowColor: new THREE.Color(0xffc14a) };
     this.height = size.y * s + 1.25; this.fitR = Math.max(size.x, size.z) * s * 0.62;
     this.sockets = { mouth: this.mouth, rear: this.rear };
+  }
+  // Slope under the four paws, not the smoothed hill normal. A long body leaned
+  // on the average slope still plants the uphill side in the hill.
+  groundNormal(x, z, yaw, heightAt, out) {
+    const fX = Math.sin(yaw), fZ = Math.cos(yaw), sX = fZ, sZ = -fX, d = 1.35;
+    const dz = (heightAt(x + fX * d, z + fZ * d) - heightAt(x - fX * d, z - fZ * d)) / (2 * d);
+    const dx = (heightAt(x + sX * d, z + sZ * d) - heightAt(x - sX * d, z - sZ * d)) / (2 * d);
+    return out.set(-dx * sX - dz * fX, 1, -dx * sZ - dz * fZ).normalize();
+  }
+  // The rest pose is fitted so the paws start on y=0. Clips and hills still push
+  // part of the body through the ground, so after each pose we lift by however
+  // far the deepest skinned point sits below the terrain under that point.
+  seatOnGround(heightAt) {
+    const sk = this.skin;
+    if (!sk || !heightAt) return 0;
+    this.obj.updateMatrixWorld(true);
+    const attr = sk.geometry.attributes.position;
+    const v = this._seatV || (this._seatV = new THREE.Vector3());
+    let lift = -Infinity;
+    for (let i = 0; i < attr.count; i += 4) {
+      sk.getVertexPosition(i, v);
+      v.applyMatrix4(sk.matrixWorld);
+      const pen = heightAt(v.x, v.z) - v.y;
+      if (pen > lift) lift = pen;
+    }
+    if (lift > -Infinity) this.obj.position.y += lift;
+    return lift;
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }
   footPos(i, out) { return this.legs[i % this.legs.length].g.getWorldPosition(out); }
