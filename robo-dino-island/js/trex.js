@@ -44,7 +44,7 @@ export class TrexMech {
     this.b = { pelvis: bones.hips, chest: bones.chest, neck: bones.neck, head: bones.head, jaw: bones.jaw };
     const box = new THREE.Box3().setFromObject(scene);
     const size = box.getSize(new THREE.Vector3());
-    const s = 6.4 / Math.max(size.z, 0.001);
+    const s = 9.6 / Math.max(size.z, 0.001); // 1.5x the previous 6.4-unit length
     rig.scale.setScalar(s);
     box.setFromObject(rig);
     rig.position.y -= box.min.y;
@@ -57,7 +57,7 @@ export class TrexMech {
     this.seatOnBack();
     this.body = new THREE.Group(); this.body.name = 'trex-body'; bones.chest.add(this.body);
     this.legs = [bones.l_foot, bones.r_foot].map(g => ({ g: g || new THREE.Group() }));
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.7, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
     shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; obj.add(shadow); this.shadow = shadow;
 
     this.mixer = new THREE.AnimationMixer(scene);

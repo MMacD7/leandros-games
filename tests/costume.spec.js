@@ -295,12 +295,26 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
       }
     } else sunk.push('no-rider');
     const rex = G.defs().find(d => d.id === 'rex');
-    const ok = p.def.id === 'trex' && p.def.kind === 'trex' && m.skinned === true && p.def.radius === 2.5
+    const giga = G.defs().find(d => d.id === 'giga');
+    const ws = new THREE.Vector3();
+    const riderWorld = rider && rider.obj ? rider.obj.getWorldScale(ws).x : 0;
+    let bestWalk = 0;
+    for (const yaw of [0, 0.9, 1.8, 2.7, 3.6, 4.5]) {
+      p.pos.set(20, 0, 80); p.yaw = yaw; p.speedNow = 0; p.groundY();
+      const x0 = p.pos.x, z0 = p.pos.z, dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+      for (let i = 0; i < 90; i++) p.move(1 / 30, dir, 1, false);
+      bestWalk = Math.max(bestWalk, Math.hypot(p.pos.x - x0, p.pos.z - z0));
+    }
+    const ok = p.def.id === 'trex' && p.def.kind === 'trex' && m.skinned === true && p.def.radius === 3.75
+      && m.modelScale > 4.8 && m.modelScale < 5.4
+      && riderWorld > 1.5 && riderWorld < 2.05
+      && giga && giga.scale === 1.25 && giga.radius === 4.13 && giga.radius > p.def.radius * 1.09
+      && bestWalk > 12
       && names.includes('jaw') && names.includes('l_thigh') && names.includes('tail5')
       && clips.includes('Walk') && clips.includes('Run') && clips.includes('Roar') && clips.includes('Chomp') && clips.includes('Stagger')
       && rex && rex.kind === 'rex';
     G.save.jungleLion = true; G.save.farmLion = true; G.save.jungleCostume = true; G.save.selected = 'rex'; g.spawnPlayer(false);
-    return { ok, lift, sunk, costume: g.player.def.costume === true };
+    return { ok, lift, sunk, costume: g.player.def.costume === true, bestWalk, riderWorld, scale: m.modelScale, gigaR: giga && giga.radius };
   });
   expect(trexSmoke.ok, JSON.stringify(trexSmoke)).toBe(true);
   expect(trexSmoke.sunk, JSON.stringify(trexSmoke.sunk)).toEqual([]);
