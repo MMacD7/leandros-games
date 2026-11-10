@@ -742,7 +742,7 @@ export class FarmLife {
     if (this.farmLion) this.farmLion.obj.visible = on;
     if (!on && this.ridingLion) this.dismountLion(true);
   }
-  placeFarmLion(x, z, yaw) { const L = this.farmLion; if (!L) return; const h = this.W.height(x, z); L.obj.position.set(x, Math.max(h, 0), z); L.obj.rotation.set(0, yaw, 0); }
+  placeFarmLion(x, z, yaw) { const L = this.farmLion; if (!L) return; const h = this.W.height(x, z); L._yaw = yaw; L.obj.position.set(x, Math.max(h, 0), z); L.obj.rotation.set(0, yaw, 0); }
   lionNear(p) { const L = this.farmLion; if (!L || !L.obj.visible || this.ridingLion || !p) return false; const q = L.obj.position; return Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < 4.8; }
   mountLion(p = this.kid, quiet = false) {
     if (!p || !this.farmLion || !this.farmLion.obj.visible || this.riding || this.driving || this.ridingLion) return false;
@@ -763,8 +763,17 @@ export class FarmLife {
   syncFarmLion(p, dt, title) {
     const L = this.farmLion; if (!L || !L.obj.visible) return;
     if (p && p.mech && p.mech.obj) p.mech.obj.visible = true;
-    if (this.ridingLion && p) { L.obj.position.set(p.pos.x, p.pos.y, p.pos.z); L.obj.rotation.y = p.yaw; L.animate(dt, p.speedNow || 0, { turn: p.turn || 0, jaw: L.jaw || 0, roar: L.thunderT > 0 ? 1 : 0 }); }
+    const riding = this.ridingLion && p;
+    const x = riding ? p.pos.x : L.obj.position.x, z = riding ? p.pos.z : L.obj.position.z;
+    const yaw = riding ? p.yaw : (L._yaw || 0);
+    const h = this.W.height(x, z);
+    L.obj.position.set(x, Math.max(h, 0), z);
+    const n = L.groundNormal ? L.groundNormal(x, z, yaw, (a, b) => this.W.height(a, b), this._ln || (this._ln = new THREE.Vector3())) : this.W.normalAt(x, z, this._ln || (this._ln = new THREE.Vector3())).normalize();
+    const stand = new THREE.Quaternion().setFromUnitVectors(this._up || (this._up = new THREE.Vector3(0, 1, 0)), n);
+    L.obj.quaternion.copy(stand).multiply(new THREE.Quaternion().setFromAxisAngle(this._up, yaw));
+    if (riding) L.animate(dt, p.speedNow || 0, { turn: p.turn || 0, jaw: L.jaw || 0, roar: L.thunderT > 0 ? 1 : 0 });
     else L.animate(dt, 0, {});
+    if (L.seatOnGround) L.seatOnGround((a, b) => this.W.height(a, b));
     if (!title && this.active && p && this.g.save.farmLion && !this._lionBoot) { this._lionBoot = true; if (!this.riding && !this.driving && !this.ridingLion) this.mountLion(p); }
   }
   // ---------- v5.3 the BIG BOUNCY CASTLE ----------
