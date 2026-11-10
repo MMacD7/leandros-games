@@ -363,7 +363,7 @@ tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
-const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.82, spread: 0.7, shinOut: 0.22, seatW: 0.32 }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
@@ -420,7 +420,7 @@ function setJunglePreview() {
   } else {
     gMech = gMechs.lion || (gMechs.lion = makeDino(LION, assets, false)); gScene.add(gMech.obj);
     gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
-    if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.82, spread: 0.7, shinOut: 0.22, seatW: 0.32 }); else gRider.unmount();
+    if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount();
   }
 }
 function showLions() {
@@ -515,6 +515,7 @@ function fpsTick(dt, now) {
 let last = performance.now(), smokeT = 0, titleT = 0, frames = 0, cpuMs = 0, garageFrame = null;
 function loop(now) {
   requestAnimationFrame(loop);
+  if (window.__hold) return;
   setArtCamera(screen === 'garage' ? gCam : (game && game.camera));
   let dt = (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; if (dt <= 0) return;
   frames++;

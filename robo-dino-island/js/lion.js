@@ -56,8 +56,8 @@ export class LionMech {
     this.mane = new THREE.Group(); this.mane.name = 'lion-mane'; head.add(this.mane);
     const whisk = new THREE.Object3D(); whisk.name = 'lion-whisker'; whisk.position.set(0.08, 0.02, 0.18); head.add(whisk);
     this.body = new THREE.Group(); this.body.name = 'lion-body'; spine.add(this.body);
-    this.seat = new THREE.Group(); this.seat.name = 'lion-seat'; this.seat.position.set(0, 0.16, 0.06); hips.add(this.seat);
-    this.rear = new THREE.Group(); this.rear.name = 'lion-rear'; this.rear.position.set(0, 0.05, -0.08); (bones.tail1 || hips).add(this.rear);
+    this.seat = new THREE.Group(); this.seat.name = 'lion-seat'; this.seat.position.set(0, 0.1, 0.2); spine.add(this.seat);
+    this.rear = new THREE.Group(); this.rear.name = 'lion-rear'; this.rear.position.set(0, 0.08, -0.22); (bones.tail1 || hips).add(this.rear);
     this.legs = ['fl_paw', 'fr_paw', 'bl_paw', 'br_paw'].map(name => ({ g: bones[name] || new THREE.Group(), knee: bones[name] }));
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.05, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
     shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; obj.add(shadow); this.shadow = shadow;
@@ -72,7 +72,7 @@ export class LionMech {
     }
     const mat = scene.getObjectByProperty('isMesh', true);
     this.mats = { plate: mat && mat.material, glowColor: new THREE.Color(0xffc14a) };
-    this.height = size.y * s; this.fitR = Math.max(size.x, size.z) * s * 0.55;
+    this.height = size.y * s + 1.25; this.fitR = Math.max(size.x, size.z) * s * 0.62;
     this.sockets = { mouth: this.mouth, rear: this.rear };
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }

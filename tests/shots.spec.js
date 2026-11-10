@@ -32,7 +32,7 @@ test('v5.8.6 lion approval shots', async ({ page }) => {
   await poll(page, () => G.save.jungleLion === true && G.save.farmLion === true);
   await page.waitForTimeout(400);
   for (const [name, yaw] of [['front', 0.7], ['side', 1.6], ['back', 2.5]]) {
-    await page.evaluate(yaw => G.frameGarage({ zoom: 0.38, yaw }), yaw);
+    await page.evaluate(yaw => G.frameGarage({ zoom: 0.58, yaw }), yaw);
     await page.waitForTimeout(350);
     await page.screenshot({ path: OUT + '/v586-lion-garage-' + name + '.png' });
   }
@@ -58,6 +58,18 @@ test('v5.8.6 lion approval shots', async ({ page }) => {
   });
   await page.waitForTimeout(200);
   await page.screenshot({ path: OUT + '/v586-lion-jungle-run.png' });
+  await page.evaluate(() => {
+    const g = G.game, p = g.player, THREE = G.THREE;
+    const look = new THREE.Vector3();
+    g.camHook = (cam) => {
+      p.mech.seat.getWorldPosition(look); look.y += 0.45;
+      const yaw = p.yaw + 1.2, dist = 3.6, pitch = 0.16;
+      cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
+      cam.lookAt(look);
+    };
+  });
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: OUT + '/v586-lion-seat-closeup.png' });
 
   await go(page, 'farm');
   await page.evaluate(() => G.show('play'));

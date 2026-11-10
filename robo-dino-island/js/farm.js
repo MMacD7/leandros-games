@@ -748,7 +748,7 @@ export class FarmLife {
     if (!p || !this.farmLion || !this.farmLion.obj.visible || this.riding || this.driving || this.ridingLion) return false;
     this.ridingLion = true; this.n.lionRides = (this.n.lionRides || 0) + 1; this.kidSpeed = this.kidSpeed || p.st.speed; p.st.speed = 13; p.radius = 1.35;
     const q = this.farmLion.obj.position; p.pos.x = q.x; p.pos.z = q.z; p.yaw = this.farmLion.obj.rotation.y; p.speedNow = 0; p.groundY();
-    p.mech.setRide(true, 1.55); this._rl = null; this.syncFarmLion(p, 0, false);
+    p.mech.setRide(true, 1.35); this._rl = null; this.syncFarmLion(p, 0, false);
     if (!quiet) { this.toast('🦁 Leandro is riding the lion! Tap ⚡ WAR. Hold GALLOP. Tap HOP OFF to feed.'); voice.say("Let's go, Leandro!", { prio: 2, cd: 2000 }); this.fx.dust(p.pos, 8, 1.5, 4); }
     return true;
   }

@@ -20,10 +20,11 @@ export default defineConfig({
     timeout: 20000,
   },
   projects: [
-    { name: 'iphone', testIgnore: /shots\.spec/, use: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: iphoneUA } },
-    { name: 'iphone-landscape', testIgnore: /shots\.spec/, use: { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: iphoneUA } },
-    { name: 'ipad', testIgnore: /shots\.spec/, use: { viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: ipadUA } },
-    { name: 'ipad-portrait', testIgnore: /shots\.spec/, use: { viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: ipadUA } },
+    { name: 'iphone', testIgnore: /shots\.spec|gait\.spec/, use: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: iphoneUA } },
+    { name: 'iphone-landscape', testIgnore: /shots\.spec|gait\.spec/, use: { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: iphoneUA } },
+    { name: 'ipad', testIgnore: /shots\.spec|gait\.spec/, use: { viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: ipadUA } },
+    { name: 'ipad-portrait', testIgnore: /shots\.spec|gait\.spec/, use: { viewport: { width: 820, height: 1180 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: ipadUA } },
     { name: 'closeup', testMatch: /shots\.spec\.js/, use: { viewport: { width: 1280, height: 720 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: iphoneUA } },
+    { name: 'gait', testMatch: /gait\.spec\.js/, use: { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: iphoneUA } },
   ],
 });
