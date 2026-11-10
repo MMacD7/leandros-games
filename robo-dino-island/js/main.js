@@ -15,7 +15,7 @@ import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave,
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
-import { preloadLion, preloadTrex } from './models.js';
+import { preloadLion, preloadTrex, preloadBrachio } from './models.js';
 import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
@@ -79,7 +79,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
-preloadArt(mgr); preloadLion(mgr); preloadTrex(mgr);
+preloadArt(mgr); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -363,7 +363,7 @@ tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
-const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount(); } else if (gMech.def.kind === 'trex' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.347, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount(); } else if (gMech.def.kind === 'trex' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.347, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'brachio' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.75 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
@@ -435,6 +435,7 @@ function setGarageMech() {
   gMech.obj.position.set(0, 0, 0); if (def.fly) gMech.obj.position.y = 1.2;
   if (save.ride !== false && !def.westie && !def.sea) {
     if (def.kind === 'trex' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.347, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
+    else if (def.id === 'brachio' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.75 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' });
     else gRider.mount(gMech);
   } else gRider.unmount();
 }
@@ -524,7 +525,7 @@ function loop(now) {
   frames++;
   fpsTick(dt, now);
   if (screen === 'garage') {
-    titleT += dt; { const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio'; gMech.obj.rotation.y = garageFrame && garageFrame.yaw != null ? garageFrame.yaw : GARAGE_YAW - (tall ? 0.45 : 0) + Math.sin(titleT * 0.35) * (tall ? 0.3 : 0.55); } gMech.animate(dt, 0, { jaw: gMech.roar > 0 ? 1 : 0, roar: gMech.roar > 0.3 ? Math.min(1, gMech.roar) : 0, flying: gMech.def.fly }); if (gMech.def.lion && gMech.seatOnGround) { gMech.obj.position.y = 0; gMech.seatOnGround(() => 0); }
+    titleT += dt; { const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio'; gMech.obj.rotation.y = garageFrame && garageFrame.yaw != null ? garageFrame.yaw : GARAGE_YAW - (tall ? 0.45 : 0) + Math.sin(titleT * 0.35) * (tall ? 0.3 : 0.55); } gMech.animate(dt, 0, { jaw: gMech.roar > 0 ? 1 : 0, roar: gMech.roar > 0.3 ? Math.min(1, gMech.roar) : 0, flying: gMech.def.fly }); if (gMech.seatOnGround) { gMech.obj.position.y = 0; gMech.seatOnGround(() => 0); }
     if (!gMech.roarT || titleT > gMech.roarT) { gMech.roarT = titleT + 6 + Math.random() * 3; if (gMech.roarT > 7) gMech.roar = 1.6; }
     gMech.roar = Math.max(0, (gMech.roar || 0) - dt); if (gRider.mounted) gRider.update(dt, { speedNow: 0, roar: gMech.roar, turn: 0 }); if (gMech.def.fly) gMech.obj.position.y = 1.5 + Math.sin(titleT * 2) * 0.2;
     const W = window.innerWidth, H = window.innerHeight, portrait = H > W, h = gMech.height, R = Math.max(gMech.def.dragon ? gMech.fitR * 0.62 : gMech.fitR, 6);
@@ -559,7 +560,7 @@ function loop(now) {
   // volcano smoke plume
   if (screen !== 'pause') {
     emitSmoke(dt);
-    world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale });
+    world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : 0 });
     fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog);
   }
   if (world.peak && screen !== 'pause') peakAmbience(dt);
@@ -614,5 +615,5 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 // test / debug hooks (no network, local only)
-function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
+function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
 window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };

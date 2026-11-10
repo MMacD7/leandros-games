@@ -61,7 +61,7 @@ export const REALS = [
     hp: 210, speed: 9, bite: 14, biteRate: 0.6, special: 'whip', specialName: 'SPIKE<br>TAIL', specialCD: 3.5, roar: 1.4, scale: 1.0, radius: 2.6,
     back: 0x363e2e, belly: 0x9a9070, stripe: 0x161a12, accent: 0xe03a16, eye: 0xffa21a },
   { id: 'brachio', name: 'Brachiosaurus', price: 1600, kind: 'brachio', desc: 'The tallest of all! Rears up for an earth-shaking stomp.',
-    hp: 330, speed: 8.5, bite: 14, biteRate: 0.6, special: 'stomp', specialName: 'TITAN<br>STOMP', specialCD: 5.5, roar: 1.8, scale: 1.25, radius: 3.4,
+    hp: 330, speed: 8.5, bite: 14, biteRate: 0.6, special: 'stomp', specialName: 'TITAN<br>STOMP', specialCD: 5.5, roar: 1.8, scale: 1.25, radius: 4.8,
     back: 0x474c52, belly: 0xa69e8c, stripe: 0x24272c, accent: 0x7a8696, eye: 0xffb21a },
   { id: 'giga', name: 'Giganotosaurus', price: 0, kind: 'giga', desc: 'Even bigger than a T-Rex! Goes into a BERSERK RAGE: faster and fiercer.',
     hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'rage', specialName: 'BERSERK<br>RAGE', specialCD: 9, roar: 2.8, scale: 1.25, radius: 4.13,

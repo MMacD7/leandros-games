@@ -301,13 +301,23 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
   }
   normalAtY(x, z) { const e = 2; const a = this.height(x - e, z) - this.height(x + e, z), b = this.height(x, z - e) - this.height(x, z + e); return 2 * e / Math.hypot(a, 2 * e, b); }
 
-  updateLOD(cam) {
+  updateLOD(cam, player) {
     const lodD2 = this.q.lodDist ** 2, far2 = Math.min(this.q.draw, this.drawCap || 1e9) ** 2; // v5 ocean: the fog hides everything past ~300 m
+    const clear = player && player.clear || 0;
+    const ax = clear && (player.x - cam.x), az = clear && (player.z - cam.z);
+    const seg2 = clear ? ax * ax + az * az : 0;
 
     for (const set of this.lodSets) {
       let nh = 0, nl = 0;
       for (const it of set.items) {
         const d2 = (it.x - cam.x) ** 2 + (it.z - cam.z) ** 2; if (d2 > far2) continue;
+        if (seg2 > 4) {
+          const t = ((it.x - cam.x) * ax + (it.z - cam.z) * az) / seg2;
+          if (t > 0.04 && t < 0.82) {
+            const sx = cam.x + ax * t - it.x, sz = cam.z + az * t - it.z;
+            if (sx * sx + sz * sz < clear * clear) continue;
+          }
+        }
         if (d2 < lodD2) { for (const m of set.hi) { m.setMatrixAt(nh, it.m); if (set.colored) m.setColorAt(nh, it.c); } nh++; } else { for (const m of set.lo) { m.setMatrixAt(nl, it.m); if (set.colored) m.setColorAt(nl, it.c); } nl++; }
       }
       for (const m of set.hi) { m.count = nh; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
@@ -467,7 +477,7 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
     // grass center slightly ahead of camera toward player so the field fills the view
     const cx = lerp(cam.x, player.x, 0.7), cz = lerp(cam.z, player.z, 0.7);
     for (const g of [this.grass, this.flowers]) { g.u.uCenter.value.set(cx, 0, cz); g.u.uPlayer.value.set(player.x, 0, player.z, 3.2 * (player.scale || 1)); }
-    this.lodTimer -= dt; if (this.lodTimer <= 0) { this.lodTimer = 0.4; this.updateLOD(cam); }
+    this.lodTimer -= dt; if (this.lodTimer <= 0) { this.lodTimer = 0.4; this.updateLOD(cam, player); }
     this.baseRing.material.color.setHSL(0.52, 1, 0.5 + 0.15 * Math.sin(this.time * 3));
     if (this.beam) { const d = Math.hypot(cam.x - BASE.x, cam.z - BASE.z); this.beam.material.opacity = 0.2 * smooth(40, 120, d); this.beam.visible = d > 40; }
     this.lavaGlow.material.opacity = 0.65 + 0.2 * Math.sin(this.time * 2.3) * Math.sin(this.time * 1.1);
