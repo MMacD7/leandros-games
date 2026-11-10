@@ -2,15 +2,27 @@
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
 
-const URL = 'assets/models/lion.glb';
-let cache = null;
+const LION_URL = 'assets/models/lion.glb';
+const TREX_URL = 'assets/models/trex.glb';
+let lionCache = null;
+let trexCache = null;
 
 export function preloadLion(mgr) {
   const loader = new GLTFLoader(mgr);
-  loader.load(URL, gltf => { cache = gltf; }, undefined, err => console.error(URL, err));
+  loader.load(LION_URL, gltf => { lionCache = gltf; }, undefined, err => console.error(LION_URL, err));
 }
 
 export function cloneLion() {
-  if (!cache) throw new Error('lion model not loaded');
-  return { scene: clone(cache.scene), animations: cache.animations };
+  if (!lionCache) throw new Error('lion model not loaded');
+  return { scene: clone(lionCache.scene), animations: lionCache.animations };
+}
+
+export function preloadTrex(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(TREX_URL, gltf => { trexCache = gltf; }, undefined, err => console.error(TREX_URL, err));
+}
+
+export function cloneTrex() {
+  if (!trexCache) throw new Error('trex model not loaded');
+  return { scene: clone(trexCache.scene), animations: trexCache.animations };
 }

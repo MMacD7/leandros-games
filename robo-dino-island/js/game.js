@@ -16,6 +16,7 @@ import { FarmLife, KidMech, KID } from './farm.js';
 import { JungleHype } from './hype.js';
 import { Personas } from './persona.js';
 import { LionMech, LION } from './lion.js';
+import { TrexMech } from './trex.js';
 import { CostumeRex, COSTUME } from './costume.js';
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
 export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
@@ -23,7 +24,7 @@ export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stego
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const pool = new Map();
-export const makeDino = (def, assets, wild) => def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+export const makeDino = (def, assets, wild) => def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.kind === 'trex' ? new TrexMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
 export { LION, COSTUME };
 const ROID = ['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero']; // v5 "on steroids" dinos (every level)
 const STAMPEDERS = ['raptorpack', 'velo', 'megatrike', 'trice', 'pachy', 'para', 'raptor'];
@@ -152,7 +153,9 @@ export class Game {
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
   mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && p.def.costume) return; // Rex Costume already shows Leandro. The lion is a 3D cat, so Leandro sits on the seat.
     if (!(p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean))) return; // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
-    if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else R.mount(p.mech); }
+    if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false });
+    else if (p.def.kind === 'trex' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.42, spread: 0.85, shinOut: 0.2 });
+    else R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }
 
