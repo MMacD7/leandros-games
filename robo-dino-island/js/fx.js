@@ -174,7 +174,7 @@ export class FX {
       q = q.clone().addScaledVector(fdir2, 0.7 + Math.random() * 0.8).add(new THREE.Vector3((Math.random() - 0.5) * 0.4, 0.2 + Math.random() * 0.7, (Math.random() - 0.5) * 0.4));
       fork2.push(q);
     }
-    pushRib(pts, { r: 0.25, g: 0.85, b: 1.8 }, 0.55);
+    pushRib(pts, { r: 0.25, g: 0.85, b: 1.8 }, 0.32);
     pushRib(pts, { r: 0.55, g: 1.35, b: 2.2 }, 0.12);
     pushRib(pts, { r: 1.6, g: 1.7, b: 1.9 }, 0.04);
     pushLine(pts, 0x7ad8ff);

@@ -125,14 +125,17 @@ export class Rider {
     this.buildSeat(Math.max(0.3, Math.min(0.75, hw * 1.05)));
     this.setPose(0);
   }
-  // Sit Leandro on a mount that is not a dino skeleton (the Jungle Island lion). Same Celtic kit, same saddle.
+  // Sit Leandro on the lion. No saddle block: he sits on the fur, legs down the sides, hands on the mane.
   mountAt(parent, opts = {}) {
     this.unmount(); if (!parent) return;
-    this.real = true; this.popT = -1; this.seatGroup.visible = true;
-    this.spread = opts.spread ?? 0.95; this.shinOut = opts.shinOut ?? 0.32; this.hw = 0.42;
+    this.real = true; this.popT = -1; this.bare = opts.saddle === false;
+    this.seatGroup.visible = !this.bare;
+    this.spread = opts.spread ?? (this.bare ? 1.05 : 0.95); this.shinOut = opts.shinOut ?? (this.bare ? 0.12 : 0.32); this.hw = 0.42;
     this.obj.scale.setScalar(opts.scale ?? 1.12); this.obj.position.set(0, 0, 0); this.obj.quaternion.identity(); this.obj.rotation.set(0, 0, 0);
-    parent.add(this.obj); this.mounted = opts.mech || null; this.hips.position.y = 0.13;
-    this.buildSeat(opts.seatW ?? 0.46); this.root.position.y = 0.04; this.setPose(0);
+    parent.add(this.obj); this.mounted = opts.mech || null;
+    this.hips.position.y = this.bare ? 0 : 0.13;
+    if (!this.bare) this.buildSeat(opts.seatW ?? 0.46);
+    this.root.position.y = this.bare ? 0 : 0.04; this.setPose(0);
   }
   unmount() { if (this.obj.parent) this.obj.parent.remove(this.obj); this.mounted = null; }
   buildSeat(w) {
@@ -154,6 +157,13 @@ export class Rider {
   // pose: sitting astride, hands on the horn / handle bar
   setPose(dt, st = {}) {
     const L = this.legs, A = this.arms, t = this.t;
+    if (this.bare) {
+      // Thighs hang down the ribs. Both arms reach forward onto the mane, elbows bent. No arm out to the side.
+      for (const g of L) { g.hip.rotation.set(-0.25, 0, g.s * 0.58); g.knee.rotation.set(0.72, 0, 0); g.foot.rotation.set(0.2, 0, 0); }
+      this.torso.rotation.set(0.18, 0, 0); this.head.rotation.set(0.02, Math.sin(t * 0.7) * 0.06, 0);
+      for (const a of A) { a.sh.rotation.set(-1.15, 0, a.s * -0.22); a.el.rotation.set(-0.85, 0, 0); }
+      return;
+    }
     for (const g of L) { g.hip.rotation.set(-1.35, 0, g.s * this.spread); g.knee.rotation.set(1.45, 0, g.s * this.shinOut * 0.6 - g.s * this.spread * 0.55); g.foot.rotation.set(-0.15, 0, 0); }
     const hold = st.hold || 0, k = st.k || 0;
     this.torso.rotation.set(0.12 + 0.12 * k + 0.25 * hold, 0, 0); this.head.rotation.set(-0.1 * k - 0.2 * hold + Math.sin(t * 1.3) * 0.03, Math.sin(t * 0.7) * 0.12 * (1 - hold), 0);
@@ -167,7 +177,8 @@ export class Rider {
     if (this.popT >= 0) return this.updatePop(dt);
     if (!m) return;
     const sp = d ? d.speedNow || 0 : 0, k = Math.min(1, sp / (8 * m.def.scale)), hold = d ? Math.min(1, Math.max(d.roar > 0.25 ? 1 : 0, d.breathT > 0 ? 0.6 : 0, d.boosting ? 0.5 : 0)) : 0;
-    this.root.position.y = (this.real ? 0.035 : 0.045) + Math.abs(Math.sin((m.phase || 0) + 0.6)) * 0.06 * k + Math.sin(this.t * 2) * 0.004;
+    const sit = this.bare ? 0 : (this.real ? 0.035 : 0.045);
+    this.root.position.y = sit + Math.abs(Math.sin((m.phase || 0) + 0.6)) * 0.04 * k + Math.sin(this.t * 2) * 0.004;
     this.root.rotation.z += (((d && d.turn) || 0) * 0.28 - this.root.rotation.z) * Math.min(1, dt * 6); // lean into turns
     this.setPose(dt, { k, hold });
   }
