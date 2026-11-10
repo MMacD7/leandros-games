@@ -93,17 +93,27 @@ export class LionMech {
       const target = n === name ? 1 : 0;
       act.setEffectiveWeight(fresh || !loop ? target : act.getEffectiveWeight() * 0.62 + target * 0.38);
     }
+    return next;
+  }
+  // One cycle of the baked clip covers this much ground, so the feet keep up with speedNow.
+  cycleDist(name) {
+    const leg = 0.92 * this.modelScale;
+    if (name === 'Run') return 4 * leg * Math.sin(35 * Math.PI / 180);
+    if (name === 'Walk') return 4 * leg * Math.sin(32 * Math.PI / 180);
+    return 1;
   }
   animate(dt, speed, o = {}) {
     this.t += dt;
     const roar = Math.max(o.roar || 0, this.thunderT > 0 ? 1 : 0, this.roar || 0);
     const gulp = Math.max(o.jaw || 0, this.jaw || 0);
-    if (gulp > 0.25) this.play('Chomp', false, 1);
-    else if (roar > 0.25) this.play('Roar', false, 1);
-    else if (speed > 8) this.play('Run', true, Math.max(0.65, speed / 3.1));
-    else if (speed > 0.45) this.play('Walk', true, Math.max(0.45, speed / 2.2));
-    else this.play('Idle', true, 1);
+    let name = 'Idle', loop = true, scale = 1;
+    if (gulp > 0.25) { name = 'Chomp'; loop = false; }
+    else if (roar > 0.25) { name = 'Roar'; loop = false; }
+    else if (speed > 8) { name = 'Run'; scale = Math.max(0.35, speed / this.cycleDist('Run') * 0.5); }
+    else if (speed > 0.45) { name = 'Walk'; scale = Math.max(0.35, speed / this.cycleDist('Walk') * 0.8); }
+    const act = this.play(name, loop, scale);
     this.mixer.update(dt);
+    if (act && act.getClip()) this.phase = (act.time / act.getClip().duration) * Math.PI * 2;
     this.jaw = Math.max(0, (this.jaw || 0) - dt * 1.6);
     this.roar = Math.max(0, (this.roar || 0) - dt);
     this.thunderT = Math.max(0, this.thunderT - dt);

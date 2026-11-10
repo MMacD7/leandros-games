@@ -158,10 +158,10 @@ export class Rider {
   setPose(dt, st = {}) {
     const L = this.legs, A = this.arms, t = this.t;
     if (this.bare) {
-      for (const g of L) { g.hip.rotation.set(-1.15, 0, g.s * 1.05); g.knee.rotation.set(1.25, 0, 0); g.foot.rotation.set(0.15, 0, 0); }
-      this.torso.rotation.set(0.22, 0, 0); this.head.rotation.set(-0.08, Math.sin(t * 0.7) * 0.08, 0);
-      for (const a of A) { a.sh.rotation.set(-1.75, 0, a.s * 0.42); a.el.rotation.set(-0.4, 0, 0); }
-      if (this.waveT > 0) { A[1].sh.rotation.set(-2.5, 0, 0.55 + 0.35 * Math.sin(t * 9)); A[1].el.rotation.set(-0.5, 0, 0); }
+      // Thighs hang down the ribs. Both arms reach forward onto the mane, elbows bent. No arm out to the side.
+      for (const g of L) { g.hip.rotation.set(-0.25, 0, g.s * 0.58); g.knee.rotation.set(0.72, 0, 0); g.foot.rotation.set(0.2, 0, 0); }
+      this.torso.rotation.set(0.18, 0, 0); this.head.rotation.set(0.02, Math.sin(t * 0.7) * 0.06, 0);
+      for (const a of A) { a.sh.rotation.set(-1.15, 0, a.s * -0.22); a.el.rotation.set(-0.85, 0, 0); }
       return;
     }
     for (const g of L) { g.hip.rotation.set(-1.35, 0, g.s * this.spread); g.knee.rotation.set(1.45, 0, g.s * this.shinOut * 0.6 - g.s * this.spread * 0.55); g.foot.rotation.set(-0.15, 0, 0); }
