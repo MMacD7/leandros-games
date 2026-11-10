@@ -98,5 +98,25 @@ test('v5.8.6 lion approval shots', async ({ page }) => {
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => document.getElementById('shout').textContent)).toBe('GULP!');
   await page.screenshot({ path: OUT + '/v586-lion-farm-chomp.png' });
+
+  await page.evaluate(() => {
+    const F = G.farm, p = G.game.player, g = G.game, THREE = G.THREE;
+    document.getElementById('shout').textContent = '';
+    p.speedNow = 0; F.farmLion.thunderT = 3; F.farmLion.roar = 3;
+    F.syncFarmLion(p, 0.5, false);
+    const look = new THREE.Vector3();
+    g.camHook = (cam) => {
+      F.farmLion.head.getWorldPosition(look); look.y += 0.15;
+      const yaw = p.yaw + 0.55, dist = 5.6, pitch = 0.18;
+      cam.position.set(look.x + Math.sin(yaw) * Math.cos(pitch) * dist, look.y + Math.sin(pitch) * dist, look.z + Math.cos(yaw) * Math.cos(pitch) * dist);
+      cam.lookAt(look);
+    };
+  });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: OUT + '/v586-lion-roar.png' });
+  const f0 = await page.evaluate(() => G.frames);
+  await page.waitForTimeout(2000);
+  const fps = await page.evaluate(f0 => (G.frames - f0) / 2, f0);
+  fs.writeFileSync(OUT + '/v586-fps.txt', String(fps));
   expect(errors, errors.join('\n')).toEqual([]);
 });

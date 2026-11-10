@@ -86,7 +86,7 @@ Pick a level with the big cards on the title screen: **ðŸŒ´ JUNGLE ISLAND**, **ð
   * The horse and the tractor can't go on the castle (it bumps them back): tap HOP OFF first. A horse or tractor parked next to the castle no longer steals the JUMP button.
   * Restart level always gives a clean start, even mid-bounce, on the horse or on the tractor.
 * The first tap after this update gives a one-time shout: "New level unlocked, Leandro! Farty Poop Farm!"
-* **v5.8.6 trial: the lion is a 3D model again.** The flat picture is replaced by a CC0 rigged big cat (Momus Park "Mountain Lion", see CREDITS.md) colored gold. It still looks like a low-poly cat, not the heroic lion in the concept. The Rex drawing is unchanged.
+* **v5.8.6: Meshy lion.** The lion is a textured 3D model generated with Meshy from the approved concept (see CREDITS.md), rigged here with idle, walk, run, roar, and chomp. No armor. The Rex drawing is unchanged.
 
 ## Modes
 * **Explore the Island**: free roam.

@@ -170,6 +170,10 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
     return { kid: !!p.def.farmKid, costume: !!p.def.costume, ridingLion: F.ridingLion, horse: !!F.horse, tractor: !!F.tractor, hoop, whiteShorts };
   });
   expect(farm).toEqual({ kid: true, costume: false, ridingLion: true, horse: true, tractor: true, hoop: true, whiteShorts: true });
+  const f0 = await page.evaluate(() => G.frames);
+  await page.waitForTimeout(2000);
+  const farmFps = await page.evaluate(f0 => (G.frames - f0) / 2, f0);
+  console.log('FARM_FPS ' + farmFps);
   const gallop = await page.locator('#a-boost').boundingBox();
   expect(gallop.x).toBeGreaterThanOrEqual(0);
   expect(gallop.x + gallop.width).toBeLessThanOrEqual(view.width + 0.5);

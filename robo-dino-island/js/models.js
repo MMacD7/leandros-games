@@ -1,4 +1,4 @@
-// Loads the CC0 rigged big cat used for the Thunder Lion. See CREDITS.md.
+// Loads the Meshy lion (see CREDITS.md). One shared file, a skinned copy per actor.
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
 
@@ -12,5 +12,5 @@ export function preloadLion(mgr) {
 
 export function cloneLion() {
   if (!cache) throw new Error('lion model not loaded');
-  return clone(cache.scene);
+  return { scene: clone(cache.scene), animations: cache.animations };
 }
