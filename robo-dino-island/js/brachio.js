@@ -3,15 +3,17 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { cloneBrachio } from './models.js';
 
 const RIM = (shader) => {
-  // The painted texture already carries studio shading. Lift the darks so the
-  // teal hide, cream belly, orange crest and amber eye stay bright in the jungle.
+  // Deepen the teal hide. Leave the bright cream belly and orange crest alone.
   shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
     #include <color_fragment>
-    diffuseColor.rgb = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(0.72));
-    diffuseColor.rgb *= vec3(0.96, 1.08, 1.12);`);
+    float luma = dot(diffuseColor.rgb, vec3(0.30, 0.59, 0.11));
+    float warm = smoothstep(0.05, 0.28, diffuseColor.r - max(diffuseColor.g, diffuseColor.b));
+    vec3 deep = pow(diffuseColor.rgb, vec3(1.35)) * vec3(0.62, 0.92, 0.86);
+    float keep = max(smoothstep(0.42, 0.78, luma), warm);
+    diffuseColor.rgb = mix(deep, diffuseColor.rgb * vec3(1.06, 1.02, 0.94), keep);`);
   shader.fragmentShader = shader.fragmentShader.replace('#include <output_fragment>', `
-    float rim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.0);
-    outgoingLight += vec3(1.05, 0.62, 0.22) * rim * 0.30;
+    float rim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.2);
+    outgoingLight += vec3(0.95, 0.42, 0.12) * rim * 0.18;
     #include <output_fragment>`);
 };
 
@@ -34,8 +36,8 @@ export class BrachioMech {
         for (const m of mats) {
           if (!m) continue;
           if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
-          m.roughness = 0.46; m.metalness = 0.0; m.envMapIntensity = 1.65;
-          m.emissive = new THREE.Color(0x0c3a42); m.emissiveIntensity = 0.26;
+          m.roughness = 0.72; m.metalness = 0.0; m.envMapIntensity = 0.32;
+          m.emissive = new THREE.Color(0x042e34); m.emissiveIntensity = 0.04;
           m.onBeforeCompile = RIM;
         }
       }
@@ -108,25 +110,26 @@ export class BrachioMech {
     for (const h of hits) if (h.point.y > top) top = h.point.y;
     return top;
   }
-  // Leandro sits on the shoulder, at the base of the neck.
+  // On the withers, just in front of the shoulders, in the chest's own frame.
   seatOnBack() {
     this.obj.updateMatrixWorld(true);
-    const neck = this.bones.neck0, chest = this.bones.chest;
-    const c = new THREE.Vector3();
-    (neck || chest).getWorldPosition(c);
+    const chest = this.bones.chest;
+    const origin = new THREE.Vector3();
+    chest.getWorldPosition(origin);
     let best = null;
-    for (const dz of [-0.16, -0.06, 0.04]) {
-      for (const dx of [-0.06, 0, 0.06]) {
-        const y = this.surfaceY(c.x + dx * this.modelScale, c.z + dz * this.modelScale);
-        if (y == null) continue;
-        const p = new THREE.Vector3(c.x + dx * this.modelScale, y, c.z + dz * this.modelScale);
-        if (!best || p.y > best.y) best = p;
+    for (const lz of [-0.08, 0.0, 0.06]) {
+      for (const lx of [-0.04, 0, 0.04]) {
+        const probe = new THREE.Vector3(lx, 0.45, lz);
+        chest.localToWorld(probe);
+        const y = this.surfaceY(probe.x, probe.z);
+        if (y == null || y > origin.y + 2.6) continue;
+        const hit = new THREE.Vector3(probe.x, y, probe.z);
+        if (!best || hit.y > best.y) best = hit;
       }
     }
-    const parent = chest || neck;
-    if (!best) { this.seat.position.set(0, 0.22, 0.12); return; }
-    const local = parent.worldToLocal(best.clone());
-    local.y += 0.05;
+    if (!best) { this.seat.position.set(0, 0.16, -0.08); return; }
+    const local = chest.worldToLocal(best.clone());
+    local.y += 0.03;
     this.seat.position.copy(local);
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }

@@ -75,13 +75,50 @@ test('v5.8.8 brachio feet, seat, and stomp', async ({ page }, info) => {
     p.pos.set(flat.x, 0, flat.z); p.yaw = 0.2; p.speedNow = 0; p.roar = 0; p.rearA = 0; p.groundY();
     for (let i = 0; i < 8; i++) p.updateVisual(1 / 20);
     const feet0 = m.legs.slice(0, 2).map(L => { const v = new THREE.Vector3(); L.g.getWorldPosition(v); return v.y; });
-    p.rearA = 0.8;
-    for (let i = 0; i < 8; i++) p.updateVisual(1 / 20);
+    m._clip = '';
+    p.rearA = 0.9;
+    p.updateVisual(1 / 30);
+    const act = m.actions.Stomp;
+    act.time = 0.52;
+    m.mixer.update(0.04);
+    if (m.seatOnGround) m.seatOnGround((x, z) => g.world.height(x, z));
     const feet1 = m.legs.slice(0, 2).map(L => { const v = new THREE.Vector3(); L.g.getWorldPosition(v); return v.y; });
     const lift = Math.min(feet1[0] - feet0[0], feet1[1] - feet0[1]);
-    const head = new THREE.Vector3(), hips = new THREE.Vector3();
+    g.rider.update(0.05, p);
+    const head = new THREE.Vector3(), hips = new THREE.Vector3(), chestW = new THREE.Vector3(), neckW = new THREE.Vector3();
     g.rider.head.getWorldPosition(head);
     g.rider.hips.getWorldPosition(hips);
+    m.bones.chest.getWorldPosition(chestW);
+    m.bones.neck2.getWorldPosition(neckW);
+    const stretchOf = (name) => {
+      const clip = m.actions[name];
+      for (const [n, a] of Object.entries(m.actions)) a.setEffectiveWeight(n === name ? 1 : 0);
+      const dur = clip.getClip().duration;
+      const geo = sk.geometry, rest = geo.attributes.position, tris = geo.index.array;
+      const ra = new THREE.Vector3(), rb = new THREE.Vector3(), rc = new THREE.Vector3();
+      const pa = new THREE.Vector3(), pb = new THREE.Vector3(), pc = new THREE.Vector3();
+      let maxR = 1, n = 0, hot = 0;
+      for (let s = 0; s < 4; s++) {
+        clip.time = Math.max(0, dur * (s + 0.5) / 4 - 0.001);
+        m.mixer.update(0.001);
+        m.obj.updateMatrixWorld(true);
+        for (let t = 0; t < tris.length; t += 6) {
+          const i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
+          ra.fromBufferAttribute(rest, i0); rb.fromBufferAttribute(rest, i1); rc.fromBufferAttribute(rest, i2);
+          const e0 = ra.distanceTo(rb), e1 = rb.distanceTo(rc), e2 = rc.distanceTo(ra);
+          sk.getVertexPosition(i0, pa); sk.getVertexPosition(i1, pb); sk.getVertexPosition(i2, pc);
+          const edges = [[e0, pa.distanceTo(pb)], [e1, pb.distanceTo(pc)], [e2, pc.distanceTo(ra)]];
+          for (const [r, f] of edges) {
+            if (r < 0.05) continue;
+            const ratio = Math.max(f / r, r / Math.max(f, 1e-4));
+            n++; if (ratio > maxR) maxR = ratio; if (ratio > 2.5) hot++;
+          }
+        }
+      }
+      return { max: Math.round(maxR * 100) / 100, hot: n ? Math.round(hot / n * 1000) / 1000 : 0 };
+    };
+    const stretch = {};
+    for (const name of ['Idle', 'Walk', 'Run', 'Roar', 'Stomp']) stretch[name] = stretchOf(name);
     const ws = new THREE.Vector3();
     const riderWorld = g.rider.obj.getWorldScale(ws).x;
     const box = new THREE.Box3().setFromObject(m.skin);
@@ -103,6 +140,9 @@ test('v5.8.8 brachio feet, seat, and stomp', async ({ page }, info) => {
       mounted: !!g.rider.mounted,
       seatGap: Math.round((hips.y - p.pos.y) * 100) / 100,
       headAbove: Math.round((head.y - hips.y) * 100) / 100,
+      toChest: Math.round(hips.distanceTo(chestW) * 100) / 100,
+      toNeck: Math.round(hips.distanceTo(neckW) * 100) / 100,
+      stretch,
       riderWorld: Math.round(riderWorld * 100) / 100,
       tankId: tank.def.id,
       tankSkin: tank.mech.skinned === true,
@@ -119,11 +159,17 @@ test('v5.8.8 brachio feet, seat, and stomp', async ({ page }, info) => {
   expect(report.mounted).toBeTruthy();
   expect(report.seatGap).toBeGreaterThan(3);
   expect(report.headAbove).toBeGreaterThan(0.2);
+  expect(report.toChest).toBeLessThan(2.4);
+  expect(report.toChest).toBeLessThan(report.toNeck);
   expect(report.riderWorld).toBeGreaterThan(1.4);
   expect(report.riderWorld).toBeLessThan(2.2);
   expect(report.tankId).toBe('brachiotank');
   expect(report.tankSkin).toBe(false);
 
+  for (const [name, s] of Object.entries(report.stretch)) {
+    expect(s.max, name).toBeLessThan(14);
+    expect(s.hot, name).toBeLessThan(0.08);
+  }
   if (info.project.name !== 'iphone-landscape') return;
   fs.mkdirSync(OUT, { recursive: true });
 
@@ -135,33 +181,28 @@ test('v5.8.8 brachio feet, seat, and stomp', async ({ page }, info) => {
       G.game.spawnPlayer(false);
       G.show('play');
       const g = G.game, p = g.player, THREE = G.THREE, m = p.mech;
-      p.pos.set(76, 0, 32); p.yaw = Math.PI / 2; p.groundY();
       p.speedNow = pose === 'walk' ? 5 : 0;
       p.rearA = pose === 'stomp' ? 0.9 : 0;
       p.roar = 0;
-      const n = pose === 'stomp' ? 10 : 12;
-      for (let i = 0; i < n; i++) p.updateVisual(1 / 20);
+      // The ruins floor is flattened and clear of trees. Both animals stand on it.
+      const AX = 105, AZ = 40;
+      const place = (x, z) => { p.pos.set(x, 0, z); p.yaw = Math.PI / 2; p.groundY(); };
+      place(pose === 'vs' ? AX + 9 : AX, AZ);
+      for (let i = 0; i < (pose === 'stomp' ? 8 : 12); i++) p.updateVisual(1 / 20);
+      if (pose === 'stomp') {
+        const act = m.actions.Stomp;
+        act.time = 0.54; m.mixer.update(0.02);
+        if (m.seatOnGround) m.seatOnGround((x, z) => g.world.height(x, z));
+      }
+      g.rider.update(0.05, p);
       if (pose === 'vs') {
-        p.pos.set(-20, 0, -40); p.groundY();
-        for (let i = 0; i < 4; i++) p.updateVisual(1 / 20);
-        const e = g.spawnEnemy(p.pos.x - 20, p.pos.z, 2, 'trex');
-        e.pos.set(p.pos.x - 16, 0, p.pos.z);
-        e.yaw = p.yaw; e.groundY(); e.speedNow = 0;
-        e.updateVisual(0.05);
+        const e = g.spawnEnemy(AX - 9, AZ, 2, 'trex');
+        e.pos.set(AX - 9, 0, AZ);
+        e.yaw = Math.PI / 2; e.groundY(); e.speedNow = 0;
+        for (let i = 0; i < 4; i++) e.updateVisual(0.05);
         e.mech.obj.visible = true;
         e.mech.obj.position.copy(e.pos);
-      }
-      if (pose === 'chase') {
-        let best = null;
-        for (let x = -40; x <= 40; x += 8) for (let z = -40; z <= 40; z += 8) {
-          const h = g.world.height(x, z);
-          if (h < 2 || h > 12) continue;
-          let err = 0;
-          for (let k = 4; k <= 36; k += 8) err = Math.max(err, Math.abs(g.world.height(x - k, z) - h));
-          if (!best || err < best.err) best = { x, z, err };
-        }
-        p.pos.set(best.x, 0, best.z); p.groundY();
-        for (let i = 0; i < 6; i++) p.updateVisual(1 / 20);
+        window.__pair = { x: AX, z: AZ, h: g.world.height(AX, AZ) };
       }
       const yaw = p.yaw;
       const side = new THREE.Vector3(-Math.cos(yaw), 0, Math.sin(yaw));
@@ -170,15 +211,19 @@ test('v5.8.8 brachio feet, seat, and stomp', async ({ page }, info) => {
       cam.aspect = 844 / 390; cam.updateProjectionMatrix();
       G.renderer.setSize(844, 390, false);
       if (pose === 'chase') {
-        g.snapCam = true; g.cam.yaw = p.yaw + Math.PI; g.cam.pitch = 0.18; g.cam.dist = 8;
+        g.snapCam = true; g.cam.yaw = p.yaw + Math.PI - 0.62; g.cam.pitch = 0.22; g.cam.dist = 8;
         g.updateCamera(1, { looking: false, look: { dx: 0, dy: 0 } });
+        g.world.updateLOD(cam.position, { x: p.pos.x, z: p.pos.z, clear: 14 });
+      } else if (pose === 'vs') {
+        const look = new THREE.Vector3(105, g.world.height(105, 40) + 5.4, 40);
+        cam.position.set(105, look.y + 1.6, 40 + 30);
+        cam.lookAt(look);
+        g.world.updateLOD(cam.position, { x: look.x, z: look.z, clear: 10 });
       } else {
         const look = p.pos.clone();
-        look.y += pose === 'vs' ? 4.5 : m.height * 0.5;
-        if (pose === 'vs') look.x -= 4;
-        const dist = pose === 'vs' ? 36 : 28;
-        cam.position.copy(look).addScaledVector(side, dist);
-        cam.position.y = look.y + 1.5;
+        look.y += m.height * 0.48;
+        cam.position.copy(look).addScaledVector(side, pose === 'stomp' ? 34 : 30);
+        cam.position.y = look.y + (pose === 'stomp' ? 3.2 : 1.6);
         cam.lookAt(look);
       }
       for (const e of g.enemies) if (pose !== 'vs' && e.mech && e.mech.obj) e.mech.obj.visible = false;
@@ -197,6 +242,33 @@ test('v5.8.8 brachio feet, seat, and stomp', async ({ page }, info) => {
   await shoot('brachio-stomp.png', 'stomp');
   await shoot('brachio-vs-trex.png', 'vs');
   await shoot('brachio-chase.png', 'chase');
+
+  fs.mkdirSync('/tmp/brachio-rear', { recursive: true });
+  for (let i = 0; i < 6; i++) {
+    const jpeg = await page.evaluate((i) => {
+      const g = G.game, p = g.player, m = p.mech, THREE = G.THREE;
+      p.speedNow = 0; p.rearA = 0.9; p.roar = 0;
+      const act = m.actions.Stomp;
+      for (const [n, a] of Object.entries(m.actions)) a.setEffectiveWeight(n === 'Stomp' ? 1 : 0);
+      act.enabled = true; act.play();
+      act.time = [0.02, 0.22, 0.40, 0.56, 0.78, 1.05][i];
+      m.mixer.update(0.001);
+      if (m.seatOnGround) m.seatOnGround((x, z) => g.world.height(x, z));
+      g.rider.update(0.05, p);
+      const cam = g.camera;
+      cam.fov = 36; cam.aspect = 844 / 390; cam.updateProjectionMatrix();
+      G.renderer.setSize(844, 390, false);
+      const look = p.pos.clone(); look.y += m.height * 0.52;
+      cam.position.set(p.pos.x, look.y + 4.5, p.pos.z + 38);
+      cam.lookAt(look);
+      for (const e of g.enemies) if (e.mech && e.mech.obj) e.mech.obj.visible = false;
+      G.renderer.render(g.scene, cam);
+      const url = document.querySelector('canvas').toDataURL('image/jpeg', 0.82);
+      return url.slice(url.indexOf(',') + 1);
+    }, i);
+    fs.writeFileSync('/tmp/brachio-rear/' + String(i + 1) + '.jpg', Buffer.from(jpeg, 'base64'));
+  }
+  execFileSync('ffmpeg', ['-y', '-i', '/tmp/brachio-rear/%d.jpg', '-frames:v', '1', '-update', '1', '-filter_complex', 'tile=3x2:margin=4:padding=4', OUT + '/brachio-rearup-sheet.png'], { stdio: 'inherit' });
 
   if (process.env.BRACHIO_STILLS === '1') return;
   fs.mkdirSync('/tmp/brachio-gait', { recursive: true });
