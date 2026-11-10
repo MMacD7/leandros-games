@@ -40,7 +40,7 @@ ROBOS.forEach(d => { d.real = false; });
 // Real (organic) dinosaurs: natural attacks instead of guns. Primary = bite, special (cooldown), roar (stuns), run.
 export const REALS = [
   { id: 'trex', name: 'T-Rex', price: 0, kind: 'trex', desc: 'The tyrant king! Bone-crushing bite and a roar that shakes the ground.',
-    hp: 150, speed: 11, bite: 30, biteRate: 0.55, special: 'chomp', specialName: 'MEGA<br>CHOMP', specialCD: 6, roar: 2.6, scale: 1.0, radius: 2.5,
+    hp: 150, speed: 11, bite: 30, biteRate: 0.55, special: 'chomp', specialName: 'MEGA<br>CHOMP', specialCD: 6, roar: 2.6, scale: 1.0, radius: 3.75,
     back: 0x45351f, belly: 0x9c8058, stripe: 0x100b06, accent: 0xb83c14, eye: 0xffa21a },
   { id: 'carno', name: 'Carnotaurus', price: 200, kind: 'carno', desc: 'The horned bull-lizard. Lightning-fast horn charge!',
     hp: 115, speed: 14.5, bite: 22, biteRate: 0.45, special: 'charge', specialName: 'HORN<br>CHARGE', specialCD: 4.5, roar: 2.0, scale: 0.92, radius: 2.1,
@@ -64,7 +64,7 @@ export const REALS = [
     hp: 330, speed: 8.5, bite: 14, biteRate: 0.6, special: 'stomp', specialName: 'TITAN<br>STOMP', specialCD: 5.5, roar: 1.8, scale: 1.25, radius: 3.4,
     back: 0x474c52, belly: 0xa69e8c, stripe: 0x24272c, accent: 0x7a8696, eye: 0xffb21a },
   { id: 'giga', name: 'Giganotosaurus', price: 0, kind: 'giga', desc: 'Even bigger than a T-Rex! Goes into a BERSERK RAGE: faster and fiercer.',
-    hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'rage', specialName: 'BERSERK<br>RAGE', specialCD: 9, roar: 2.8, scale: 1.12, radius: 2.8,
+    hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'rage', specialName: 'BERSERK<br>RAGE', specialCD: 9, roar: 2.8, scale: 1.25, radius: 4.13,
     back: 0x4a4038, belly: 0xa8967a, stripe: 0x1a1410, accent: 0x9a2a14, eye: 0xff6a1a },
   { id: 'allo', name: 'Allosaurus', price: 0, kind: 'allo', desc: 'The lion of the Jurassic. A lightning-fast TRIPLE BITE combo!',
     hp: 140, speed: 13, bite: 24, biteRate: 0.45, special: 'combo', specialName: 'TRIPLE<br>BITE', specialCD: 4.5, roar: 2.0, scale: 0.92, radius: 2.2,
