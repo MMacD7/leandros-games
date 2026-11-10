@@ -3,9 +3,15 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { cloneTrex } from './models.js';
 
 const RIM = (shader) => {
+  // The painted texture already carries studio shading. Lift the darks so the
+  // forest green, orange stripes and cream belly stay bright under the island sun.
+  shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
+    #include <color_fragment>
+    diffuseColor.rgb = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(0.72));
+    diffuseColor.rgb *= vec3(1.06, 1.1, 0.98);`);
   shader.fragmentShader = shader.fragmentShader.replace('#include <output_fragment>', `
     float rim = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.0);
-    outgoingLight += vec3(0.55, 0.95, 0.45) * rim * 0.22;
+    outgoingLight += vec3(0.42, 1.05, 0.32) * rim * 0.34;
     #include <output_fragment>`);
 };
 
@@ -22,13 +28,14 @@ export class TrexMech {
     scene.traverse(o => {
       if (o.isBone) bones[o.name] = o;
       if (o.isMesh) {
-        o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; o.raycast = () => {};
+        o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; o.raycast = () => {};
         meshes.push(o);
         const mats = [].concat(o.material);
         for (const m of mats) {
           if (!m) continue;
-          m.roughness = 0.62; m.metalness = 0.0;
-          m.emissive = new THREE.Color(0x102008); m.emissiveIntensity = 0.18;
+          if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+          m.roughness = 0.42; m.metalness = 0.0; m.envMapIntensity = 1.7;
+          m.emissive = new THREE.Color(0x12380c); m.emissiveIntensity = 0.28;
           m.onBeforeCompile = RIM;
         }
       }
@@ -46,7 +53,8 @@ export class TrexMech {
     this.mouth = new THREE.Group(); this.mouth.name = 'trex-mouth';
     this.mouth.position.set(0, -0.02, 0.16); (bones.jaw || bones.head).add(this.mouth);
     this.seat = new THREE.Group(); this.seat.name = 'trex-seat';
-    this.seat.position.set(0, 0.14, 0.02); (bones.spine || bones.hips).add(this.seat);
+    // On the back, just behind the neck, parented to the spine so he leans with the gait.
+    this.seat.position.set(0, 0.02, 0.18); (bones.spine || bones.hips).add(this.seat);
     this.body = new THREE.Group(); this.body.name = 'trex-body'; bones.chest.add(this.body);
     this.legs = [bones.l_foot, bones.r_foot].map(g => ({ g: g || new THREE.Group() }));
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.15, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));

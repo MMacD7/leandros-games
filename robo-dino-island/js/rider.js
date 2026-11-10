@@ -25,9 +25,9 @@ function mats() {
   // v5.3 Celtic-style kit: green (#018749) and white horizontal hoops, NO crest / sponsor / logo; white shorts; hooped socks
   const hoopT = canvasTex(64, 256, (g, w, h) => { const n = 7; for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? '#ffffff' : '#018749'; g.fillRect(0, Math.floor(i * h / n), w, Math.ceil(h / n) + 1); } });
   const sockT = canvasTex(64, 64, (g, w, h) => { for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#ffffff' : '#018749'; g.fillRect(0, i * 16, w, 16); } });
-  const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, metalness: 0, ...o });
+  const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75, metalness: 0, envMapIntensity: 1.65, ...o });
   MATS = {
-    skin: M(0xb07d55, { roughness: 0.6 }), hair: M(0x2b1b12, { roughness: 0.9 }), shirt: M(0xffffff, { map: hoopT, roughness: 0.8 }), shirtPlain: M(0xffffff, { map: hoopT, roughness: 0.8 }), hoopSock: M(0xffffff, { map: sockT, roughness: 0.8 }),
+    skin: M(0xc48a62, { roughness: 0.42, emissive: 0xb87448, emissiveIntensity: 0.85 }), hair: M(0x2b1b12, { roughness: 0.85, emissive: 0x1a100c, emissiveIntensity: 0.35 }), shirt: M(0xffffff, { map: hoopT, roughness: 0.72 }), shirtPlain: M(0xffffff, { map: hoopT, roughness: 0.72 }), hoopSock: M(0xffffff, { map: sockT, roughness: 0.72 }),
     shorts: M(0xf7f7f4, { roughness: 0.8 }), shoe: M(0xe9eef2, { roughness: 0.5 }), sole: M(0x2a3138), sock: M(0xf6f6f6),
     eye: M(0x15100c, { roughness: 0.2 }), white: new THREE.MeshBasicMaterial({ color: 0xffffff }), mouth: M(0x6a1f1f, { roughness: 0.6 }), cheek: M(0xe08f80, { roughness: 0.7, transparent: true, opacity: 0.55 }),
     saddle: M(0x7a4524, { roughness: 0.7 }), saddleTrim: M(0xd9a55a, { metalness: 0.6, roughness: 0.35 }),
@@ -128,7 +128,7 @@ export class Rider {
   // Sit Leandro on the lion. No saddle block: he sits on the fur, legs down the sides, hands on the mane.
   mountAt(parent, opts = {}) {
     this.unmount(); if (!parent) return;
-    this.real = true; this.popT = -1; this.bare = opts.saddle === false;
+    this.real = true; this.popT = -1; this.bare = opts.saddle === false; this.grip = opts.grip || '';
     this.seatGroup.visible = !this.bare;
     this.spread = opts.spread ?? (this.bare ? 1.05 : 0.95); this.shinOut = opts.shinOut ?? (this.bare ? 0.12 : 0.32); this.hw = 0.42;
     this.obj.scale.setScalar(opts.scale ?? 1.12); this.obj.position.set(0, 0, 0); this.obj.quaternion.identity(); this.obj.rotation.set(0, 0, 0);
@@ -157,6 +157,13 @@ export class Rider {
   // pose: sitting astride, hands on the horn / handle bar
   setPose(dt, st = {}) {
     const L = this.legs, A = this.arms, t = this.t;
+    if (this.bare && this.grip === 'neck') {
+      // Astride the T-Rex, leaning onto the neck, both hands holding it.
+      for (const g of L) { g.hip.rotation.set(-0.18, 0, g.s * 0.82); g.knee.rotation.set(0.58, 0, 0); g.foot.rotation.set(0.12, 0, 0); }
+      this.torso.rotation.set(0.72, 0, 0); this.head.rotation.set(-0.18, Math.sin(t * 0.6) * 0.05, 0);
+      for (const a of A) { a.sh.rotation.set(-1.85, 0, a.s * -0.5); a.el.rotation.set(-0.35, 0, 0); }
+      return;
+    }
     if (this.bare) {
       // Thighs hang down the ribs. Both arms reach forward onto the mane, elbows bent. No arm out to the side.
       for (const g of L) { g.hip.rotation.set(-0.25, 0, g.s * 0.58); g.knee.rotation.set(0.72, 0, 0); g.foot.rotation.set(0.2, 0, 0); }

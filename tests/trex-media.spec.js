@@ -33,13 +33,18 @@ test('v5.8.7 T-Rex stills and a walk clip', async ({ page }) => {
     G.show('play'); window.__hold = true;
   });
   await poll(page, () => G.screen === 'play' && G.game.player.def.kind === 'trex');
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { const t = document.getElementById('toast'); if (t) { t.textContent = ''; t.classList.remove('show'); } });
   await page.evaluate(() => {
     const w = G.game.world;
     if (w.grass) w.grass.mesh.visible = false;
     if (w.flowers) w.flowers.mesh.visible = false;
     G.game.scene.traverse(o => { if (o.isInstancedMesh) o.visible = false; });
     if (w.baseGroup) w.baseGroup.visible = false;
-    for (const e of G.game.enemies) if (e.mech && e.mech.obj) e.mech.obj.visible = false;
+    for (const e of G.game.enemies) { e.pos.x += 500; if (e.mech && e.mech.obj) e.mech.obj.visible = false; }
+    if (G.game.hype) G.game.hype._entToast = 1e9;
+    const toast = document.getElementById('toast'); if (toast) { toast.textContent = ''; toast.classList.remove('show'); }
+    const shout = document.getElementById('shout'); if (shout) shout.classList.remove('show');
     G.renderer.setSize(844, 390, false);
     const cam = G.game.camera; cam.aspect = 844 / 390; cam.fov = 50; cam.updateProjectionMatrix();
   });
@@ -112,7 +117,7 @@ test('v5.8.7 T-Rex stills and a walk clip', async ({ page }) => {
     const jpeg = await page.evaluate(({ travelled }) => {
       const g = G.game, p = g.player, THREE = G.THREE;
       for (const e of g.enemies) if (e.mech && e.mech.obj) e.mech.obj.visible = false;
-      p.pos.set(20 + travelled, 0, 140); p.yaw = Math.PI / 2; p.groundY();
+      p.pos.set(-90 + travelled, 0, 30); p.yaw = Math.PI / 2; p.groundY();
       const up = new THREE.Vector3(0, 1, 0);
       p.mech.obj.position.copy(p.pos);
       p.mech.obj.quaternion.setFromAxisAngle(up, p.yaw + Math.PI);
