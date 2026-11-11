@@ -45,6 +45,32 @@ Spinosaurus 3D model generated with Meshy AI from original concept art.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 - Ocean-blue hide, a sunset-orange sail with dark blue spots, a cream belly, and a crocodile snout. No armor and no logos.
 
+## Leandro
+
+Leandro 3D model is an original cartoon boy made for this game, with a Mixamo skeleton.
+
+- File: `assets/models/leandro.glb`
+- Messy brown hair, a green and white hooped shirt with no crest or logos, white shorts, white socks, and green trainers. About 1.1 m tall before he is scaled up a little so he reads on the big dinosaurs.
+- He sits on every ride with bone rotations, and he walks and runs with the Walking and Running clips when he is on foot.
+
+## Velociraptor
+
+Velociraptor 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/raptor.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Velociraptor concept. The biped rig and the Idle, Walk, Run, Roar, and Pounce clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Tan hide, blue feathers on the head, arms, and tail. No armor and no logos.
+
+## Ankylosaurus
+
+Ankylosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/anky.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Ankylosaurus concept. The quadruped rig and the Idle, Walk, Run, Roar, and Smash clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Orange armor plates, pale spikes, a cream belly, and a round tail club. No logos.
+
 ## Carnotaurus
 
 Carnotaurus 3D model generated with Meshy AI from original concept art.
