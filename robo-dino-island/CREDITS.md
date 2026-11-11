@@ -45,6 +45,15 @@ Spinosaurus 3D model generated with Meshy AI from original concept art.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 - Ocean-blue hide, a sunset-orange sail with dark blue spots, a cream belly, and a crocodile snout. No armor and no logos.
 
+## Carnotaurus
+
+Carnotaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/carno.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Carnotaurus concept. The biped rig and the Idle, Walk, Run, Roar, and Rush clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Red hide with black tiger stripes, a cream belly, and two brow horns. No armor and no logos.
+
 ## Triceratops
 
 Triceratops 3D model generated with Meshy AI from original concept art.
