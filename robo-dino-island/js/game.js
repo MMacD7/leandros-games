@@ -23,6 +23,7 @@ import { SpinoMech } from './spino.js';
 import { TrikeMech } from './trike.js';
 import { CarnoMech } from './carno.js';
 import { RaptorMech } from './raptor.js';
+import { AnkyMech } from './anky.js';
 import { CostumeRex, COSTUME } from './costume.js';
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
 export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
@@ -30,7 +31,7 @@ export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stego
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const pool = new Map();
-export const makeDino = (def, assets, wild) => def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.kind === 'trex' ? new TrexMech(def) : def.id === 'brachio' ? new BrachioMech(def) : def.id === 'giga' ? new GigaMech(def) : def.id === 'spinos' ? new SpinoMech(def) : def.id === 'trice' ? new TrikeMech(def) : def.id === 'carno' ? new CarnoMech(def) : def.id === 'velo' ? new RaptorMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+export const makeDino = (def, assets, wild) => def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.kind === 'trex' ? new TrexMech(def) : def.id === 'brachio' ? new BrachioMech(def) : def.id === 'giga' ? new GigaMech(def) : def.id === 'spinos' ? new SpinoMech(def) : def.id === 'trice' ? new TrikeMech(def) : def.id === 'carno' ? new CarnoMech(def) : def.id === 'velo' ? new RaptorMech(def) : def.id === 'ankys' ? new AnkyMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
 export { LION, COSTUME };
 const ROID = ['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero']; // v5 "on steroids" dinos (every level)
 const STAMPEDERS = ['raptorpack', 'velo', 'megatrike', 'trice', 'pachy', 'para', 'raptor'];
@@ -44,7 +45,7 @@ class Dino {
     this.mech = getMech(def, game.assets, wild); game.scene.add(this.mech.obj);
     this.pos = new THREE.Vector3(); this.yaw = 0; this.speedNow = 0; this.alive = true; this.koT = 0;
     this.radius = def.radius ?? (def.kind === 'bronto' ? 3.2 : def.kind === 'raptor' ? 1.4 : def.kind === 'ptero' ? 2 : 2.4) * def.scale;
-    this.real = !!def.real; this.stunT = 0; this.slowT = 0; this.act = null; this.biteA = 0; this.chargeA = 0; this.whipA = 0; this.rearA = 0; this.air = 0;
+    this.real = !!def.real; this.stunT = 0; this.slowT = 0; this.act = null; this.biteA = 0; this.chargeA = 0; this.whipA = 0; this.rearA = 0; this.air = 0; this.smashA = 0;
     this.tilt = new THREE.Quaternion(); this.laserT = 0; this.missileT = 0; this.meleeT = 0; this.jaw = 0; this.roar = 0; this.side = 0;
     this.fly = !!def.fly; this.swim = !!def.swim; this.alt = 0; this.climb = 0; this.knock = new THREE.Vector3();
     this.dragon = !!def.dragon; this.rageT = 0; this.poisonT = 0; this.chill = 0; this.frozenT = 0; this.frillT = 0;
@@ -65,6 +66,7 @@ class Dino {
   hit(dmg, from, attacker, quiet) {
     if (!this.alive) return;
     if (this.shieldT > 0) { this.mech.flash = 0.4; return; }
+    if (this.def.id === 'ankys') dmg *= 0.62; // orange armor soaks part of every hit
     if (this.shellT > 0) { // v5.5 SHELL SHIELD: blocks the hit and bounces it back at the attacker
       this.g.reflects = (this.g.reflects || 0) + 1; sfx.clonk && sfx.clonk(0.9); this.g.fx.ring(this.center.clone(), 5, 0x6aff9a);
       if (attacker && attacker !== this && attacker.alive && attacker.hit) { attacker.hit(dmg * 0.8, this.pos, this, true); if (attacker.knock && from) attacker.knock.addScaledVector(tmp.subVectors(attacker.pos, this.pos).setY(0).normalize(), 8); } return; }
@@ -116,7 +118,7 @@ class Dino {
     this.jaw = Math.max(0, this.jaw - dt * 3); this.roar = Math.max(0, this.roar - dt * 1.2); this.biteA = Math.max(0, this.biteA - dt * 4); this.slowT -= dt;
     const ro = this.real ? sstep(0, 0.35, this.roar) : (this.roar > 0.2 ? 1 : 0);
     m.animate(dt, this.alive ? this.speedNow : 0, { jaw: Math.max(this.jaw, this.roar > 0 ? 1 : 0), roar: ro, turn: this.turn || 0, flying: this.fly, boost: this.boosting, climb: this.climb,
-      bite: Math.sin(this.biteA * Math.PI), charge: this.chargeA, whip: this.whipA, slash: this.slashA || 0, splash: this.splashA || 0, pounce: this.pounceA || 0, rear: this.rearA, air: this.air, pant: this.boosting ? 1 : 0, look: this.look || 0, frill: this.frillT > 0 || this.breathT > 0 });
+      bite: Math.sin(this.biteA * Math.PI), charge: this.chargeA, whip: this.whipA, slash: this.slashA || 0, splash: this.splashA || 0, pounce: this.pounceA || 0, smash: this.smashA || 0, rear: this.rearA, air: this.air, pant: this.boosting ? 1 : 0, look: this.look || 0, frill: this.frillT > 0 || this.breathT > 0 });
     if (this.alive && m.seatOnGround) m.seatOnGround((x, z) => w.height(x, z));
     this.status(dt);
     // heavy footsteps: thump, dust at the foot and a camera rumble for big dinos near the camera
@@ -169,6 +171,7 @@ export class Game {
     else if (p.def.id === 'trice' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.55 / (p.mech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
     else if (p.def.id === 'carno' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.55 / (p.mech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
     else if (p.def.id === 'velo' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.35 / (p.mech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' });
+    else if (p.def.id === 'ankys' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' });
     else R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }
@@ -474,6 +477,7 @@ export class Game {
     else if (k === 'trikecharge') { d.act = { type: 'trikecharge', t: 0, dur: 1.1, dir: fwd.clone(), speed: Math.max(18, d.st.speed * 2.1), hit: new Set(), slammed: false }; d.chargeA = 1; d.roar = 0.25; sfx.whoosh(0.7); if (d === this.player) this.hud.toast('🦏 TRIKE CHARGE!'); return; }
     else if (k === 'hornrush') { d.act = { type: 'hornrush', t: 0, dur: 1.05, dir: fwd.clone(), speed: Math.max(32, d.st.speed * 1.7), hit: new Set(), slammed: false }; d.chargeA = 1; d.roar = 0.2; sfx.whoosh(0.9); if (d === this.player) this.hud.toast('🐂 HORN RUSH!'); return; }
     else if (k === 'raptorpounce') { const act = this.pounceAct(d, target, fwd); act.type = 'raptorpounce'; d.act = act; d.pounceA = 1; d.roar = 0.35; sfx.whoosh(1); if (d === this.player) this.hud.toast('🦖 RAPTOR POUNCE!'); return; }
+    else if (k === 'tailclub') { d.act = { type: 'tailclub', t: 0, dur: 0.95, yaw0: d.yaw, slammed: false, hit: new Set() }; d.smashA = 1; d.roar = 0.35; sfx.whoosh(0.8); if (d === this.player) this.hud.toast('💥 TAIL SMASH!'); return; }
     else if (k === 'combo') d.act = { type: 'combo', t: 0, dur: 1.0, dir: fwd.clone(), n: 0, target };
     else if (k === 'spit') { d.frillT = 1.1; d.jaw = 1.4; this.later(0.25, () => { if (!d.alive) return; for (let i = 0; i < 3; i++) this.later(i * 0.09, () => d.alive && this.launchOrb(d, target, 'goo', i ? 0.08 : 0)); }); sfx.whoosh(0.7); return; }
     else if (k === 'headbutt') { d.act = { type: 'headbutt', t: 0, dur: 0.95, dir: fwd.clone(), speed: Math.max(24, d.st.speed * 2.5), hit: new Set() }; sfx.whoosh(0.6); return; }
@@ -616,6 +620,13 @@ export class Game {
       if (leap && this.r() < 0.7) this.fx.glow.spawn({ pos: { x: d.pos.x, y: d.pos.y + 1.2, z: d.pos.z }, vel: { x: (this.r() - 0.5) * 2, y: 1.5, z: (this.r() - 0.5) * 2 }, size: 0.25, life: 0.4, r: 0.7, g: 0.85, b: 1.3, alpha: 0.7 });
       if (uu >= 1) { d.air = 0; d.biteA = 1; hitFoes(d.radius + 3.2, d.st.bite * 2.6, leap ? 16 : 9, 1.2, null); this.fx.dust(d.pos, 12, 1.8, 7); this.fx.ring(d.pos, leap ? 9 : 8, leap ? 0x4aa0ff : 0xffc070); if (leap) { this.fx.ring(d.pos, 5, 0xd8ecff); d.pounceHit = true; } this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.3); sfx.stomp(); sfx.chomp(1); A.slammed = true;
         if (A.chain > 0) { if (A.target) A.done.add(A.target); const nx = this.nearestFoe(d, 28, A.done); if (nx) { A.next = this.pounceAct(d, nx, null, A.chain - 1); A.next.done = A.done; sfx.whoosh(1); } } } } }
+    else if (A.type === 'tailclub') { d.smashA = 1; d.speedNow = 0; d.yaw = A.yaw0 + Math.sin(u * Math.PI) * 0.35;
+      if (u > 0.42 && !A.slammed) { A.slammed = true; const fwd = d.forward(new THREE.Vector3()), side = new THREE.Vector3(-fwd.z, 0, fwd.x);
+        const P = d.pos.clone().addScaledVector(fwd, -d.radius * 0.75); P.y = d.ground + 0.35;
+        const R = Math.max(7.5, d.radius * 2.2);
+        this.fx.ring(P, R, 0xffb14a); this.fx.ring(P, R * 0.55, 0xfff1c4); this.fx.ring(P.clone().addScaledVector(side, d.radius * 0.4), 5, 0xffc878);
+        this.fx.dust(P, 18, 2.4, 9); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.75 : 0.32); sfx.stomp();
+        for (const e of foes) { if (!e || !e.alive || A.hit.has(e)) continue; const away = tmp.subVectors(e.pos, d.pos).setY(0); const dist = away.length() - e.radius; if (dist > d.radius + 4.4) continue; if (away.lengthSq() < 1e-4) away.copy(fwd).multiplyScalar(-1); else away.normalize(); if (away.dot(fwd) > 0.15) continue; A.hit.add(e); e.hit(d.st.bite * 2.4, d.pos, d); e.knock.addScaledVector(away, 16); this.stun(e, 0.65); this.fx.impact(e.center.clone(), 1.3, e.real); } } }
     else if (A.type === 'rocket') { const sp = A.speed * Math.min(1, u * 6) * (u > 0.85 ? (1 - u) / 0.15 : 1); slide(A.dir, sp); d.chargeA = 1; // Mega-Trike: rocket-powered horn charge, ends in a KABOOM
       const at = d.pos.clone().addScaledVector(A.dir, -d.radius).setY(d.pos.y + d.mech.height * 0.5); for (let i = 0; i < this.fx.n(2); i++) this.fx.fire.spawn({ pos: at, vel: { x: -A.dir.x * 16 + (this.r() - 0.5) * 3, y: 1 + this.r() * 2, z: -A.dir.z * 16 + (this.r() - 0.5) * 3 }, size: 1.2, size1: 3, life: 0.3, r: 3.2, g: 1.4, b: 0.35, alpha: 1, drag: 1.5, rv: 3 });
       if (this.r() < 0.6) this.fx.dust(d.pos, 1, 1.4 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.5, 60 * dt * 10, d);
@@ -709,7 +720,7 @@ export class Game {
     if (A.type === 'whip' && A.lava && u > 0.5 && !A.lavaDone) { A.lavaDone = true; // Lava Ankylo: a ring of fire + a molten blast
       const P = d.pos; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, q = new THREE.Vector3(P.x + Math.cos(a) * 7 * s, 0, P.z + Math.sin(a) * 7 * s); q.y = this.world.height(q.x, q.z); this.mh.addFire(q, 2.4, 3.5, d); }
       this.mh.blast(P.clone().setY(P.y + 1), 1.2, { by: d, dmg: d.st.bite * 1.6, R: 9 * s, only: e => (d.wild ? e === this.player : e !== this.player), fire: false }); this.fx.ring(P, 16 * s, 0xff5a10); this.fx.ring(P, 9 * s, 0xffd040); }
-    if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.pounceA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; d.slashA = 0; d.splashA = 0; if (A.hit) for (const e of A.hit) e.dizzyFx = 0; if (A.next) d.act = A.next; }
+    if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.pounceA = 0; d.smashA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; d.slashA = 0; d.splashA = 0; if (A.hit) for (const e of A.hit) e.dizzyFx = 0; if (A.next) d.act = A.next; }
     return true;
   }
 
@@ -1059,7 +1070,7 @@ export class Game {
     if (!pAlive) return;
     const facing = Math.cos(angDiff(e.yaw, Math.atan2(toP.x, toP.z))) > 0.6;
     if (facing && dist < reach + 1.5 && e.laserT <= 0) { e.laserT = e.st.rate; this.bite(e, p); }
-    const k = e.def.special, inRange = k === 'chomp' ? dist < (e.def.kind === 'trex' ? 18 : 12) : k === 'charge' || k === 'headbutt' || k === 'trikecharge' || k === 'hornrush' ? dist > 6 && dist < 30 : k === 'pounce' || k === 'raptorpounce' || k === 'spit' ? dist > 6 && dist < 24 : k === 'whip' ? dist < e.radius + 6 * s
+    const k = e.def.special, inRange = k === 'chomp' ? dist < (e.def.kind === 'trex' ? 18 : 12) : k === 'charge' || k === 'headbutt' || k === 'trikecharge' || k === 'hornrush' ? dist > 6 && dist < 30 : k === 'pounce' || k === 'raptorpounce' || k === 'spit' ? dist > 6 && dist < 24 : k === 'whip' || k === 'tailclub' ? dist < e.radius + 7 * s
       : k === 'rage' ? dist < 22 : k === 'slash' ? dist < e.radius + 8 * s : k === 'splash' ? dist < e.radius + 7 : k === 'combo' ? dist < 11 : k === 'honk' ? dist < 18 * s + 4
       : k === 'tsunami' ? dist < 24 * s + 4 : k === 'rockethorn' ? dist > 7 && dist < 32 : k === 'pack' ? dist > 5 && dist < 26 : k === 'cannon' ? dist > 10 && dist < 50
       : k === 'lavaslam' ? dist < e.radius + 7 * s : k === 'bark' ? dist < 18
@@ -1150,7 +1161,7 @@ export class Game {
     // auto-follow behind the dino while moving (unless the player is steering the camera)
     if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI + (p.def.id === 'brachio' ? -0.62 : 0); c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
     if (p.def.id === 'brachio' && !inp.looking) c.pitch += (0.32 - c.pitch) * Math.min(1, dt * 2);
-    let dist = 4 + h * 1.55 + (p.def.farmKid ? 1.8 : 0) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
+    let dist = 4 + h * 1.55 + (p.def.farmKid ? 1.8 : 0) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
     // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;

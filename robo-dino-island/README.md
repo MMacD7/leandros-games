@@ -164,7 +164,7 @@ Buttons: **BITE** (hold), **special** (with cooldown), **ROAR** (stuns enemies i
 | Velociraptor | RAPTOR POUNCE: crouch, leap, sickle-claw slash | feathered, very fast, hunts in a pack |
 | Spinosaurus | TAIL SWIPE: 360° tail whip | **swims**, big sail |
 | Triceratops | GORE CHARGE: horn charge that stuns | tough frill shield |
-| Ankylosaurus | CLUB SMASH: club-tail whip that stuns | heaviest armor |
+| Ankylosaurus | TAIL SMASH: the club swings in an arc and knocks foes back | low, wide, orange armor |
 | Stegosaurus | SPIKE TAIL: spiked tail whip | back plates |
 | Brachiosaurus | TITAN STOMP: rears up and slams down with a shockwave | biggest of all |
 | Giganotosaurus | RAGE MODE: glowing red fury, faster with harder bites | huge hunter |

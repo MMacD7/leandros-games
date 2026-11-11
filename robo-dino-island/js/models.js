@@ -111,3 +111,15 @@ export function cloneLeandro() {
   if (!leandroCache) throw new Error('leandro model not loaded');
   return { scene: clone(leandroCache.scene), animations: leandroCache.animations };
 }
+
+const ANKY_URL = 'assets/models/anky.glb';
+let ankyCache = null;
+
+export function preloadAnky(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(ANKY_URL, gltf => { ankyCache = gltf; }, undefined, err => console.error(ANKY_URL, err));
+}
+export function cloneAnky() {
+  if (!ankyCache) throw new Error('anky model not loaded');
+  return { scene: clone(ankyCache.scene), animations: ankyCache.animations };
+}
