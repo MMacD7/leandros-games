@@ -15,8 +15,8 @@ import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave,
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
-import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky } from './models.js';
-import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
+import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky, preloadStego, preloadAllo, preloadDilo } from './models.js';
+import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
 
@@ -79,7 +79,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
-preloadArt(mgr); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr);
+preloadArt(mgr); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -112,7 +112,7 @@ function boot() {
   const fogC = new THREE.Color(0xb6cde0);
   try { const im = skyTex.image, cv = document.createElement('canvas'); cv.width = 64; cv.height = 32; const g = cv.getContext('2d'); g.drawImage(im, 0, 0, 64, 32); const px = g.getImageData(0, 15, 64, 2).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < px.length; i += 4) { r += px[i]; gg += px[i + 1]; b += px[i + 2]; } const n = px.length / 4; fogC.setRGB(r / n / 255, gg / n / 255, b / n / 255, THREE.SRGBColorSpace); } catch (e) { }
   scene.fog = new THREE.Fog(fogC, 60, 900);
-  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.42, fog: fogC.clone(), near: 60, far: 900, sunDir: sunDir.clone(), sunC: 0xfff1dc, sunI: 3.6, hs: 0xbfe3ff, hg: 0x4a5a2a, hi: 0.25, exp: 1.05 };
+  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone(), near: 80, far: 1300, sunDir: sunDir.clone(), sunC: 0xfff6e4, sunI: 3.8, hs: 0xc8e6ff, hg: 0x4a6a32, hi: 0.32, exp: 1.08 };
   fx = new FX(scene, assets, sfx);
   world = makeWorld(level); applyEnv(level);
   input = new Input(document.body);
@@ -257,7 +257,7 @@ function updateHUD(dt) {
 }
 const rc = $('radar').getContext('2d');
 function drawRadar(p) {
-  const S = 220, R = 105, scale = R / 120, yaw = game.cam.yaw; rc.clearRect(0, 0, S, S);
+  const S = 220, R = 105, worldR = game.world && game.world.playR > 400 ? 280 : 120, scale = R / worldR, yaw = game.cam.yaw; rc.clearRect(0, 0, S, S);
   rc.save(); rc.translate(S / 2, S / 2); rc.beginPath(); rc.arc(0, 0, R, 0, 7); rc.clip();
   const dot = (x, z, col, r) => { const dx = (x - p.pos.x) * scale, dz = (z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
     let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 6) { rx *= (R - 6) / L; ry *= (R - 6) / L; } rc.fillStyle = col; rc.beginPath(); rc.arc(-rx, -ry, r, 0, 7); rc.fill(); };
@@ -265,6 +265,14 @@ function drawRadar(p) {
   if (game.farm) { dot(BASE.x, BASE.z + 18, '#ff6a5a', 9); for (const d of game.farm.radar()) dot(d.x, d.z, d.c, 4.5); } // v5.1 farm: the farmhouse, hungry (yellow) and fed (green) animals, golden poop
   else { if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 9); dot(ARENA.x, ARENA.z, '#ffd34a', 7); dot(BASE.x, BASE.z, '#3de8ff', 9); }
   for (const k of game.pickups) if (k.alive && k.type === 'core') dot(k.x, k.z, 'rgba(120,240,255,.8)', 3);
+  if (game.eggs) for (const e of game.eggs.list) {
+    if (e.hatched) continue;
+    const d = Math.hypot(e.x - p.pos.x, e.z - p.pos.z); if (d > 90) continue;
+    const dx = (e.x - p.pos.x) * scale, dz = (e.z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
+    let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 8) { rx *= (R - 8) / L; ry *= (R - 8) / L; }
+    rc.fillStyle = '#fff6e8'; rc.beginPath(); rc.ellipse(-rx, -ry, 5, 7, 0, 0, 7); rc.fill();
+    rc.fillStyle = '#e23a4a'; rc.beginPath(); rc.arc(-rx + 1.2, -ry - 1, 1.7, 0, 7); rc.fill();
+  }
   for (const e of game.enemies) if (e.alive) dot(e.pos.x, e.pos.z, '#ff3a2a', 6);
   rc.restore();
   rc.fillStyle = '#fff'; rc.beginPath(); rc.moveTo(S / 2, S / 2 - 12); rc.lineTo(S / 2 + 8, S / 2 + 8); rc.lineTo(S / 2 - 8, S / 2 + 8); rc.fill();
@@ -287,12 +295,25 @@ function show(s) {
   if (s === 'title' && game) game.mh.titleEnter();
   hud.bolts(); checkRotate(); fpsReset(); syncMusic();
 }
+function jungleHot() {
+  if (!game || !game.player) return false;
+  const p = game.player;
+  if (p.act || p.breathT > 0) return true;
+  for (const e of game.enemies) {
+    if (!e.alive) continue;
+    const big = e.boss || (e.radius || 0) >= 3 || (e.def && e.def.hp >= 180);
+    if (big && e.pos.distanceTo(p.pos) < 80) return true;
+  }
+  return false;
+}
 function syncMusic() {
   const b = game && game.battle;
   const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
   if (level === 'farm') { music.play(screen === 'play' || screen === 'pause' || screen === 'levels' || screen === 'results' ? 'farm' : 'farmtitle'); if (screen === 'play' && music.setIntensity) music.setIntensity(0); return; } // v5.1 hoedown!
-  const t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
-  if (!b && screen === 'play' && music.setIntensity) music.setIntensity(0);
+  let t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
+  const hot = !b && level === 'jungle' && screen === 'play' && jungleHot();
+  if (hot) t = 'battle';
+  if (!b && screen === 'play' && music.setIntensity) music.setIntensity(hot ? 1 : 0);
   music.play(t);
 }
 let rotateDismissed = false;
@@ -306,7 +327,7 @@ function announceNewLevel() {
   try { if (localStorage.getItem(NEW_LV_KEY) || !save.voice) return; } catch (e) { return; }
   if (voice.say('New level unlocked, Leandro! Farty Poop Farm!', { prio: 3, cd: 0 }) !== false) { try { localStorage.setItem(NEW_LV_KEY, '1'); } catch (e) { } if (screen === 'title') hud.toast('💩 NEW LEVEL: FARTY POOP FARM! 🐷'); }
 }
-for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { voice.prime(); announceNewLevel(); }, { once: true, capture: true });
+for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { initAudio(); voice.prime(); announceNewLevel(); }, { once: true, capture: true });
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : 'Find energy cores ⚡ and wild dinos!'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
@@ -363,13 +384,18 @@ tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
-const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount(); } else if (gMech.def.kind === 'trex' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 4), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'brachio' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'giga' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 6.5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'spinos' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'trice' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'carno' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'velo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.35 / (gMech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'ankys' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount(); } else if (gMech.def.kind === 'trex' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 4), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'brachio' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'giga' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 6.5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'spinos' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'trice' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'carno' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'velo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.35 / (gMech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'ankys' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'stegos' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'allo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'dilo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 0.95, shinOut: 0.04, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
 tap('b-voice', toggleVoice); tap('p-voice', toggleVoice); voice.setEnabled(save.voice !== false); voiceLabel();
 function hypeStart() { voice.say('Leandro!', { prio: 2, cd: 8000 }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 2, cd: 8000 }); }
-tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); musicLabel();
+tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); music.setVolume(save.musicVol ?? 0.9); musicLabel();
+const volInput = $('p-music-vol');
+if (volInput) {
+  volInput.value = String(Math.round((save.musicVol ?? 0.9) * 100));
+  volInput.addEventListener('input', () => { initAudio(); save.musicVol = (+volInput.value || 0) / 100; music.setVolume(save.musicVol); persist(); });
+}
 tap('p-quality', () => { if (autoQ) { autoQ = false; applyQuality(TIERS[0]); } else if (Q.tier < 3) applyQuality(TIERS[Q.tier + 1]); else { autoQ = true; applyQuality(TIERS[startTier]); } });
 document.addEventListener('gesturestart', e => e.preventDefault()); document.addEventListener('dblclick', e => e.preventDefault());
 document.addEventListener('touchmove', e => { if (!e.target.closest('.g-panel')) e.preventDefault(); }, { passive: false });
@@ -382,8 +408,12 @@ let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo',
 // v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
 const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish', 'turtle']); // v5 (+ v5.5 sea turtle)
 const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
-const G_REALS = newFirst(REALS), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS), G_DOGS = WESTIES, G_SEA = SEA.filter(d => !d.wildOnly);
-const gListOf = () => gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;
+// v5.9.5: the 3D upgrades move out of the Real carousel into SUPER DINOS. Ids stay the same, so old saves still select them. v5.10.0 adds Dilophosaurus.
+const SUPER_ORDER = ['trex', 'brachio', 'giga', 'spinos', 'trice', 'carno', 'velo', 'ankys', 'stegos', 'allo', 'dilo'];
+const SUPER_SET = new Set(SUPER_ORDER);
+const G_SUPER = SUPER_ORDER.map(id => REALS.find(d => d.id === id));
+const G_REALS = newFirst(REALS.filter(d => !SUPER_SET.has(d.id))), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS), G_DOGS = WESTIES, G_SEA = SEA.filter(d => !d.wildOnly);
+const gListOf = () => gList === 'super' ? G_SUPER : gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;
 const NEW_GARAGE_KEY = 'robo-dino-island.seen.newgarage';
 const gMechs = {}, gRider = new Rider();
 function buildGarage() {
@@ -398,10 +428,69 @@ function buildGarage() {
   const fill = new THREE.HemisphereLight(0xa0c8ff, 0x202020, 0.55); gScene.add(fill);
   const rim2 = new THREE.SpotLight(0xff5a1a, 700, 60, 0.7, 0.6, 1.6); rim2.position.set(12, 7, -11); gScene.add(rim2, rim2.target);
   syncGarageToSelected();
+  buildSuperCards();
+  paintSuperThumbs();
 }
 function syncGarageToSelected() {
-  const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0]; gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d));
+  const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0];
+  gList = SUPER_SET.has(d.id) ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo';
+  gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d));
 }
+function buildSuperCards() {
+  const root = $('g-super-grid'); if (!root || root.childElementCount) return;
+  root.innerHTML = G_SUPER.map(d => {
+    const move = (d.specialName || '').replace(/<br>/g, ' ');
+    return `<button class="sd-card" type="button" data-super="${d.id}" aria-pressed="false" aria-label="${d.name}. ${move}."><canvas class="sd-thumb" width="192" height="144" aria-hidden="true"></canvas><span class="sd-txt"><b>${d.name}</b><small>${move}</small></span></button>`;
+  }).join('');
+}
+let superThumbsStarted = false;
+async function paintSuperThumbs() {
+  if (superThumbsStarted) return;
+  superThumbsStarted = true;
+  const w = 192, h = 144;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  let thumbR = null;
+  try {
+    thumbR = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+    thumbR.outputColorSpace = THREE.SRGBColorSpace;
+    thumbR.toneMapping = THREE.ACESFilmicToneMapping;
+    thumbR.toneMappingExposure = 1.05;
+    thumbR.setSize(w, h, false);
+    const cam = new THREE.PerspectiveCamera(30, w / h, 0.1, 160);
+    for (const def of G_SUPER) {
+      const m = gMechs[def.id] || (gMechs[def.id] = makeDino(def, assets, false));
+      gRider.unmount();
+      gScene.add(m.obj);
+      m.obj.position.set(0, def.fly ? 1.2 : 0, 0);
+      m.obj.rotation.set(0, 0.85, 0);
+      m.obj.scale.setScalar(1);
+      for (let i = 0; i < 4; i++) m.animate(1 / 20, 0, {});
+      if (m.seatOnGround) { m.obj.position.y = 0; m.seatOnGround(() => 0); }
+      const hh = m.height || 4, R = Math.max(m.fitR || 5, hh * 0.7, 4);
+      cam.position.set(R * 0.7, hh * 0.55 + 0.4, R * 1.15);
+      cam.lookAt(0, hh * 0.38, 0);
+      thumbR.render(gScene, cam);
+      const dest = document.querySelector(`#g-super [data-super="${def.id}"] canvas`);
+      if (dest) dest.getContext('2d').drawImage(canvas, 0, 0, dest.width, dest.height);
+      gScene.remove(m.obj);
+    }
+  } catch (e) { console.warn('super thumbs', e); }
+  if (thumbR) thumbR.dispose();
+  if (screen === 'garage') refreshGarage();
+}
+$('g-super').addEventListener('click', e => {
+  const b = e.target.closest('[data-super]'); if (!b) return;
+  const def = G_SUPER.find(d => d.id === b.dataset.super); if (!def) return;
+  initAudio(); voice.prime();
+  gList = 'super'; gTab = 'super'; gIdx = G_SUPER.indexOf(def);
+  voice.say(def.name + '!', { prio: 2, cd: 1500, replace: true });
+  if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 1, cd: 6000 });
+  if (!save.owned.includes(def.id)) save.owned.push(def.id);
+  save.selected = def.id; save.landSel = def.id; gPicked = true;
+  sfx.ui(); persist(); refreshGarage();
+  if (gMech) { gMech.roar = 1.5; sfx.bigRoar(1.1 - (def.scale || 1) * 0.25, 1, false); }
+});
 function refreshLions() {
   const on = !!(save.jungleLion && save.farmLion), b = $('jg-lion'); if (!b) return;
   b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -427,6 +516,7 @@ function showLions() {
   $('g-dino').classList.add('hidden'); $('g-ups').classList.add('hidden');
   $('g-prev').parentElement.classList.add('hidden');
   for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups']) { const el = $('t-' + t); if (el) el.classList.remove('on'); }
+  for (const el of document.querySelectorAll('#g-super [data-super]')) { el.classList.remove('on'); el.setAttribute('aria-pressed', 'false'); }
   refreshLions(); setJunglePreview(); hud.bolts();
 }
 function setGarageMech() {
@@ -442,10 +532,21 @@ function setGarageMech() {
     else if (def.id === 'carno' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
     else if (def.id === 'velo' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.35 / (gMech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' });
     else if (def.id === 'ankys' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' });
+    else if (def.id === 'stegos' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' });
+    else if (def.id === 'allo' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
+    else if (def.id === 'dilo' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 0.95, shinOut: 0.04, saddle: false, grip: 'neck' });
     else gRider.mount(gMech);
   } else gRider.unmount();
 }
+function paintBabies() {
+  const grid = $('g-baby-grid'); if (!grid || !game || !game.eggs) return;
+  const rows = game.eggs.catalog();
+  grid.innerHTML = rows.map(b => `<button type="button" class="bb-card ${b.hatched ? 'on' : ''}" data-egg="${b.id}" aria-label="${b.hatched ? b.name : 'Hidden egg'}"><b>${b.hatched ? '🥚 ' + b.name : '🥚 ???'}</b><small>${b.hatched ? (b.following ? 'Following' : 'In the nest') : 'Still hidden'}</small></button>`).join('');
+  const n = rows.filter(b => b.hatched).length;
+  const count = $('babies-count'); if (count) count.textContent = n + '/' + rows.length;
+}
 function refreshGarage() {
+  paintBabies();
   if (!robosOn && (gTab === 'robo' || gList === 'robo')) { gTab = gList = 'real'; gIdx = 0; } // v5.6: robots are hidden while Robo Dinos is OFF
   refreshLions();
   if (gTab === 'lions') { showLions(); return; }
@@ -467,6 +568,10 @@ function refreshGarage() {
     <span class="upb"><button data-up="${u.id}" data-d="-1" ${l <= 0 ? 'disabled' : ''} aria-label="less">−</button><button data-up="${u.id}" data-d="1" ${l >= MAX_UP ? 'disabled' : ''} aria-label="more">+</button></span></div>`; }).join('');
   $('g-dino').classList.toggle('hidden', gTab === 'ups'); $('g-ups').classList.toggle('hidden', gTab !== 'ups');
   for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups']) { const el = $('t-' + t); if (el) el.classList.toggle('on', gTab === t); }
+  for (const el of document.querySelectorAll('#g-super [data-super]')) {
+    const on = gList === 'super' && G_SUPER[gIdx] && el.dataset.super === G_SUPER[gIdx].id;
+    el.classList.toggle('on', on); el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
   $('g-prev').parentElement.classList.toggle('hidden', gTab === 'ups');
   hud.bolts();
 }
@@ -566,7 +671,7 @@ function loop(now) {
   // volcano smoke plume
   if (screen !== 'pause') {
     emitSmoke(dt);
-    world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : 0 });
+    world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : game.player.def.id === 'stegos' ? 5 : game.player.def.id === 'allo' ? 4 : game.player.def.id === 'dilo' ? 3 : 0 });
     fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog);
   }
   if (world.peak && screen !== 'pause') peakAmbience(dt);
@@ -621,5 +726,5 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 // test / debug hooks (no network, local only)
-function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : game.player.def.id === 'stegos' ? 5 : game.player.def.id === 'allo' ? 4 : game.player.def.id === 'dilo' ? 3 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
+window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, audioCtx, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };

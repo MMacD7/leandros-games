@@ -57,8 +57,8 @@ export const REALS = [
   { id: 'ankys', name: 'Ankylosaurus', price: 1000, kind: 'ankys', desc: 'A low, wide tank in orange armor. TAIL SMASH swings the club and knocks everyone nearby back.',
     hp: 340, speed: 7.5, bite: 16, biteRate: 0.6, special: 'tailclub', specialName: 'TAIL<br>SMASH', specialCD: 5, roar: 1.5, scale: 1.0, radius: 3.1,
     back: 0x3e3a2a, belly: 0x8c7d60, stripe: 0x1c1a12, accent: 0xc89a48, eye: 0xff8a1a },
-  { id: 'stegos', name: 'Stegosaurus', price: 1200, kind: 'stegos', desc: 'Huge back plates and a tail full of spikes.',
-    hp: 210, speed: 9, bite: 14, biteRate: 0.6, special: 'whip', specialName: 'SPIKE<br>TAIL', specialCD: 3.5, roar: 1.4, scale: 1.0, radius: 2.6,
+  { id: 'stegos', name: 'Stegosaurus', price: 1200, kind: 'stegos', desc: 'Fiery orange plates and four tail spikes. SPIKE SWING sweeps them in a wide arc.',
+    hp: 260, speed: 10, bite: 16, biteRate: 0.55, special: 'spikeswing', specialName: 'SPIKE<br>SWING', specialCD: 5, roar: 1.6, scale: 1.0, radius: 3.4,
     back: 0x363e2e, belly: 0x9a9070, stripe: 0x161a12, accent: 0xe03a16, eye: 0xffa21a },
   { id: 'brachio', name: 'Brachiosaurus', price: 1600, kind: 'brachio', desc: 'The tallest of all! Rears up for an earth-shaking stomp.',
     hp: 330, speed: 8.5, bite: 14, biteRate: 0.6, special: 'stomp', specialName: 'TITAN<br>STOMP', specialCD: 5.5, roar: 1.8, scale: 1.25, radius: 4.8,
@@ -66,11 +66,11 @@ export const REALS = [
   { id: 'giga', name: 'Giganotosaurus', price: 0, kind: 'giga', desc: 'Even bigger than a T-Rex! MEGA SLASH lunges in with a tail sweep and a bite.',
     hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'slash', specialName: 'MEGA<br>SLASH', specialCD: 5.5, roar: 2.8, scale: 1.25, radius: 4.5,
     back: 0x4a4038, belly: 0xa8967a, stripe: 0x1a1410, accent: 0x9a2a14, eye: 0xff6a1a },
-  { id: 'allo', name: 'Allosaurus', price: 0, kind: 'allo', desc: 'The lion of the Jurassic. A lightning-fast TRIPLE BITE combo!',
-    hp: 140, speed: 13, bite: 24, biteRate: 0.45, special: 'combo', specialName: 'TRIPLE<br>BITE', specialCD: 4.5, roar: 2.0, scale: 0.92, radius: 2.2,
+  { id: 'allo', name: 'Allosaurus', price: 0, kind: 'allo', desc: 'Fast and agile, a bit smaller than the T-Rex. CLAW FRENZY lunges in with three orange claw swipes.',
+    hp: 130, speed: 16, bite: 22, biteRate: 0.4, special: 'clawfrenzy', specialName: 'CLAW<br>FRENZY', specialCD: 4.5, roar: 1.8, scale: 1.0, radius: 3.3,
     back: 0x6a4a2a, belly: 0xd0b48a, stripe: 0x2a1408, accent: 0xd8501a, eye: 0xffc21a },
-  { id: 'dilo', name: 'Dilophosaurus', price: 0, kind: 'dilo', desc: 'Twin crests and a pop-out frill. SPITS sticky venom goo that slows and stings!',
-    hp: 95, speed: 15.5, bite: 16, biteRate: 0.35, special: 'spit', specialName: 'VENOM<br>SPIT', specialCD: 2.4, roar: 1.4, scale: 0.8, radius: 1.6,
+  { id: 'dilo', name: 'Dilophosaurus', price: 0, kind: 'dilo', desc: 'Quick and nimble. Twin red crests and a neck frill. FRILL BLAST fans the frill and spits a cartoon slime cone.',
+    hp: 85, speed: 18, bite: 12, biteRate: 0.32, special: 'frillblast', specialName: 'FRILL<br>BLAST', specialCD: 4.2, roar: 1.3, scale: 1.0, radius: 2.4,
     back: 0x3a4a1a, belly: 0xc8c08a, stripe: 0x1a2208, accent: 0xff5a1a, eye: 0xd8ff3a },
   { id: 'pachy', name: 'Pachycephalosaurus', price: 0, kind: 'pachy', desc: 'A rock-hard dome head. Charges in for a HEAD-BUTT that sends foes flying!',
     hp: 150, speed: 13.5, bite: 14, biteRate: 0.5, special: 'headbutt', specialName: 'HEAD<br>BUTT', specialCD: 3.5, roar: 1.3, scale: 0.86, radius: 1.8,
@@ -196,7 +196,7 @@ const ALL_IDS = () => DINOS.map(d => d.id);
 const maxUps = () => Object.fromEntries(UPGRADES.map(u => [u.id, MAX_UP]));
 const fresh = () => ({ bolts: 0, owned: ALL_IDS(), selected: 'rex', up: maxUps(),
   kos: 0, cores: 0, bestBattle: 0, muted: false, music: true, ride: true, allUnlocked: true, level: 'jungle', voice: true,
-  jungleLion: false, farmLion: false, jungleCostume: false }); // v5.7 lion, v5.7.1 farm lion, v5.8 Rex Costume on Jungle Island only
+  jungleLion: false, farmLion: false, jungleCostume: false, hatched: [], musicVol: 0.9 }); // v5.7 lion, v5.8 Rex Costume, v5.9.7 eggs + music volume
 
 export function loadSave() {
   try {
@@ -207,12 +207,14 @@ export function loadSave() {
     const up = s.allUnlocked ? { ...f.up, ...(s.up || {}) } : maxUps(); // first load after the update: max out every upgrade
     for (const k in up) up[k] = Math.max(0, Math.min(MAX_UP, up[k] | 0));
     const out = { ...f, ...s, up, owned, allUnlocked: true };
-    if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex';
+    if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex'; // SUPER DINOS kept the same ids, so a saved T-Rex or Ankylosaurus still resolves
     if (!['peak', 'city', 'ocean', 'farm'].includes(out.level)) out.level = 'jungle';
     out.voice = out.voice !== false;
     out.jungleLion = out.jungleLion === true;
     out.farmLion = out.farmLion === true;
     out.jungleCostume = out.jungleCostume === true;
+    out.hatched = Array.isArray(s.hatched) ? s.hatched.filter(id => typeof id === 'string') : [];
+    out.musicVol = typeof s.musicVol === 'number' ? Math.max(0, Math.min(1, s.musicVol)) : 0.9;
     return out;
   } catch (e) { return fresh(); }
 }
