@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import fs from 'fs';
 
 const OUT = '/opt/cursor/artifacts';
-const IDS = ['trex', 'brachio', 'giga', 'spinos', 'trice', 'carno', 'velo', 'ankys', 'stegos', 'allo', 'dilo'];
-const NAMES = ['T-Rex', 'Brachiosaurus', 'Giganotosaurus', 'Spinosaurus', 'Triceratops', 'Carnotaurus', 'Velociraptor', 'Ankylosaurus', 'Stegosaurus', 'Allosaurus', 'Dilophosaurus'];
-const MOVES = ['MEGA CHOMP', 'TITAN STOMP', 'MEGA SLASH', 'SAIL SPLASH', 'TRIKE CHARGE', 'HORN RUSH', 'RAPTOR POUNCE', 'TAIL SMASH', 'SPIKE SWING', 'CLAW FRENZY', 'FRILL BLAST'];
+const IDS = ['trex', 'brachio', 'giga', 'spinos', 'trice', 'carno', 'velo', 'ankys', 'stegos', 'allo', 'dilo', 'pachy'];
+const NAMES = ['T-Rex', 'Brachiosaurus', 'Giganotosaurus', 'Spinosaurus', 'Triceratops', 'Carnotaurus', 'Velociraptor', 'Ankylosaurus', 'Stegosaurus', 'Allosaurus', 'Dilophosaurus', 'Pachycephalosaurus'];
+const MOVES = ['MEGA CHOMP', 'TITAN STOMP', 'MEGA SLASH', 'SAIL SPLASH', 'TRIKE CHARGE', 'HORN RUSH', 'RAPTOR POUNCE', 'TAIL SMASH', 'SPIKE SWING', 'CLAW FRENZY', 'FRILL BLAST', 'SKULL BASH'];
 
 async function poll(page, fn, ms = 90000, label = 'poll', arg) {
   const t0 = Date.now();
@@ -39,15 +39,15 @@ test('v5.9.5 SUPER DINOS section', async ({ page }, info) => {
   await expect(page.locator('#super-title')).toHaveText('SUPER DINOS');
   await expect(page.locator('#lions-title')).toHaveText('LIONS GO TO WAR!');
   const cards = page.locator('#g-super [data-super]');
-  await expect(cards).toHaveCount(11);
-  for (let i = 0; i < 11; i++) {
+  await expect(cards).toHaveCount(12);
+  for (let i = 0; i < 12; i++) {
     const card = cards.nth(i);
     await expect(card).toHaveAttribute('data-super', IDS[i]);
     await expect(card.locator('b')).toHaveText(NAMES[i]);
     await expect(card.locator('small')).toHaveText(MOVES[i]);
   }
   const dup = await page.evaluate(() => document.querySelectorAll('[data-super]').length);
-  expect(dup).toBe(11);
+  expect(dup).toBe(12);
   const lists = await page.evaluate(() => ({ super: G.superIds, real: G.realIds() }));
   expect(lists.super).toEqual(IDS);
   for (const id of IDS) expect(lists.real, id).not.toContain(id);
