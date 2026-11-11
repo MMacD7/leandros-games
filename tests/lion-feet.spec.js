@@ -48,12 +48,14 @@ test('lion paws stay on the ground in every clip', async ({ page }, info) => {
         return { h, ny: n.y, err };
       };
       let flat = null, slope = null;
-      for (let x = -80; x <= 80; x += 4) for (let z = -80; z <= 80; z += 4) {
+      const lim = world.playR > 400 ? 220 : 80, step = world.playR > 400 ? 6 : 4;
+      for (let x = -lim; x <= lim; x += step) for (let z = -lim; z <= lim; z += step) {
+        if (world.playR > 400 && (Math.hypot(x - 18, z + 48) < 50 || Math.hypot(x - 150, z - 8) < 48)) continue;
         const s = planeErr(x, z);
         if (s.h < 1.5 || s.h > 28) continue;
         const row = { x, z, ...s };
         if (s.ny > 0.992 && s.err < 0.05 && (!flat || s.err < flat.err)) flat = row;
-        if (s.ny > 0.984 && s.ny < 0.994 && s.err < 0.04 && (!slope || s.err < slope.err)) slope = row;
+        if (s.ny > 0.984 && s.ny < 0.994 && s.err < 0.04 && (!slope || s.ny > slope.ny || (s.ny === slope.ny && s.err < slope.err))) slope = row;
       }
       return { flat, slope };
     };

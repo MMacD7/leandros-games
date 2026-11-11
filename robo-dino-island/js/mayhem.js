@@ -77,7 +77,7 @@ export class Mayhem {
       const x = alongX ? along : k * B + side, z = alongX ? k * B + side : along; if (Math.hypot(x, z) > 270) continue; const m = ((along % B) + B) % B; if (Math.min(m, B - m) < 10) continue; // not in intersections
       if (add('car', x, z, 'city', alongX ? Math.PI / 2 : 0)) n++; } }
     // island: scattered depots
-    for (let i = 0, n = 0; i < 200 && n < 24; i++) { const a = r() * 6.28, d = 40 + r() * 250, x = Math.cos(a) * d, z = Math.sin(a) * d;
+    for (let i = 0, n = 0; i < 280 && n < (W.playR > 400 ? 40 : 24); i++) { const a = r() * 6.28, d = (W.playR > 400 ? 55 : 40) + r() * (W.playR > 400 ? 420 : 250), x = Math.cos(a) * d, z = Math.sin(a) * d;
       if (Math.hypot(x - BASE.x, z - BASE.z) < 45 || Math.hypot(x - ARENA.x, z - ARENA.z) < 45 || Math.hypot(x - VOLC.x, z - VOLC.z) < 50 || Math.hypot(x - TITLE.x, z - TITLE.z) < 28) continue;
       if (!ok(x, z, 1.4)) continue; cluster(x, z, 'island', r, true); n++; }
     this.dirty = true;
