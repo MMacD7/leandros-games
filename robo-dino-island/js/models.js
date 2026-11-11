@@ -63,3 +63,16 @@ export function cloneSpino() {
   if (!spinoCache) throw new Error('spino model not loaded');
   return { scene: clone(spinoCache.scene), animations: spinoCache.animations };
 }
+
+const TRIKE_URL = 'assets/models/trike.glb';
+let trikeCache = null;
+
+export function preloadTrike(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(TRIKE_URL, gltf => { trikeCache = gltf; }, undefined, err => console.error(TRIKE_URL, err));
+}
+
+export function cloneTrike() {
+  if (!trikeCache) throw new Error('trike model not loaded');
+  return { scene: clone(trikeCache.scene), animations: trikeCache.animations };
+}
