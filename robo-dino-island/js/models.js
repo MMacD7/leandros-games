@@ -76,3 +76,16 @@ export function cloneTrike() {
   if (!trikeCache) throw new Error('trike model not loaded');
   return { scene: clone(trikeCache.scene), animations: trikeCache.animations };
 }
+
+const CARNO_URL = 'assets/models/carno.glb';
+let carnoCache = null;
+
+export function preloadCarno(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(CARNO_URL, gltf => { carnoCache = gltf; }, undefined, err => console.error(CARNO_URL, err));
+}
+
+export function cloneCarno() {
+  if (!carnoCache) throw new Error('carno model not loaded');
+  return { scene: clone(carnoCache.scene), animations: carnoCache.animations };
+}
