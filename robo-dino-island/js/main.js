@@ -112,7 +112,7 @@ function boot() {
   const fogC = new THREE.Color(0xb6cde0);
   try { const im = skyTex.image, cv = document.createElement('canvas'); cv.width = 64; cv.height = 32; const g = cv.getContext('2d'); g.drawImage(im, 0, 0, 64, 32); const px = g.getImageData(0, 15, 64, 2).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < px.length; i += 4) { r += px[i]; gg += px[i + 1]; b += px[i + 2]; } const n = px.length / 4; fogC.setRGB(r / n / 255, gg / n / 255, b / n / 255, THREE.SRGBColorSpace); } catch (e) { }
   scene.fog = new THREE.Fog(fogC, 60, 900);
-  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.42, fog: fogC.clone(), near: 60, far: 900, sunDir: sunDir.clone(), sunC: 0xfff1dc, sunI: 3.6, hs: 0xbfe3ff, hg: 0x4a5a2a, hi: 0.25, exp: 1.05 };
+  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone(), near: 80, far: 1300, sunDir: sunDir.clone(), sunC: 0xfff6e4, sunI: 3.8, hs: 0xc8e6ff, hg: 0x4a6a32, hi: 0.32, exp: 1.08 };
   fx = new FX(scene, assets, sfx);
   world = makeWorld(level); applyEnv(level);
   input = new Input(document.body);
@@ -257,7 +257,7 @@ function updateHUD(dt) {
 }
 const rc = $('radar').getContext('2d');
 function drawRadar(p) {
-  const S = 220, R = 105, scale = R / 120, yaw = game.cam.yaw; rc.clearRect(0, 0, S, S);
+  const S = 220, R = 105, worldR = game.world && game.world.playR > 400 ? 280 : 120, scale = R / worldR, yaw = game.cam.yaw; rc.clearRect(0, 0, S, S);
   rc.save(); rc.translate(S / 2, S / 2); rc.beginPath(); rc.arc(0, 0, R, 0, 7); rc.clip();
   const dot = (x, z, col, r) => { const dx = (x - p.pos.x) * scale, dz = (z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
     let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 6) { rx *= (R - 6) / L; ry *= (R - 6) / L; } rc.fillStyle = col; rc.beginPath(); rc.arc(-rx, -ry, r, 0, 7); rc.fill(); };

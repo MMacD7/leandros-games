@@ -71,6 +71,10 @@ Ankylosaurus 3D model generated with Meshy AI from original concept art.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 - Orange armor plates, pale spikes, a cream belly, and a round tail club. No logos.
 
+## Jungle Island
+
+The bigger Jungle Island in v5.9.6 is original procedural art made for this game: the terrain, sandy shore, river, lake, waterfall, palms, broadleaf canopies, ferns, rocks, and the smoking volcano. No downloaded models.
+
 ## Carnotaurus
 
 Carnotaurus 3D model generated with Meshy AI from original concept art.

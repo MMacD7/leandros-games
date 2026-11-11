@@ -43,7 +43,8 @@ test('v5.9.4 anky feet, stretch, smash, and seat', async ({ page }, info) => {
       return { gap: minY - g.world.height(at.x, at.z), bury };
     };
     let flat = null, slope = null;
-    for (let x = -80; x <= 80; x += 4) for (let z = -80; z <= 80; z += 4) {
+    for (let x = -220; x <= 220; x += 6) for (let z = -220; z <= 220; z += 6) {
+      if (Math.hypot(x - 18, z + 48) < 50 || Math.hypot(x - 150, z - 8) < 48) continue;
       const h = g.world.height(x, z);
       if (h < 1.5 || h > 28) continue;
       const n = g.world.normalAt(x, z, new THREE.Vector3());

@@ -91,7 +91,7 @@ class Dino {
     // water: only swimmers and flyers go deep
     const h = w.height(this.pos.x, this.pos.z);
     if (!this.fly && (!this.swim || this.g.world.lava) && h < -1.6) { this.pos.x = ox; this.pos.z = oz; this.speedNow *= 0.5; }
-    const r = Math.hypot(this.pos.x, this.pos.z); if (r > 380) { this.pos.x *= 380 / r; this.pos.z *= 380 / r; }
+    const r = Math.hypot(this.pos.x, this.pos.z), lim = (this.g.world && this.g.world.playR) || 380; if (r > lim) { this.pos.x *= lim / r; this.pos.z *= lim / r; }
     const hitB = w.collide(this.pos, this.radius * 0.6, this.fly && this.alt > 4 || this.jy > 6); if (hitB && w.city) w.city.slam(this, hitB, dt); // v5: smash into buildings
     this.groundY();
   }
@@ -222,11 +222,12 @@ export class Game {
   }
   roamSpawnPoint() {
     for (let t = 0; t < 40; t++) {
-      const a = this.r() * Math.PI * 2, d = 60 + this.r() * 220, x = Math.cos(a) * d * 0.9, z = Math.sin(a) * d * 0.9;
+      const big = this.world && this.world.playR > 400;
+      const a = this.r() * Math.PI * 2, d = (big ? 90 : 60) + this.r() * (big ? 360 : 220), x = Math.cos(a) * d * 0.9, z = Math.sin(a) * d * 0.9;
       const h = this.world.height(x, z);
       if (h < 1.5 || h > 40) continue; if (Math.hypot(x - BASE.x, z - BASE.z) < 75) continue;
       if (this.player && Math.hypot(x - this.player.pos.x, z - this.player.pos.z) < 45) continue;
-      if (this.player && t < 30 && Math.hypot(x - this.player.pos.x, z - this.player.pos.z) > 200) continue; // v5: keep new arrivals near the action (far ones despawn at 260 m)
+      if (this.player && t < 30 && Math.hypot(x - this.player.pos.x, z - this.player.pos.z) > (big ? 340 : 200)) continue; // keep new arrivals near the action
       if (Math.hypot(x - VOLC.x, z - VOLC.z) < 30) continue;
       if (this.world.city && this.world.city.blocked(x, z, 5)) continue; // not inside a skyscraper
       return [x, z, 1 + Math.min(3, Math.floor(Math.hypot(x - BASE.x, z - BASE.z) / 90))];
@@ -245,9 +246,10 @@ export class Game {
   }
   placePickups() {
     this.pickups = []; if (this.world.farm) return; // v5.1: no robot parts lying around the farm
+    const big = this.world && this.world.playR > 400, nPick = big ? 140 : 90;
     const r = rng(this.world.peak ? 4321 : 1234);
-    for (let i = 0; i < 90; i++) {
-      const a = r() * Math.PI * 2, d = 20 + r() * 260, x = Math.cos(a) * d, z = Math.sin(a) * d, h = this.world.height(x, z);
+    for (let i = 0; i < nPick; i++) {
+      const a = r() * Math.PI * 2, d = (big ? 30 : 20) + r() * (big ? 470 : 260), x = Math.cos(a) * d, z = Math.sin(a) * d, h = this.world.height(x, z);
       if (h < 1.2 || h > 45) continue;
       this.pickups.push({ type: r() < 0.4 ? 'core' : 'scrap', x, z, y: h, alive: true, t: 0, ph: r() * 6 });
     }
@@ -980,7 +982,7 @@ export class Game {
         const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
       this.stampT = (this.stampT ?? 70) - dt; if (this.stampT <= 0) { this.stampT = 75 + this.r() * 60; if (p.alive) this.stampede(); }
       // despawn very far enemies so the island stays lively near the player
-      for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; if (e.alive && e.pos.distanceTo(p.pos) > 260) { e.remove(); this.enemies.splice(i, 1); } } }
+      for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; if (e.alive && e.pos.distanceTo(p.pos) > (this.world && this.world.playR > 400 ? 360 : 260)) { e.remove(); this.enemies.splice(i, 1); } } }
     else if (this.battle && !this.battle.over) {
       this.battle.t -= dt; if (music.setIntensity) music.setIntensity(clamp(this.enemies.filter(e => e.alive).length / 8 + (this.battle.boss ? 0.5 : 0), 0, 1)); if (this.enemies.length === 0) { if (this.battle.wave > 0) this.hud.leandroWins?.('Wave ' + this.battle.wave + ' cleared!'); this.nextWave(); }
       if (this.battle.t <= 0) this.endBattle();
