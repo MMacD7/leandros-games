@@ -50,6 +50,18 @@ export class SpinoMech {
       }
     });
     this.bones = bones; this.meshes = meshes; this.skin = meshes[0];
+    const attr0 = this.skin.geometry.attributes.position;
+    const neckIds = [];
+    for (let i = 0; i < attr0.count; i++) {
+      const x = attr0.getX(i), y = attr0.getY(i), z = attr0.getZ(i);
+      // The saddle: the low hide where the neck meets the shoulders, in front of the sail.
+      // z 0.44–0.48 is the trough. Farther forward the neck rises toward the skull.
+      if (z > 0.44 && z < 0.482 && y > 0.08 && y < 0.22 && Math.abs(x) < 0.07) neckIds.push(i);
+    }
+    this._neckIds = neckIds;
+    let sailTip = 0;
+    for (let i = 1; i < attr0.count; i++) if (attr0.getY(i) > attr0.getY(sailTip)) sailTip = i;
+    this._sailTip = sailTip;
     this.b = { pelvis: bones.hips, chest: bones.chest, neck: bones.neck, head: bones.head, jaw: bones.jaw };
     const box = new THREE.Box3().setFromObject(scene);
     const size = box.getSize(new THREE.Vector3());
@@ -117,26 +129,42 @@ export class SpinoMech {
     for (const h of hits) if (h.point.y > top) top = h.point.y;
     return top;
   }
-  // At the base of the neck, just in front of the sail. The sail itself is rejected.
-  seatOnBack() {
+  // Crown of the neck-base hide on the posed mesh. A vertical ray here hits the sail first.
+  neckHide(out = new THREE.Vector3()) {
+    const sk = this.skin, ids = this._neckIds, neck = this.bones.neck;
+    if (!sk || !ids || !ids.length) return null;
     this.obj.updateMatrixWorld(true);
-    const neck = this.bones.neck || this.bones.chest;
-    const origin = new THREE.Vector3();
-    neck.getWorldPosition(origin);
-    let best = null;
-    for (const lz of [-0.10, -0.04, 0.02]) {
-      for (const lx of [-0.02, 0, 0.02]) {
-        const probe = new THREE.Vector3(lx, 0.5, lz);
-        neck.localToWorld(probe);
-        const y = this.surfaceY(probe.x, probe.z);
-        if (y == null || y > origin.y + 1.35) continue;
-        const hit = new THREE.Vector3(probe.x, y, probe.z);
-        if (!best || hit.y > best.y) best = hit;
-      }
+    const v = this._hideV || (this._hideV = new THREE.Vector3());
+    const local = this._hideL || (this._hideL = new THREE.Vector3());
+    let best = -Infinity, any = -Infinity;
+    const anyPt = this._hideAny || (this._hideAny = new THREE.Vector3());
+    for (let k = 0; k < ids.length; k++) {
+      sk.getVertexPosition(ids[k], v);
+      v.applyMatrix4(sk.matrixWorld);
+      if (v.y > any) { any = v.y; anyPt.copy(v); }
+      if (!neck) continue;
+      local.copy(v);
+      neck.worldToLocal(local);
+      if (Math.abs(local.x) > 0.06) continue;
+      if (local.y > best) { best = local.y; out.copy(v); }
     }
-    if (!best) { this.seat.position.set(0, 0.12, -0.06); return; }
-    const local = neck.worldToLocal(best.clone());
-    local.y += 0.01;
+    if (best === -Infinity) { if (any === -Infinity) return null; out.copy(anyPt); }
+    return out;
+  }
+  sailTop(out = new THREE.Vector3()) {
+    const sk = this.skin;
+    if (!sk) return null;
+    this.obj.updateMatrixWorld(true);
+    sk.getVertexPosition(this._sailTip || 0, out);
+    return out.applyMatrix4(sk.matrixWorld);
+  }
+  // Follows the neck bone. The anchor is the skinned neck-base surface.
+  seatOnBack() {
+    const neck = this.bones.neck || this.bones.chest;
+    const hit = this.neckHide(this._neckHit || (this._neckHit = new THREE.Vector3()));
+    if (!neck || !hit) { if (this.seat) this.seat.position.set(0, 0.08, 0.02); return; }
+    const local = neck.worldToLocal(hit.clone());
+    local.y += 0.008;
     this.seat.position.copy(local);
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }
@@ -185,5 +213,6 @@ export class SpinoMech {
     if (this.splash) this.splash.value = Math.max(splash, this.flash * 0.4);
     const plate = this.mats.plate;
     if (plate && plate.emissive) plate.emissive.setRGB(0.05 + splash * 0.7, 0.12 + splash * 0.22, 0.22);
+    this.seatOnBack();
   }
 }

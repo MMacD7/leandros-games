@@ -101,27 +101,45 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
     const stretch = {};
     for (const name of ['Idle', 'Walk', 'Run', 'Roar', 'Splash']) stretch[name] = stretchOf(name);
     p.pos.set(flat.x, 0, flat.z); p.yaw = 0.2; p.speedNow = 0; p.roar = 0; p.splashA = 0; p.groundY();
+    m._clip = '';
     for (let i = 0; i < 6; i++) p.updateVisual(1 / 20);
-    g.rider.update(0.05, p);
     const head = new THREE.Vector3(), hips = new THREE.Vector3(), foot = new THREE.Vector3(), headB = new THREE.Vector3();
-    g.rider.head.getWorldPosition(head);
-    g.rider.hips.getWorldPosition(hips);
     m.bones.head.getWorldPosition(headB);
     let footLow = Infinity;
     for (const L of m.legs) { const v = new THREE.Vector3(); L.g.getWorldPosition(v); footLow = Math.min(footLow, v.y); }
-    const backY = m.surfaceY(hips.x, hips.z);
-    const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
-    const right = new THREE.Vector3(fwd.z, 0, -fwd.x);
-    let footDrop = Infinity, footSide = 0;
-    for (const leg of g.rider.legs) {
-      leg.foot.getWorldPosition(foot);
-      footDrop = Math.min(footDrop, hips.y - foot.y);
-      footSide = Math.max(footSide, Math.abs(foot.clone().sub(hips).dot(right)));
-    }
     const box = new THREE.Box3().setFromObject(m.skin);
     const size = box.getSize(new THREE.Vector3());
     const ws = new THREE.Vector3();
     const riderWorld = g.rider.obj.getWorldScale(ws).x;
+    const hide = new THREE.Vector3(), sailPt = new THREE.Vector3();
+    const seatOf = (name) => {
+      p.speedNow = name === 'Run' ? 14 : name === 'Walk' ? 5 : 0;
+      p.roar = name === 'Roar' ? 1.4 : 0;
+      p.splashA = name === 'Splash' ? 1 : 0;
+      m._clip = '';
+      for (let i = 0; i < (name === 'Splash' ? 12 : 8); i++) p.updateVisual(1 / 20);
+      if (name === 'Splash' && m.actions.Splash) { m.actions.Splash.time = 0.52; m.mixer.update(0.001); m.seatOnBack(); }
+      g.rider.update(0.05, p);
+      g.rider.hips.getWorldPosition(hips);
+      const neck = m.neckHide(hide), sail = m.sailTop(sailPt);
+      const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+      const right = new THREE.Vector3(fwd.z, 0, -fwd.x);
+      let footDrop = Infinity, footSide = 0;
+      for (const leg of g.rider.legs) {
+        leg.foot.getWorldPosition(foot);
+        footDrop = Math.min(footDrop, hips.y - foot.y);
+        footSide = Math.max(footSide, Math.abs(foot.clone().sub(hips).dot(right)));
+      }
+      return {
+        name,
+        hipGap: neck ? Math.round((hips.y - neck.y) * 100) / 100 : 99,
+        belowSail: sail ? Math.round((sail.y - hips.y) * 100) / 100 : 0,
+        footDrop: Math.round(footDrop * 100) / 100,
+        footSide: Math.round(footSide * 100) / 100,
+      };
+    };
+    const seats = ['Walk', 'Run', 'Roar', 'Splash'].map(seatOf);
+    g.rider.head.getWorldPosition(head);
     g.special(p);
     for (let i = 0; i < 16; i++) { g.updateAct(p, 1 / 20); p.updateVisual(1 / 20); }
     const splash = { clip: m._clip, type: p.act && p.act.type, slammed: !!(p.act && p.act.slammed), mounted: !!g.rider.mounted };
@@ -137,9 +155,7 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
       special: p.def.special,
       rows: rows.map(round),
       stretch,
-      hipGap: backY == null ? 99 : Math.round((hips.y - backY) * 100) / 100,
-      footDrop: Math.round(footDrop * 100) / 100,
-      footSide: Math.round(footSide * 100) / 100,
+      seats,
       headAbove: Math.round((head.y - hips.y) * 100) / 100,
       riderWorld: Math.round(riderWorld * 100) / 100,
       splash,
@@ -156,10 +172,13 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
   expect(report.length).toBeGreaterThan(14);
   expect(report.radius).toBeGreaterThan(4.5);
   expect(report.special).toBe('splash');
-  expect(report.hipGap).toBeGreaterThan(-0.25);
-  expect(report.hipGap).toBeLessThan(0.45);
-  expect(report.footDrop).toBeGreaterThan(0.4);
-  expect(report.footSide).toBeGreaterThan(0.35);
+  for (const s of report.seats) {
+    expect(s.hipGap, s.name).toBeGreaterThan(-0.3);
+    expect(s.hipGap, s.name).toBeLessThan(0.35);
+    expect(s.belowSail, s.name).toBeGreaterThan(s.name === 'Splash' ? 0.9 : 1.8);
+    expect(s.footDrop, s.name).toBeGreaterThan(0.35);
+    expect(s.footSide, s.name).toBeGreaterThan(0.25);
+  }
   expect(report.headAbove).toBeGreaterThan(0.2);
   expect(report.riderWorld).toBeGreaterThan(1.4);
   expect(report.riderWorld).toBeLessThan(2.2);
@@ -182,7 +201,7 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
 
   if (info.project.name !== 'iphone-landscape') return;
   fs.mkdirSync(OUT, { recursive: true });
-  console.log('spino', JSON.stringify({ sail: report.sail, head: report.head, length: report.length, width: report.width, radius: report.radius, hipGap: report.hipGap, footDrop: report.footDrop, footSide: report.footSide, stretch: report.stretch }));
+  console.log('spino', JSON.stringify({ sail: report.sail, head: report.head, length: report.length, seats: report.seats, stretch: report.stretch }));
 
   const shoot = async (file, pose) => {
     await page.evaluate((pose) => {
@@ -191,7 +210,8 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
       if (G.level !== 'jungle') G.setLevel('jungle');
       G.game.spawnPlayer(false);
       G.show('play');
-      const g = G.game, p = g.player, THREE = G.THREE, m = p.mech;
+      const g = G.game, p = g.player, THREE = G.THREE, m = p.mech, cam0 = g.camera;
+      cam0.fov = cam0.aspect < 1 ? 72 : 58; cam0.updateProjectionMatrix();
       g.fx.update(2, g.world, () => {}, g.scene.fog);
       for (const r of g.fx.rings.splice(0)) { g.scene.remove(r.m); if (r.m.material) r.m.material.dispose(); }
       for (const e of g.enemies) if (e.remove) e.remove();
@@ -237,6 +257,12 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
         const look = new THREE.Vector3(AX, g.world.height(AX, AZ) + 3.6, AZ);
         cam.position.set(AX, look.y + 1.8, AZ - (pose === 'vs' ? 36 : 22));
         cam.lookAt(look);
+      } else if (pose === 'seat') {
+        const look = new THREE.Vector3();
+        g.rider.hips.getWorldPosition(look);
+        cam.fov = 34; cam.updateProjectionMatrix();
+        cam.position.set(look.x, look.y + 0.55, look.z + 8.2);
+        cam.lookAt(look.x + 0.15, look.y - 0.15, look.z);
       } else {
         const look = p.pos.clone(); look.y += m.height * 0.42;
         cam.position.set(look.x, look.y + (pose === 'splash' ? 2.8 : 1.4), look.z + (pose === 'splash' ? 24 : 20));
@@ -256,6 +282,7 @@ test('v5.9.0 spino feet, stretch, splash, and seat', async ({ page }, info) => {
   await page.screenshot({ path: OUT + '/spino-garage.png' });
 
   await shoot('spino-walk.png', 'walk');
+  await shoot('spino-seat.png', 'seat');
   await shoot('spino-splash.png', 'splash');
   await shoot('spino-vs-giga.png', 'vs');
   await shoot('spino-enemy.png', 'enemy');
