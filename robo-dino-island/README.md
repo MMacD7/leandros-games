@@ -163,7 +163,7 @@ Buttons: **BITE** (hold), **special** (with cooldown), **ROAR** (stuns enemies i
 | Carnotaurus | HORN CHARGE: fast bull charge with knockback | quick, bull horns |
 | Velociraptor | POUNCE: leaps onto a target from far away | smallest and fastest, sickle claws, feathers |
 | Spinosaurus | TAIL SWIPE: 360° tail whip | **swims**, big sail |
-| Triceratops | GORE CHARGE: horn charge that stuns | tough frill shield |
+| Triceratops | TRIKE CHARGE: head-down horn charge, dust trail, shockwave ring | frill shield, about 9 m |
 | Ankylosaurus | CLUB SMASH: club-tail whip that stuns | heaviest armor |
 | Stegosaurus | SPIKE TAIL: spiked tail whip | back plates |
 | Brachiosaurus | TITAN STOMP: rears up and slams down with a shockwave | biggest of all |
