@@ -68,7 +68,7 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   await ready(page);
   await dismissRotate(page);
 
-  await expect(page.locator('#ver')).toHaveText('v5.9.3');
+  await expect(page.locator('#ver')).toHaveText('v5.9.4');
   const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
   expect(sw).toContain('./js/costume.js');
   expect(sw).toContain('./js/lion.js');
@@ -89,6 +89,8 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   expect(sw).toContain('./js/raptor.js');
   expect(sw).toContain('./assets/models/raptor.glb');
   expect(sw).toContain('./assets/models/leandro.glb');
+  expect(sw).toContain('./js/anky.js');
+  expect(sw).toContain('./assets/models/anky.glb');
   expect(sw).toContain('./assets/art/rex-rider.webp');
   const lionSrc = await page.evaluate(async () => (await fetch('./js/lion.js')).text());
   expect(lionSrc.toLowerCase()).not.toContain('thundercat');

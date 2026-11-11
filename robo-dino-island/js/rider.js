@@ -141,8 +141,8 @@ export class Rider {
   applySkinPose() {
     if (!this.attachSkin()) return;
     if (this.clips) for (const a of Object.values(this.clips)) a.setEffectiveWeight(0);
-    const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos' || this.mounted.def.id === 'trice' || this.mounted.def.id === 'carno');
-    const spread = wide ? 0.62 : 0.42;
+    const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos' || this.mounted.def.id === 'trice' || this.mounted.def.id === 'carno' || this.mounted.def.id === 'ankys');
+    const spread = wide ? 0.72 : 0.42;
     this.bendBone('mixamorig:LeftUpLeg', -1.15, 0, spread);
     this.bendBone('mixamorig:RightUpLeg', -1.15, 0, -spread);
     this.bendBone('mixamorig:LeftLeg', 1.4, 0, 0);
@@ -218,7 +218,13 @@ export class Rider {
     this.real = true; this.popT = -1; this.bare = opts.saddle === false; this.grip = opts.grip || '';
     this.seatGroup.visible = !this.bare;
     this.spread = opts.spread ?? (this.bare ? 1.05 : 0.95); this.shinOut = opts.shinOut ?? (this.bare ? 0.12 : 0.32); this.hw = 0.42;
-    this.obj.scale.setScalar(opts.scale ?? 1.12); this.obj.position.set(0, 0, 0); this.obj.quaternion.identity(); this.obj.rotation.set(0, 0, 0);
+    this.obj.position.set(0, 0, 0); this.obj.quaternion.identity(); this.obj.rotation.set(0, 0, 0);
+    if (opts.world) {
+      parent.updateWorldMatrix(true, false);
+      const ps = new THREE.Vector3();
+      parent.getWorldScale(ps);
+      this.obj.scale.set(opts.world / Math.max(0.001, ps.x), opts.world / Math.max(0.001, ps.y), opts.world / Math.max(0.001, ps.z));
+    } else this.obj.scale.setScalar(opts.scale ?? 1.12);
     parent.add(this.obj); this.mounted = opts.mech || null;
     this.hips.position.y = this.bare ? 0 : 0.13;
     if (!this.bare) this.buildSeat(opts.seatW ?? 0.46);
@@ -247,7 +253,7 @@ export class Rider {
     if (this.bare && this.grip === 'neck') {
       // Hips on the hide, legs down both flanks, both hands on the base of the neck, face up.
       // The Giga's back is wide, so the same sit has to reach farther out or his feet plant on the hide.
-      const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos' || this.mounted.def.id === 'trice' || this.mounted.def.id === 'carno');
+      const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos' || this.mounted.def.id === 'trice' || this.mounted.def.id === 'carno' || this.mounted.def.id === 'ankys');
       for (const g of L) {
         g.hip.rotation.set(wide ? -1.05 : -0.42, 0, g.s * (wide ? 1.42 : 1.05));
         g.knee.rotation.set(wide ? 1.45 : 0.95, 0, 0);

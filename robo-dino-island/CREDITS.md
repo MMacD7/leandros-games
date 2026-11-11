@@ -62,6 +62,15 @@ Velociraptor 3D model generated with Meshy AI from original concept art.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 - Tan hide, blue feathers on the head, arms, and tail. No armor and no logos.
 
+## Ankylosaurus
+
+Ankylosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/anky.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Ankylosaurus concept. The quadruped rig and the Idle, Walk, Run, Roar, and Smash clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Orange armor plates, pale spikes, a cream belly, and a round tail club. No logos.
+
 ## Carnotaurus
 
 Carnotaurus 3D model generated with Meshy AI from original concept art.

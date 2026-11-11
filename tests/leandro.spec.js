@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'fs';
 
 const OUT = '/opt/cursor/artifacts';
-const MOUNTS = ['lion', 'trex', 'brachio', 'giga', 'spinos', 'trice', 'carno', 'velo'];
+const MOUNTS = ['lion', 'trex', 'brachio', 'giga', 'spinos', 'trice', 'carno', 'velo', 'ankys'];
 
 async function poll(page, fn, ms = 90000) {
   const t0 = Date.now();
