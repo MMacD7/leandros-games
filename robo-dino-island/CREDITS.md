@@ -36,6 +36,15 @@ Giganotosaurus 3D model generated with Meshy AI from original concept art.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 - Charcoal-brown hide, rusty red-orange tiger stripes, and a tan belly. No armor and no logos.
 
+## Spinosaurus
+
+Spinosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/spino.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Spinosaurus concept. The biped rig and the Idle, Walk, Run, Roar, and Splash clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Ocean-blue hide, a sunset-orange sail with dark blue spots, a cream belly, and a crocodile snout. No armor and no logos.
+
 ## Rex Costume
 
 - `assets/art/rex-rider.webp` — original drawing made for this game. Leandro in a cowboy hat, hooped shirt and white shorts, on an orange and blue inflatable T-rex.
