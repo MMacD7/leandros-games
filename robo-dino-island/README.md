@@ -167,7 +167,7 @@ Buttons: **BITE** (hold), **special** (with cooldown), **ROAR** (stuns enemies i
 | Ankylosaurus | CLUB SMASH: club-tail whip that stuns | heaviest armor |
 | Stegosaurus | SPIKE TAIL: spiked tail whip | back plates |
 | Brachiosaurus | TITAN STOMP: rears up and slams down with a shockwave | biggest of all |
-| Giganotosaurus | RAGE MODE: glowing red fury, faster with harder bites | huge hunter |
+| Giganotosaurus | MEGA SLASH: a lunging tail sweep plus a bite | huge hunter, a bit longer than the T-Rex |
 | Allosaurus | COMBO SLASH: three quick lunging bites | brow horns |
 | Dilophosaurus | VENOM SPIT: opens its neck frill and spits poison goo (slows + poisons) | twin crests and frill |
 | Pachycephalosaurus | HEAD-BUTT: dome-head ram with big knockback and dizzy stars | dome skull |

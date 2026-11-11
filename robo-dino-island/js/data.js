@@ -63,8 +63,8 @@ export const REALS = [
   { id: 'brachio', name: 'Brachiosaurus', price: 1600, kind: 'brachio', desc: 'The tallest of all! Rears up for an earth-shaking stomp.',
     hp: 330, speed: 8.5, bite: 14, biteRate: 0.6, special: 'stomp', specialName: 'TITAN<br>STOMP', specialCD: 5.5, roar: 1.8, scale: 1.25, radius: 4.8,
     back: 0x474c52, belly: 0xa69e8c, stripe: 0x24272c, accent: 0x7a8696, eye: 0xffb21a },
-  { id: 'giga', name: 'Giganotosaurus', price: 0, kind: 'giga', desc: 'Even bigger than a T-Rex! Goes into a BERSERK RAGE: faster and fiercer.',
-    hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'rage', specialName: 'BERSERK<br>RAGE', specialCD: 9, roar: 2.8, scale: 1.25, radius: 4.13,
+  { id: 'giga', name: 'Giganotosaurus', price: 0, kind: 'giga', desc: 'Even bigger than a T-Rex! MEGA SLASH lunges in with a tail sweep and a bite.',
+    hp: 190, speed: 11.5, bite: 34, biteRate: 0.6, special: 'slash', specialName: 'MEGA<br>SLASH', specialCD: 5.5, roar: 2.8, scale: 1.25, radius: 4.5,
     back: 0x4a4038, belly: 0xa8967a, stripe: 0x1a1410, accent: 0x9a2a14, eye: 0xff6a1a },
   { id: 'allo', name: 'Allosaurus', price: 0, kind: 'allo', desc: 'The lion of the Jurassic. A lightning-fast TRIPLE BITE combo!',
     hp: 140, speed: 13, bite: 24, biteRate: 0.45, special: 'combo', specialName: 'TRIPLE<br>BITE', specialCD: 4.5, roar: 2.0, scale: 0.92, radius: 2.2,
@@ -116,7 +116,7 @@ DRAGONS.forEach(d => { d.dragon = true; d.fly = true; if (d.kind === 'dragon') {
 // the Dragon Peak arena boss (not in the garage)
 export const DRAGON_KING = { ...DRAGONS[0], id: 'dking', name: 'DRAGON KING', element: 'king', back: 0x1c1410, belly: 0x9a7a3a, stripe: 0x060403, accent: 0xffb41a, eye: 0xffd23a, scale: 2.5, radius: 6.2, boss: true };
 // v5: the City boss (not in the garage): a kaiju-sized armored Giganotosaurus
-export const MEGA_REX = { ...REALS.find(d => d.id === 'giga'), id: 'megarex', name: 'MEGA-REX', roid: true, back: 0x2a2018, belly: 0x8a7050, stripe: 0x0a0604, accent: 0xff2a0a, eye: 0xff3a1a, scale: 2.7, radius: 6.6, boss: true, special: 'stomp' };
+export const MEGA_REX = { ...REALS.find(d => d.id === 'giga'), id: 'megarex', name: 'MEGA-REX', roid: true, back: 0x2a2018, belly: 0x8a7050, stripe: 0x0a0604, accent: 0xff2a0a, eye: 0xff3a1a, scale: 2.7, radius: 6.6, boss: true, special: 'stomp', specialName: 'BERSERK<br>RAGE' };
 // v5: Ricky & Bobby are playable (small, fast West Highland terriers: bite, bark blast, zoomies, big jump + flying hop)
 export const WESTIES = [
   { id: 'ricky', name: 'Ricky', price: 0, kind: 'westie', westie: true, accent: 0xd82a2a, desc: 'A tiny terrier with a HUGE heart (red cape). Super fast, big jumps and a mighty BARK!',

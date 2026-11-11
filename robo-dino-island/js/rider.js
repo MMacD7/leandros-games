@@ -159,9 +159,17 @@ export class Rider {
     const L = this.legs, A = this.arms, t = this.t;
     if (this.bare && this.grip === 'neck') {
       // Hips on the hide, legs down both flanks, both hands on the base of the neck, face up.
-      for (const g of L) { g.hip.rotation.set(-0.42, 0, g.s * 1.05); g.knee.rotation.set(0.95, 0, 0); g.foot.rotation.set(0.08, 0, 0); }
-      this.torso.rotation.set(0.28, 0, 0); this.head.rotation.set(-0.06, Math.sin(t * 0.6) * 0.04, 0);
-      for (const a of A) { a.sh.rotation.set(-1.28, 0, a.s * -0.32); a.el.rotation.set(-0.72, 0, 0); }
+      // The Giga's back is wide, so the same sit has to reach farther out or his feet plant on the hide.
+      const wide = this.mounted && this.mounted.def && this.mounted.def.id === 'giga';
+      for (const g of L) {
+        g.hip.rotation.set(wide ? -1.05 : -0.42, 0, g.s * (wide ? 1.42 : 1.05));
+        g.knee.rotation.set(wide ? 1.45 : 0.95, 0, 0);
+        g.foot.rotation.set(wide ? 0.2 : 0.08, 0, 0);
+      }
+      this.torso.rotation.set(wide ? 0.48 : 0.28, 0, 0);
+      this.head.rotation.set(wide ? -0.16 : -0.06, Math.sin(t * 0.6) * 0.04, 0);
+      for (const a of A) { a.sh.rotation.set(wide ? -1.45 : -1.28, 0, a.s * (wide ? -0.18 : -0.32)); a.el.rotation.set(wide ? -0.9 : -0.72, 0, 0); }
+      if (wide) this.hips.position.y = -0.06;
       return;
     }
     if (this.bare) {
