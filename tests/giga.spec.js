@@ -103,10 +103,19 @@ test('v5.8.9 giga feet, stretch, slash, and seat', async ({ page }, info) => {
     p.pos.set(flat.x, 0, flat.z); p.yaw = 0.2; p.speedNow = 0; p.roar = 0; p.slashA = 0; p.groundY();
     for (let i = 0; i < 6; i++) p.updateVisual(1 / 20);
     g.rider.update(0.05, p);
-    const head = new THREE.Vector3(), hips = new THREE.Vector3(), spineW = new THREE.Vector3();
+    const head = new THREE.Vector3(), hips = new THREE.Vector3(), spineW = new THREE.Vector3(), foot = new THREE.Vector3();
     g.rider.head.getWorldPosition(head);
     g.rider.hips.getWorldPosition(hips);
     m.bones.spine.getWorldPosition(spineW);
+    const backY = m.surfaceY(hips.x, hips.z);
+    const fwd = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+    const right = new THREE.Vector3(fwd.z, 0, -fwd.x);
+    let footDrop = Infinity, footSide = 0;
+    for (const leg of g.rider.legs) {
+      leg.foot.getWorldPosition(foot);
+      footDrop = Math.min(footDrop, hips.y - foot.y);
+      footSide = Math.max(footSide, Math.abs(foot.clone().sub(hips).dot(right)));
+    }
     const box = new THREE.Box3().setFromObject(m.skin);
     const size = box.getSize(new THREE.Vector3());
     const ws = new THREE.Vector3();
@@ -126,6 +135,9 @@ test('v5.8.9 giga feet, stretch, slash, and seat', async ({ page }, info) => {
       rows: rows.map(round),
       stretch,
       toSpine: Math.round(hips.distanceTo(spineW) * 100) / 100,
+      hipGap: backY == null ? 99 : Math.round((hips.y - backY) * 100) / 100,
+      footDrop: Math.round(footDrop * 100) / 100,
+      footSide: Math.round(footSide * 100) / 100,
       headAbove: Math.round((head.y - hips.y) * 100) / 100,
       seatGap: Math.round((hips.y - p.pos.y) * 100) / 100,
       riderWorld: Math.round(riderWorld * 100) / 100,
@@ -144,6 +156,10 @@ test('v5.8.9 giga feet, stretch, slash, and seat', async ({ page }, info) => {
   expect(report.radius).toBeGreaterThan(3.75);
   expect(report.special).toBe('slash');
   expect(report.toSpine).toBeLessThan(2.2);
+  expect(report.hipGap).toBeGreaterThan(-0.25);
+  expect(report.hipGap).toBeLessThan(0.45);
+  expect(report.footDrop).toBeGreaterThan(0.4);
+  expect(report.footSide).toBeGreaterThan(0.35);
   expect(report.headAbove).toBeGreaterThan(0.2);
   expect(report.seatGap).toBeGreaterThan(2.2);
   expect(report.riderWorld).toBeGreaterThan(1.4);
@@ -167,7 +183,7 @@ test('v5.8.9 giga feet, stretch, slash, and seat', async ({ page }, info) => {
 
   if (info.project.name !== 'iphone-landscape') return;
   fs.mkdirSync(OUT, { recursive: true });
-  console.log('giga', JSON.stringify({ height: report.height, length: report.length, width: report.width, radius: report.radius, stretch: report.stretch, toSpine: report.toSpine, seatGap: report.seatGap }));
+  console.log('giga', JSON.stringify({ height: report.height, length: report.length, hipGap: report.hipGap, footDrop: report.footDrop, footSide: report.footSide, stretch: report.stretch }));
 
   const shoot = async (file, pose) => {
     await page.evaluate((pose) => {
@@ -177,26 +193,30 @@ test('v5.8.9 giga feet, stretch, slash, and seat', async ({ page }, info) => {
       G.game.spawnPlayer(false);
       G.show('play');
       const g = G.game, p = g.player, THREE = G.THREE, m = p.mech;
+      g.fx.update(2, g.world, () => {}, g.scene.fog);
+      for (const r of g.fx.rings.splice(0)) { g.scene.remove(r.m); if (r.m.material) r.m.material.dispose(); }
       for (const e of g.enemies) if (e.remove) e.remove();
       g.enemies.length = 0;
       const AX = 105, AZ = 40;
       p.speedNow = pose === 'walk' ? 5 : 0;
       p.roar = 0; p.slashA = 0;
-      p.pos.set(pose === 'vs' ? AX + 8 : AX, 0, AZ); p.yaw = Math.PI / 2; p.groundY();
-      for (let i = 0; i < 10; i++) p.updateVisual(1 / 20);
+      p.pos.set(pose === 'vs' ? AX + 9 : AX, 0, AZ); p.yaw = Math.PI / 2; p.groundY();
+      for (let i = 0; i < 8; i++) p.updateVisual(1 / 20);
       if (pose === 'slash') {
-        const act = m.actions.Slash;
-        for (const [n, a] of Object.entries(m.actions)) a.setEffectiveWeight(n === 'Slash' ? 1 : 0);
-        act.enabled = true; act.play(); act.time = 0.48;
-        m.mixer.update(0.02);
-        if (m.seatOnGround) m.seatOnGround((x, z) => g.world.height(x, z));
+        g.special(p);
+        for (let i = 0; i < 20; i++) {
+          g.updateAct(p, 1 / 30);
+          p.updateVisual(1 / 30);
+          g.fx.update(1 / 30, g.world, () => {}, g.scene.fog);
+          if (p.act && p.act.t >= 0.5) break;
+        }
       }
       g.rider.update(0.05, p);
       if (pose === 'vs') {
-        const e = g.spawnEnemy(AX - 8, AZ, 2, 'trex');
-        e.pos.set(AX - 8, 0, AZ); e.yaw = Math.PI / 2; e.groundY(); e.speedNow = 0;
-        for (let i = 0; i < 4; i++) e.updateVisual(0.05);
-        e.mech.obj.visible = true; e.mech.obj.position.copy(e.pos);
+        const e = g.spawnEnemy(AX - 9, AZ, 2, 'trex');
+        e.pos.set(AX - 9, 0, AZ); e.yaw = Math.PI / 2; e.groundY(); e.speedNow = 0; e.tilt.identity();
+        for (let i = 0; i < 6; i++) e.updateVisual(1 / 20);
+        e.mech.obj.visible = true;
       }
       if (pose === 'enemy') {
         p.mech.obj.visible = false;
@@ -215,14 +235,18 @@ test('v5.8.9 giga feet, stretch, slash, and seat', async ({ page }, info) => {
         g.updateCamera(1, { looking: false, look: { dx: 0, dy: 0 } });
         g.world.updateLOD(cam.position, { x: p.pos.x, z: p.pos.z, clear: 8 });
       } else if (pose === 'vs' || pose === 'enemy') {
-        const look = new THREE.Vector3(AX, g.world.height(AX, AZ) + 3.6, AZ);
-        cam.position.set(AX, look.y + 1.4, AZ + (pose === 'enemy' ? 26 : 32));
+        const look = new THREE.Vector3(AX, g.world.height(AX, AZ) + 3.4, AZ);
+        cam.fov = pose === 'vs' ? 46 : 42; cam.updateProjectionMatrix();
+        cam.position.set(AX, look.y + 1.6, AZ - (pose === 'vs' ? 32 : 20));
         cam.lookAt(look);
       } else {
-        const look = p.pos.clone(); look.y += m.height * 0.55;
-        const side = new THREE.Vector3(0, 0, 1);
-        cam.position.copy(look).addScaledVector(side, pose === 'slash' ? 16 : 18);
-        cam.position.y = look.y + 1.2;
+        const look = p.pos.clone(); look.y += m.height * 0.45;
+        if (pose === 'slash') {
+          const ang = p.yaw + Math.PI * 0.72;
+          cam.position.set(look.x + Math.sin(ang) * 18, look.y + 2.6, look.z + Math.cos(ang) * 18);
+        } else {
+          cam.position.set(look.x, look.y + 1.2, look.z + 18);
+        }
         cam.lookAt(look);
       }
       for (const e of g.enemies) if (pose !== 'vs' && pose !== 'enemy' && e.mech && e.mech.obj) e.mech.obj.visible = false;

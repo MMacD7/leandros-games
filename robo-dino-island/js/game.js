@@ -613,12 +613,28 @@ export class Game {
       if (u > 0.2) hitFoes(d.radius + 5.5 * s, d.st.bite * 2.3, 20, 0.8, A.hit, e => { const r = tmp.subVectors(e.pos, d.pos).setY(0).normalize(); return new THREE.Vector3(-r.z * A.dir, 0, r.x * A.dir).multiplyScalar(0.6).add(r); });
       if (this.r() < 0.6) { const tp = d.pos.clone().addScaledVector(new THREE.Vector3(-Math.sin(d.yaw), 0, -Math.cos(d.yaw)), 5 * s); tp.y = d.ground + 0.3; this.fx.dust(tp, 1, 1.4 * s, 4); } }
     else if (A.type === 'slash') { d.slashA = 1; d.speedNow = 0;
-      if (u < 0.42) slide(A.dir, 16 * s * (1 - u / 0.42));
-      d.whipA = u < 0.62 ? Math.sin(Math.min(1, u / 0.62) * Math.PI) : 0;
-      d.jaw = u > 0.5 && u < 0.86 ? 1.4 : 0.1;
+      if (u < 0.4) slide(A.dir, 22 * s * (1 - u / 0.4));
+      d.whipA = u < 0.7 ? Math.sin(Math.min(1, u / 0.55) * Math.PI) : 0;
+      d.jaw = u > 0.5 && u < 0.88 ? 1.5 : 0.1;
       d.biteA = u > 0.55 ? Math.sin(Math.min(1, (u - 0.55) / 0.35) * Math.PI) : 0;
-      if (u > 0.28 && !A.swept) { A.swept = true; const tail = d.pos.clone().addScaledVector(A.dir, -d.radius * 0.7); tail.y = d.ground + 1.2; this.fx.ring(tail, 7 * s, 0xff6a22); this.fx.dust(tail, 10, 1.6 * s, 8); hitFoes(d.radius + 4.2 * s, d.st.bite * 1.6, 16, 0.6, A.hit, e => { const r = tmp.subVectors(e.pos, d.pos).setY(0).normalize(); return new THREE.Vector3(-r.z, 0, r.x).multiplyScalar(0.7).add(r.multiplyScalar(0.4)); }); sfx.whoosh(0.8); }
-      if (u > 0.68 && !A.bitten) { A.bitten = true; const mouth = this.mouthPos(d); this.fx.ring(mouth, 4.5 * s, 0xffc070); this.fx.ring(mouth, 2.4 * s, 0xfff2c8); hitFoes(d.radius + 3.2 * s, d.st.bite * 2.2, 12, 0.5, A.hit); sfx.chomp(1.2); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.55 : 0.2); } }
+      if (u > 0.06 && !A.lunged) { A.lunged = true; this.fx.dust(d.pos, 22, 2.6 * s, 9); this.fx.ring(d.pos.clone().setY(d.ground + 0.3), 8 * s, 0xffc14a); }
+      if (u > 0.42 && !A.swept) { A.swept = true;
+        const side = new THREE.Vector3(-A.dir.z, 0, A.dir.x);
+        const tail = d.pos.clone().addScaledVector(A.dir, -d.radius * 1.15).addScaledVector(side, d.radius * 0.35);
+        tail.y = d.ground + 1.5;
+        const arc = (pos, radius, color) => {
+          const geo = this.fx.ringGeoV || this.fx.ringGeo;
+          const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+          mesh.position.copy(pos); mesh.rotation.y = Math.atan2(side.x, side.z);
+          this.scene.add(mesh); this.fx.rings.push({ m: mesh, t: 0.16, R: radius });
+        };
+        arc(tail, 6.5 * s, 0xff4a10); arc(tail.clone().setY(tail.y + 1.2), 4.2 * s, 0xffc14a);
+        this.fx.ring(tail.clone().setY(d.ground + 0.35), 7 * s, 0xff6a18);
+        this.fx.ring(d.pos.clone().setY(d.ground + 0.3), 5.5 * s, 0xffb040);
+        this.fx.dust(tail, 20, 2.4 * s, 11); this.fx.dust(d.pos, 14, 2 * s, 8);
+        hitFoes(d.radius + 5.5 * s, d.st.bite * 1.7, 18, 0.7, A.hit, e => { const r = tmp.subVectors(e.pos, d.pos).setY(0).normalize(); return new THREE.Vector3(-r.z, 0, r.x).multiplyScalar(0.8).add(r.multiplyScalar(0.35)); });
+        sfx.whoosh(1.1); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.7 : 0.25); }
+      if (u > 0.68 && !A.bitten) { A.bitten = true; const mouth = this.mouthPos(d); this.fx.ring(mouth, 6 * s, 0xffc070); this.fx.ring(mouth, 3.2 * s, 0xfff2c8); hitFoes(d.radius + 3.4 * s, d.st.bite * 2.2, 14, 0.55, A.hit); sfx.chomp(1.3); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.6 : 0.22); } }
     else if (A.type === 'stomp') { d.speedNow = 0; d.rearA = u < 0.55 ? sstep(0, 0.55, u) : Math.max(0, 1 - (u - 0.55) / 0.1);
       if (u > 0.62 && !A.slam) { A.slam = true; const ss = s * (d.def.id === 'brachio' ? 1.45 : 1); hitFoes(16 * ss, d.st.bite * 2.8, 16, 1.4, null); this.mh.damageAt(d.pos, 14 * ss, 99, d); this.fx.dust(d.pos, 26, 3 * ss, 14); this.fx.ring(d.pos, 18 * ss, 0xffd8a0); this.fx.ring(d.pos, 10 * ss, 0xffffff);
         this.fx.shake = Math.max(this.fx.shake, d === this.player ? 1.4 : 0.8); sfx.boom(1.2); sfx.stomp(); } }

@@ -110,26 +110,26 @@ export class GigaMech {
     for (const h of hits) if (h.point.y > top) top = h.point.y;
     return top;
   }
-  // On the shoulder hide, just behind the neck, in the spine's own frame.
+  // On the back, just behind the shoulders, in the spine's own frame.
   seatOnBack() {
     this.obj.updateMatrixWorld(true);
     const spine = this.bones.spine;
     const origin = new THREE.Vector3();
     spine.getWorldPosition(origin);
     let best = null;
-    for (const lz of [0.0, 0.06, 0.12]) {
-      for (const lx of [-0.04, 0, 0.04]) {
-        const probe = new THREE.Vector3(lx, 0.45, lz);
+    for (const lz of [-0.20, -0.13, -0.06]) {
+      for (const lx of [-0.02, 0, 0.02]) {
+        const probe = new THREE.Vector3(lx, 0.55, lz);
         spine.localToWorld(probe);
         const y = this.surfaceY(probe.x, probe.z);
-        if (y == null || y > origin.y + 2.4) continue;
+        if (y == null || y > origin.y + 2.2) continue;
         const hit = new THREE.Vector3(probe.x, y, probe.z);
         if (!best || hit.y > best.y) best = hit;
       }
     }
-    if (!best) { this.seat.position.set(0, 0.22, 0.06); return; }
+    if (!best) { this.seat.position.set(0, 0.16, -0.1); return; }
     const local = spine.worldToLocal(best.clone());
-    local.y += 0.05;
+    local.y += 0.01;
     this.seat.position.copy(local);
   }
   socketPos(name, out) { const s = (name && this.sockets[name]) || this.mouth; return s.getWorldPosition(out); }
