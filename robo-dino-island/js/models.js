@@ -50,3 +50,16 @@ export function cloneGiga() {
   if (!gigaCache) throw new Error('giga model not loaded');
   return { scene: clone(gigaCache.scene), animations: gigaCache.animations };
 }
+
+const SPINO_URL = 'assets/models/spino.glb';
+let spinoCache = null;
+
+export function preloadSpino(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(SPINO_URL, gltf => { spinoCache = gltf; }, undefined, err => console.error(SPINO_URL, err));
+}
+
+export function cloneSpino() {
+  if (!spinoCache) throw new Error('spino model not loaded');
+  return { scene: clone(spinoCache.scene), animations: spinoCache.animations };
+}
