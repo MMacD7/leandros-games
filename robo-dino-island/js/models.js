@@ -89,3 +89,25 @@ export function cloneCarno() {
   if (!carnoCache) throw new Error('carno model not loaded');
   return { scene: clone(carnoCache.scene), animations: carnoCache.animations };
 }
+
+const RAPTOR_URL = 'assets/models/raptor.glb';
+let raptorCache = null;
+const LEANDRO_URL = 'assets/models/leandro.glb';
+let leandroCache = null;
+
+export function preloadRaptor(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(RAPTOR_URL, gltf => { raptorCache = gltf; }, undefined, err => console.error(RAPTOR_URL, err));
+}
+export function cloneRaptor() {
+  if (!raptorCache) throw new Error('raptor model not loaded');
+  return { scene: clone(raptorCache.scene), animations: raptorCache.animations };
+}
+export function preloadLeandro(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(LEANDRO_URL, gltf => { leandroCache = gltf; }, undefined, err => console.error(LEANDRO_URL, err));
+}
+export function cloneLeandro() {
+  if (!leandroCache) throw new Error('leandro model not loaded');
+  return { scene: clone(leandroCache.scene), animations: leandroCache.animations };
+}
