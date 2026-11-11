@@ -162,7 +162,7 @@ Buttons: **BITE** (hold), **special** (with cooldown), **ROAR** (stuns enemies i
 | T-Rex | MEGA CHOMP: lunging crushing bite | strongest bite, longest roar stun |
 | Carnotaurus | HORN CHARGE: fast bull charge with knockback | quick, bull horns |
 | Velociraptor | POUNCE: leaps onto a target from far away | smallest and fastest, sickle claws, feathers |
-| Spinosaurus | TAIL SWIPE: 360° tail whip | **swims**, big sail |
+| Spinosaurus | SAIL SPLASH: rears up and slams a cartoon wave | **swims**, biggest theropod, orange sail |
 | Triceratops | GORE CHARGE: horn charge that stuns | tough frill shield |
 | Ankylosaurus | CLUB SMASH: club-tail whip that stuns | heaviest armor |
 | Stegosaurus | SPIKE TAIL: spiked tail whip | back plates |

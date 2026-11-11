@@ -160,7 +160,7 @@ export class Rider {
     if (this.bare && this.grip === 'neck') {
       // Hips on the hide, legs down both flanks, both hands on the base of the neck, face up.
       // The Giga's back is wide, so the same sit has to reach farther out or his feet plant on the hide.
-      const wide = this.mounted && this.mounted.def && this.mounted.def.id === 'giga';
+      const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos');
       for (const g of L) {
         g.hip.rotation.set(wide ? -1.05 : -0.42, 0, g.s * (wide ? 1.42 : 1.05));
         g.knee.rotation.set(wide ? 1.45 : 0.95, 0, 0);
