@@ -24,6 +24,7 @@ import { TrikeMech } from './trike.js';
 import { CarnoMech } from './carno.js';
 import { RaptorMech } from './raptor.js';
 import { AnkyMech } from './anky.js';
+import { Eggs } from './eggs.js';
 import { CostumeRex, COSTUME } from './costume.js';
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
 export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
@@ -158,6 +159,7 @@ export class Game {
     this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
     this.westies = new Westies(this);
     this.bindFarm();
+    this.eggs = new Eggs(this);
   }
   // v5.1 Farty Poop Farm: the living farm (animals, poop, horse, Bad David) belongs to the farm world
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
@@ -257,7 +259,7 @@ export class Game {
   // switch level (Jungle Island <-> Dragon Peak)
   setWorld(w) {
     if (this.westies) this.westies.reset();
-    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm();
+    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); if (this.eggs) this.eggs.sync();
   }
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
 
@@ -952,7 +954,12 @@ export class Game {
       }
     }
     for (let i = this.timers.length - 1; i >= 0; i--) { const T = this.timers[i]; T.t -= dt; if (T.t <= 0) { this.timers.splice(i, 1); T.fn(); } }
-    p.updateVisual(dt); this.rider.update(dt, p);
+    p.updateVisual(dt); this.rider.update(dt, p); if (this.eggs) this.eggs.update(dt);
+    if (this.level === 'jungle' && this.mode !== 'battle' && p.alive) {
+      let hot = !!(p.act || p.breathT > 0);
+      if (!hot) for (const e of this.enemies) if (e.alive && (e.boss || (e.radius || 0) >= 3 || (e.def && e.def.hp >= 180)) && e.pos.distanceTo(p.pos) < 80) hot = true;
+      music.play(hot ? 'battle' : 'roam'); if (music.setIntensity) music.setIntensity(hot ? 1 : 0);
+    }
     if (this.farm) this.farm.update(dt);
     if (p.shieldT > 0) { p.shieldT -= dt; if (Math.random() < 0.5) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 5, p.pos.y + Math.random() * p.mech.height, p.pos.z + (Math.random() - 0.5) * 5), vel: { x: 0, y: 1.5, z: 0 }, size: 0.5, life: 0.6, r: 0.3, g: 1.8, b: 2.6, alpha: 1 }); }
     if (!p.alive && this.player !== p) return;
