@@ -71,6 +71,41 @@ Ankylosaurus 3D model generated with Meshy AI from original concept art.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 - Orange armor plates, pale spikes, a cream belly, and a round tail club. No logos.
 
+## Jungle Island
+
+The bigger Jungle Island in v5.9.6 is original procedural art made for this game: the terrain, sandy shore, river, lake, waterfall, palms, broadleaf canopies, ferns, rocks, and the smoking volcano. No downloaded models.
+
+## Dilophosaurus
+
+Dilophosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/dilo.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Dilophosaurus concept. The biped rig and the Idle, Walk, Run, Roar, and Blast clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Green hide, a yellow belly, twin red crests, and a red-and-yellow neck frill. No logos.
+
+## Allosaurus
+
+Allosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/allo.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Allosaurus concept. The biped rig and the Idle, Walk, Run, Roar, and Frenzy clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Tan hide, a cream belly, and red-orange stripes. No logos.
+
+## Stegosaurus
+
+Stegosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/stego.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Stegosaurus concept. The quadruped rig and the Idle, Walk, Run, Roar, and Swing clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Green hide, a cream belly, fiery orange plates, and four tail spikes. No logos.
+
+## Dino eggs and the metal soundtrack
+
+The spotted eggs in v5.9.7 are original. Each baby is a small copy of a 3D dinosaur model already in the game (see the dinosaur credits above). The music is original and synthesized in the browser with Web Audio: distorted power-chord guitar, double-kick drums and bass. No downloaded or copyrighted tracks.
+
 ## Carnotaurus
 
 Carnotaurus 3D model generated with Meshy AI from original concept art.
