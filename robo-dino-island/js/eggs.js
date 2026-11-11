@@ -1,13 +1,13 @@
 // v5.9.7: spotted cartoon eggs on Jungle Island. Hatch one and a baby (0.25x of a 3D dino we already have) pops out.
 // Up to four babies follow Leandro. The rest wait on the BABY DINOS shelf. Kid-safe: collecting only adds a friend.
 import * as THREE from './vendor/three.bundle.min.js';
-import { cloneTrex, cloneBrachio, cloneGiga, cloneSpino, cloneTrike, cloneCarno, cloneRaptor, cloneAnky } from './models.js';
+import { cloneTrex, cloneBrachio, cloneGiga, cloneSpino, cloneTrike, cloneCarno, cloneRaptor, cloneAnky, cloneStego } from './models.js';
 import { music } from './music.js';
 import { sfx } from './audio.js';
-const CLONE = { trex: cloneTrex, brachio: cloneBrachio, giga: cloneGiga, spinos: cloneSpino, trice: cloneTrike, carno: cloneCarno, velo: cloneRaptor, ankys: cloneAnky };
-const NAMES = { trex: 'Baby T-Rex', brachio: 'Baby Brachio', giga: 'Baby Giga', spinos: 'Baby Spino', trice: 'Baby Trike', carno: 'Baby Carno', velo: 'Baby Raptor', ankys: 'Baby Anky' };
+const CLONE = { trex: cloneTrex, brachio: cloneBrachio, giga: cloneGiga, spinos: cloneSpino, trice: cloneTrike, carno: cloneCarno, velo: cloneRaptor, ankys: cloneAnky, stegos: cloneStego };
+const NAMES = { trex: 'Baby T-Rex', brachio: 'Baby Brachio', giga: 'Baby Giga', spinos: 'Baby Spino', trice: 'Baby Trike', carno: 'Baby Carno', velo: 'Baby Raptor', ankys: 'Baby Anky', stegos: 'Baby Stego' };
 // Longest axis of the grown dino, so the baby is about a quarter of that.
-const ADULT = { trex: 9.6, brachio: 11, giga: 6.5, spinos: 8.45, trice: 8, carno: 10, velo: 6.8, ankys: 8 };
+const ADULT = { trex: 9.6, brachio: 11, giga: 6.5, spinos: 8.45, trice: 8, carno: 10, velo: 6.8, ankys: 8, stegos: 9 };
 const BABY = Object.fromEntries(Object.entries(ADULT).map(([id, n]) => [id, n * 0.25]));
 const FOLLOW = 4;
 
@@ -22,7 +22,7 @@ export const EGGS = [
   { id: 'e8', species: 'ankys', x: -80, z: 200, where: 'hill' },
   { id: 'e9', species: 'trex', x: 40, z: 400, where: 'beach' },
   { id: 'e10', species: 'brachio', x: 70, z: -90, where: 'volcano' },
-  { id: 'e11', species: 'giga', x: -220, z: -160, where: 'hill' },
+  { id: 'e11', species: 'stegos', x: -220, z: -160, where: 'hill' },
   { id: 'e12', species: 'velo', x: 220, z: 140, where: 'hill' },
 ];
 
