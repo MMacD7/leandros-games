@@ -28,7 +28,7 @@
     </div>
   </div>
   <div id="hud-tc" class="hidden"><div id="timer">01:30</div><div id="wave">Wave 1 · KOs 0</div></div>
-  <div id="hud-tr"><div id="bolts-box"><span class="nut">⬢</span> <b id="bolts">0</b></div><canvas id="radar" width="220" height="220"></canvas></div>
+  <div id="hud-tr"><div id="bolts-box"><span class="nut">⬢</span> <b id="bolts">0</b></div><div id="eggs-box" aria-label="Dino eggs found">🥚 <b id="eggs-n">0/12</b></div><canvas id="radar" width="220" height="220"></canvas></div>
   <div id="citybar" class="hidden" aria-label="City destruction"><div class="cb"><i id="city-fill"></i></div><b id="city-t">🏙️ 0% SMASHED</b></div>
   <div id="farmbar" class="hidden" aria-label="Farm progress"><b>🌾 FED <span id="fb-fed">0/12</span></b><b id="fb-stars" aria-label="Stars">☆☆☆</b><b>💩 <span id="fb-poop">0</span></b><b>✨ <span id="fb-gold">0</span></b></div>
   <div id="boss" class="hidden"><b id="boss-name">BOSS</b><div class="bb"><i id="boss-hp"></i></div></div>
@@ -71,7 +71,7 @@
     <button id="b-robo" class="btn small robo-tg" aria-pressed="true">🤖 Robo Dinos: ON</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
-  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Bigger island! 🌴</button><span id="ver" aria-label="Version">v5.9.6</span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: Dino eggs! 🥚</button><span id="ver" aria-label="Version">v5.9.7</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
@@ -96,6 +96,11 @@
       <h2 id="super-title">SUPER DINOS</h2>
       <div id="g-super-grid" class="sd-grid"></div>
     </section>
+    <section id="g-babies" aria-labelledby="babies-title">
+      <h2 id="babies-title">BABY DINOS</h2>
+      <p class="jg-note">Hatch spotted eggs on Jungle Island. Four babies follow Leandro. The rest wait here. <b id="babies-count">0/12</b></p>
+      <div id="g-baby-grid" class="bb-grid"></div>
+    </section>
     <div class="g-tabs"><button id="t-real" class="tab">🦖 Real<sup class="tnew">NEW</sup></button><button id="t-robo" class="tab">🤖 Robots<sup class="tnew">NEW</sup></button><button id="t-dragon" class="tab">🐉 Dragons</button><button id="t-sea" class="tab">🦈 Sea<sup class="tnew">NEW</sup></button><button id="t-dogs" class="tab">🐶 Dogs<sup class="tnew">NEW</sup></button><button id="t-ups" class="tab">⚙️ Upgrades</button></div>
     <div id="g-dino">
       <h2 id="g-name">Robo-Rex</h2><p id="g-desc"></p><p id="g-abil"></p>
@@ -114,6 +119,7 @@
     <button id="p-garage" class="btn">🦖 Dino Garage</button>
     <button id="p-sound" class="btn">🔊 Sound on</button>
     <button id="p-music" class="btn">🎵 Music on</button>
+    <label id="p-vol" class="vol">Music volume <input id="p-music-vol" type="range" min="0" max="100" value="90" aria-label="Music volume"></label>
     <button id="p-voice" class="btn">🗣️ Voice on</button>
     <button id="p-ride" class="btn small">🧒 Leandro rides: ON</button>
     <button id="p-robo" class="btn small robo-tg" aria-pressed="true">🤖 Robo Dinos: ON</button>

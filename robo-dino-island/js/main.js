@@ -16,7 +16,7 @@ import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
 import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky } from './models.js';
-import { initAudio, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
+import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
 
@@ -265,6 +265,14 @@ function drawRadar(p) {
   if (game.farm) { dot(BASE.x, BASE.z + 18, '#ff6a5a', 9); for (const d of game.farm.radar()) dot(d.x, d.z, d.c, 4.5); } // v5.1 farm: the farmhouse, hungry (yellow) and fed (green) animals, golden poop
   else { if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 9); dot(ARENA.x, ARENA.z, '#ffd34a', 7); dot(BASE.x, BASE.z, '#3de8ff', 9); }
   for (const k of game.pickups) if (k.alive && k.type === 'core') dot(k.x, k.z, 'rgba(120,240,255,.8)', 3);
+  if (game.eggs) for (const e of game.eggs.list) {
+    if (e.hatched) continue;
+    const d = Math.hypot(e.x - p.pos.x, e.z - p.pos.z); if (d > 90) continue;
+    const dx = (e.x - p.pos.x) * scale, dz = (e.z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
+    let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 8) { rx *= (R - 8) / L; ry *= (R - 8) / L; }
+    rc.fillStyle = '#fff6e8'; rc.beginPath(); rc.ellipse(-rx, -ry, 5, 7, 0, 0, 7); rc.fill();
+    rc.fillStyle = '#e23a4a'; rc.beginPath(); rc.arc(-rx + 1.2, -ry - 1, 1.7, 0, 7); rc.fill();
+  }
   for (const e of game.enemies) if (e.alive) dot(e.pos.x, e.pos.z, '#ff3a2a', 6);
   rc.restore();
   rc.fillStyle = '#fff'; rc.beginPath(); rc.moveTo(S / 2, S / 2 - 12); rc.lineTo(S / 2 + 8, S / 2 + 8); rc.lineTo(S / 2 - 8, S / 2 + 8); rc.fill();
@@ -287,12 +295,25 @@ function show(s) {
   if (s === 'title' && game) game.mh.titleEnter();
   hud.bolts(); checkRotate(); fpsReset(); syncMusic();
 }
+function jungleHot() {
+  if (!game || !game.player) return false;
+  const p = game.player;
+  if (p.act || p.breathT > 0) return true;
+  for (const e of game.enemies) {
+    if (!e.alive) continue;
+    const big = e.boss || (e.radius || 0) >= 3 || (e.def && e.def.hp >= 180);
+    if (big && e.pos.distanceTo(p.pos) < 80) return true;
+  }
+  return false;
+}
 function syncMusic() {
   const b = game && game.battle;
   const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
   if (level === 'farm') { music.play(screen === 'play' || screen === 'pause' || screen === 'levels' || screen === 'results' ? 'farm' : 'farmtitle'); if (screen === 'play' && music.setIntensity) music.setIntensity(0); return; } // v5.1 hoedown!
-  const t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
-  if (!b && screen === 'play' && music.setIntensity) music.setIntensity(0);
+  let t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
+  const hot = !b && level === 'jungle' && screen === 'play' && jungleHot();
+  if (hot) t = 'battle';
+  if (!b && screen === 'play' && music.setIntensity) music.setIntensity(hot ? 1 : 0);
   music.play(t);
 }
 let rotateDismissed = false;
@@ -306,7 +327,7 @@ function announceNewLevel() {
   try { if (localStorage.getItem(NEW_LV_KEY) || !save.voice) return; } catch (e) { return; }
   if (voice.say('New level unlocked, Leandro! Farty Poop Farm!', { prio: 3, cd: 0 }) !== false) { try { localStorage.setItem(NEW_LV_KEY, '1'); } catch (e) { } if (screen === 'title') hud.toast('💩 NEW LEVEL: FARTY POOP FARM! 🐷'); }
 }
-for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { voice.prime(); announceNewLevel(); }, { once: true, capture: true });
+for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { initAudio(); voice.prime(); announceNewLevel(); }, { once: true, capture: true });
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : 'Find energy cores ⚡ and wild dinos!'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
@@ -369,7 +390,12 @@ const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $(
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
 tap('b-voice', toggleVoice); tap('p-voice', toggleVoice); voice.setEnabled(save.voice !== false); voiceLabel();
 function hypeStart() { voice.say('Leandro!', { prio: 2, cd: 8000 }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 2, cd: 8000 }); }
-tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); musicLabel();
+tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); music.setVolume(save.musicVol ?? 0.9); musicLabel();
+const volInput = $('p-music-vol');
+if (volInput) {
+  volInput.value = String(Math.round((save.musicVol ?? 0.9) * 100));
+  volInput.addEventListener('input', () => { initAudio(); save.musicVol = (+volInput.value || 0) / 100; music.setVolume(save.musicVol); persist(); });
+}
 tap('p-quality', () => { if (autoQ) { autoQ = false; applyQuality(TIERS[0]); } else if (Q.tier < 3) applyQuality(TIERS[Q.tier + 1]); else { autoQ = true; applyQuality(TIERS[startTier]); } });
 document.addEventListener('gesturestart', e => e.preventDefault()); document.addEventListener('dblclick', e => e.preventDefault());
 document.addEventListener('touchmove', e => { if (!e.target.closest('.g-panel')) e.preventDefault(); }, { passive: false });
@@ -509,7 +535,15 @@ function setGarageMech() {
     else gRider.mount(gMech);
   } else gRider.unmount();
 }
+function paintBabies() {
+  const grid = $('g-baby-grid'); if (!grid || !game || !game.eggs) return;
+  const rows = game.eggs.catalog();
+  grid.innerHTML = rows.map(b => `<button type="button" class="bb-card ${b.hatched ? 'on' : ''}" data-egg="${b.id}" aria-label="${b.hatched ? b.name : 'Hidden egg'}"><b>${b.hatched ? '🥚 ' + b.name : '🥚 ???'}</b><small>${b.hatched ? (b.following ? 'Following' : 'In the nest') : 'Still hidden'}</small></button>`).join('');
+  const n = rows.filter(b => b.hatched).length;
+  const count = $('babies-count'); if (count) count.textContent = n + '/' + rows.length;
+}
 function refreshGarage() {
+  paintBabies();
   if (!robosOn && (gTab === 'robo' || gList === 'robo')) { gTab = gList = 'real'; gIdx = 0; } // v5.6: robots are hidden while Robo Dinos is OFF
   refreshLions();
   if (gTab === 'lions') { showLions(); return; }
@@ -690,4 +724,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 // test / debug hooks (no network, local only)
 function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, audioCtx, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };

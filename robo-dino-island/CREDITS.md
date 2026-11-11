@@ -75,6 +75,10 @@ Ankylosaurus 3D model generated with Meshy AI from original concept art.
 
 The bigger Jungle Island in v5.9.6 is original procedural art made for this game: the terrain, sandy shore, river, lake, waterfall, palms, broadleaf canopies, ferns, rocks, and the smoking volcano. No downloaded models.
 
+## Dino eggs and the metal soundtrack
+
+The spotted eggs in v5.9.7 are original. Each baby is a small copy of a 3D dinosaur model already in the game (see the dinosaur credits above). The music is original and synthesized in the browser with Web Audio: distorted power-chord guitar, double-kick drums and bass. No downloaded or copyrighted tracks.
+
 ## Carnotaurus
 
 Carnotaurus 3D model generated with Meshy AI from original concept art.

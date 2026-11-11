@@ -246,6 +246,8 @@ export const sfx = {
     o.connect(ws); ws.connect(f); f.connect(g); g.connect(master); o.start(t); lfo.start(t); o.stop(t + 1.2); lfo.stop(t + 1.2);
     noise(t, 1.0, 'bandpass', 900, 400, 0.18, 1.2); },
   pickup() { if (!ctx) return; const t = now(); tone(t, 'triangle', 880, 880, 0.08, 0.15); tone(t + 0.07, 'triangle', 1320, 1320, 0.12, 0.15); },
+  squeak(v = 1) { if (!ctx) return; const t = now(); tone(t, 'sine', 880 * v, 1400 * v, 0.09, 0.12); tone(t + 0.08, 'triangle', 1200, 700, 0.1, 0.08); },
+  squeakRoar() { if (!ctx) return; const t = now(); tone(t, 'sawtooth', 520, 280, 0.22, 0.07); tone(t + 0.05, 'sine', 980, 640, 0.16, 0.06); },
   core() { if (!ctx) return; const t = now(); [660, 880, 1100, 1320].forEach((f, i) => tone(t + i * 0.06, 'sine', f, f * 1.01, 0.2, 0.15)); },
   ko(real) { if (!ctx) return; const t = now(); if (real) { tone(t, 'sawtooth', 220, 50, 1.0, 0.25); noise(t, 0.8, 'bandpass', 600, 150, 0.35, 1.5); tone(t + 0.6, 'sine', 60, 30, 0.5, 0.6); }
     else { tone(t, 'sawtooth', 500, 60, 0.9, 0.2); noise(t, 0.6, 'bandpass', 3000, 300, 0.3, 3); } },

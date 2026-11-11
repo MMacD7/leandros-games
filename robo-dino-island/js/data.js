@@ -196,7 +196,7 @@ const ALL_IDS = () => DINOS.map(d => d.id);
 const maxUps = () => Object.fromEntries(UPGRADES.map(u => [u.id, MAX_UP]));
 const fresh = () => ({ bolts: 0, owned: ALL_IDS(), selected: 'rex', up: maxUps(),
   kos: 0, cores: 0, bestBattle: 0, muted: false, music: true, ride: true, allUnlocked: true, level: 'jungle', voice: true,
-  jungleLion: false, farmLion: false, jungleCostume: false }); // v5.7 lion, v5.7.1 farm lion, v5.8 Rex Costume on Jungle Island only
+  jungleLion: false, farmLion: false, jungleCostume: false, hatched: [], musicVol: 0.9 }); // v5.7 lion, v5.8 Rex Costume, v5.9.7 eggs + music volume
 
 export function loadSave() {
   try {
@@ -213,6 +213,8 @@ export function loadSave() {
     out.jungleLion = out.jungleLion === true;
     out.farmLion = out.farmLion === true;
     out.jungleCostume = out.jungleCostume === true;
+    out.hatched = Array.isArray(s.hatched) ? s.hatched.filter(id => typeof id === 'string') : [];
+    out.musicVol = typeof s.musicVol === 'number' ? Math.max(0, Math.min(1, s.musicVol)) : 0.9;
     return out;
   } catch (e) { return fresh(); }
 }

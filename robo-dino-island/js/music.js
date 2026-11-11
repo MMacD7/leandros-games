@@ -11,7 +11,7 @@
 import { audioCtx, getMusicBus, getNoise, onAudioReady } from './audio.js';
 
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-let stingEnd = 0, ctx = null, out = null, enabled = true, cur = null, want = null, step = 0, nextT = 0, timer = null, vol = 0.26, inten = 0, DIST = null, DIST2 = null;
+let stingEnd = 0, ctx = null, out = null, enabled = true, cur = null, want = null, step = 0, nextT = 0, timer = null, vol = 0.42, userVol = 0.9, inten = 0, DIST = null, DIST2 = null, noiseOverride = null;
 
 // ---------- instruments (each schedules a short voice at time t into the given bus) ----------
 function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
@@ -21,7 +21,7 @@ function osc(bus, t, type, f0, f1, a, peak, d, filt) {
   n.connect(g); g.connect(bus); o.start(t); o.stop(t + a + d + 0.05); return o;
 }
 function nz(bus, t, type, f, q, a, peak, d, f1) {
-  const s = ctx.createBufferSource(); s.buffer = getNoise(); const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); if (f1) fl.frequency.exponentialRampToValueAtTime(f1, t + a + d); fl.Q.value = q;
+  const s = ctx.createBufferSource(); s.buffer = noiseOverride || getNoise(); if (!s.buffer) return; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); if (f1) fl.frequency.exponentialRampToValueAtTime(f1, t + a + d); fl.Q.value = q;
   const g = ctx.createGain(); env(g, t, a, peak, d); s.connect(fl); fl.connect(g); g.connect(bus); s.start(t, Math.random() * 1.5); s.stop(t + a + d + 0.05);
 }
 const G = b => b.gtr || b, L = b => b.lay || b; // guitar (distortion) input / intensity layer of a track bus
@@ -124,9 +124,10 @@ const TRACKS = {
   // title: epic half-time metal intro (D minor)
   title: { bpm: 150, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [38, 34, 36, 33], riff: [0, -99, -99, -99, -99, -99, -99, -99, 0, -99, -99, 0, -99, -99, 0, -99], open: [0, 8], kick: 'half', taiko: true, flavour: 'epic', mel: MEL_PEAK.map(r => r.map(m => m > 0 ? m - 2 : m)) }) },
   // ---- Jungle Island: TRIBAL METAL ----
-  roam: { bpm: 156, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 40, 36, 38], riff: RIFF_A, open: [0], kick: 'tribal', taiko: true, flavour: 'tribal' }) },
-  battle: { bpm: 166, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 41, 38, 36], riff: RIFF_A, open: [0, 8], kick: 'double', taiko: true, flavour: 'tribal', layer: true, lead: LEAD_E }) },
-  boss: { bpm: 172, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [38, 39, 36, 34], riff: RIFF_B, open: [0, 8], kick: 'blast', taiko: true, flavour: 'tribal', layer: true, lead: LEAD_D, chord: true }) },
+  // v5.9.7 Jungle Island: heavy double-kick metal, 168 bpm, three riffs. Battle jumps to 178 when a big enemy is close or a special is firing.
+  roam: { bpm: 168, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 38, 43, 36], riffs: [RIFF_A, RIFF_B, RIFF_A, RIFF_C], open: [0, 8, 12], kick: 'double', taiko: true, flavour: 'tribal', chord: true }) },
+  battle: { bpm: 178, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 41, 38, 36], riffs: [RIFF_B, RIFF_A, RIFF_B, RIFF_A], open: [0, 4, 8, 12], kick: 'double', taiko: true, flavour: 'tribal', layer: true, lead: LEAD_E, chord: true }) },
+  boss: { bpm: 180, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [38, 39, 36, 34], riff: RIFF_B, open: [0, 8], kick: 'blast', taiko: true, flavour: 'tribal', layer: true, lead: LEAD_D, chord: true }) },
   // ---- Dragon Peak: EPIC & DARK (E phrygian) ----
   peak: { bpm: 150, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 41, 40, 38], riff: [0, -99, -99, 0, -99, -99, 1, -99, 0, -99, -99, -99, 1, -99, 0, -99], open: [0, 8], kick: 'half', taiko: true, flavour: 'epic', mel: MEL_PEAK }) },
   peakbattle: { bpm: 164, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 41, 40, 43], riff: RIFF_A, open: [0, 8], kick: 'gallop', flavour: 'epic', mel: MEL_PEAK, layer: true, lead: LEAD_E }) },
@@ -175,7 +176,7 @@ function tick() {
 }
 function ensure() {
   if (ctx || !audioCtx()) return; ctx = audioCtx();
-  out = ctx.createGain(); out.gain.value = enabled ? vol : 0; out.connect(getMusicBus());
+  out = ctx.createGain(); out.gain.value = enabled ? vol * userVol : 0; out.connect(getMusicBus());
   DIST = curve(9, 0.6); DIST2 = curve(3, 0.2);
   nextT = ctx.currentTime + 0.1; timer = setInterval(tick, 30);
 }
@@ -187,8 +188,38 @@ export const music = {
   get wanted() { return want; },
   get running() { return !!timer && enabled; },
   get intensity() { return inten; },
-  setEnabled(on) { enabled = on; if (out && ctx) out.gain.setTargetAtTime(on ? vol : 0, ctx.currentTime, 0.1); if (on && ctx) nextT = ctx.currentTime + 0.05; },
+  setEnabled(on) { enabled = on; if (out && ctx) out.gain.setTargetAtTime(on ? vol * userVol : 0, ctx.currentTime, 0.1); if (on && ctx) nextT = ctx.currentTime + 0.05; },
   get enabled() { return enabled; },
+  setVolume(v) { userVol = Math.max(0, Math.min(1, v || 0)); if (out && ctx) out.gain.setTargetAtTime(enabled ? vol * userVol : 0, ctx.currentTime, 0.05); },
+  get volume() { return userVol; },
+  bpm(name) { const T = TRACKS[name]; return T ? T.bpm : 0; },
+  // A short heavy sting when an egg hatches: double-kick, a power chord and a crash. The loop keeps going underneath.
+  hatch() {
+    ensure(); if (!ctx || !enabled) return; this.hatches = (this.hatches || 0) + 1;
+    const t = ctx.currentTime + 0.02, hb = trackBus(t); hb.gain.cancelScheduledValues(t); hb.gain.setValueAtTime(1, t);
+    setTimeout(() => hb.disconnect(), 2500);
+    I.kick(hb, t, 1.15); I.kick(hb, t + 0.09, 1); I.snare(hb, t + 0.16, 0.85);
+    I.pc(hb, t, 40, 0.5, 1.25); I.bass(hb, t, 28, 0.4, 1); I.crash(hb, t + 0.04, 0.75); I.china(hb, t + 0.12, 0.45);
+  },
+  // Offline render of one looping track (or the hatch sting) so a demo clip can be saved. No downloaded audio.
+  async render(name, seconds = 6) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OAC) return null;
+    const sr = 22050, off = new OAC(2, Math.round(sr * seconds), sr);
+    const keep = { ctx, out, DIST, DIST2, noiseOverride };
+    try {
+      ctx = off; DIST = curve(9, 0.6); DIST2 = curve(3, 0.2);
+      noiseOverride = off.createBuffer(1, sr, sr); const nd = noiseOverride.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      out = off.createGain(); out.gain.value = 0.55; out.connect(off.destination);
+      if (name === 'hatch') { const hb = trackBus(0.02); hb.gain.cancelScheduledValues(0); hb.gain.setValueAtTime(1, 0); I.kick(hb, 0.05, 1.15); I.kick(hb, 0.14, 1); I.snare(hb, 0.21, 0.85); I.pc(hb, 0.05, 40, 0.5, 1.25); I.bass(hb, 0.05, 28, 0.4, 1); I.crash(hb, 0.09, 0.75); }
+      else {
+        const T = TRACKS[name]; if (!T) return null;
+        const g = trackBus(0, T.muffle); g.gain.cancelScheduledValues(0); g.gain.setValueAtTime(0.9, 0);
+        const d = 60 / T.bpm / 4; let time = 0.05, n = 0;
+        while (time < seconds - 0.05) { T.fn(g, time, n % 16, (n >> 4) % 4, d); n++; time += d; }
+      }
+    } finally { ctx = keep.ctx; out = keep.out; DIST = keep.DIST; DIST2 = keep.DIST2; noiseOverride = keep.noiseOverride; }
+    return off.startRendering();
+  },
   // 0..1: how hard the battle is raging (extra double-kick, cymbals and a screaming lead fade in)
   setIntensity(k) { k = Math.max(0, Math.min(1, k || 0)); if (Math.abs(k - inten) < 0.02) return; inten = k; if (ctx && cur && cur.g.lay) cur.g.lay.gain.setTargetAtTime(Math.max(0.0001, k), ctx.currentTime, 0.6); },
   // a boss arrives: a 1.6 s noise + saw RISER, then a massive HIT (kick + taiko + crash + low power chord)
