@@ -1,6 +1,7 @@
 // "Leandro rides": a chunky, cartoony, procedural low-poly kid rider who sits in a saddle (real dinos) or a
 // cockpit seat (robots). The seat is found automatically for every dino by ray-casting the body in its rest pose.
 import * as THREE from './vendor/three.bundle.min.js';
+import { cloneLeandro } from './models.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 // where along the body the seat goes: t = 0 at the hips, 1 at the chest, >1 toward the neck (in front of sails/plates)
@@ -83,8 +84,94 @@ export class Rider {
       const el = new THREE.Group(); el.position.y = -0.24; sh.add(el); add(el, cap(0.048, 0.13), m.skin, 0, -0.1, 0);
       const hand = add(el, new THREE.SphereGeometry(0.06, 10, 8), m.skin, 0, -0.22, 0); hand.scale.set(1, 1.1, 0.9);
       this.arms.push({ sh, el, hand, s }); }
-    this.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+    this.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.userData.blocky = true; } });
     this.t = 0; this.cheerT = 0; this.waveT = 0; this.popT = -1; this.mounted = null; this.visible = true;
+    this.skinned = false;
+    this.attachSkin();
+  }
+  attachSkin() {
+    if (this.skinned) return true;
+    let cloned;
+    try { cloned = cloneLeandro(); } catch (e) { return false; }
+    const { scene, animations } = cloned;
+    this.avatar = scene; this.root.add(scene);
+    const bones = {};
+    scene.traverse(o => {
+      if (o.isBone) bones[o.name] = o;
+      if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; }
+    });
+    this.skinBones = bones;
+    const byEnd = (suffix) => bones['mixamorig:' + suffix] || Object.values(bones).find(b => b.name === suffix || b.name.endsWith(suffix));
+    const hip = byEnd('Hips');
+    if (!hip) return false;
+    this.hipBone = hip;
+    this.boneName = (suffix) => (byEnd(suffix) || {}).name;
+    this._hipRest = hip.position.clone();
+    this.restQ = {};
+    for (const n in bones) this.restQ[n] = bones[n].quaternion.clone();
+    this.root.traverse(o => { if (o.userData.blocky) o.visible = false; });
+    this.mixer = new THREE.AnimationMixer(scene);
+    this.clips = {};
+    for (const c of animations) {
+      const a = this.mixer.clipAction(c);
+      a.play(); a.setEffectiveWeight(0);
+      this.clips[c.name] = a;
+    }
+    this.skinned = true;
+    this.alignAvatar();
+    return true;
+  }
+  alignAvatar() {
+    if (!this.avatar || !this._hipRest) return;
+    this.avatar.position.set(-this._hipRest.x, this.hips.position.y - this._hipRest.y, -this._hipRest.z);
+  }
+  bone(short) {
+    if (!this.skinBones) return null;
+    const hits = Object.values(this.skinBones).filter(o => o.name === 'mixamorig:' + short || o.name === 'mixamorig' + short || o.name === short);
+    hits.sort((a, b) => a.name.length - b.name.length);
+    return hits[0] || null;
+  }
+  bendBone(name, x, y, z) {
+    const short = name.split(':').pop();
+    const b = this.bone(short);
+    const rest = b && (this.restQ[b.name] || this.restQ[name]);
+    if (!b || !rest) return;
+    b.quaternion.copy(rest).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z)));
+  }
+  applySkinPose() {
+    if (!this.attachSkin()) return;
+    if (this.clips) for (const a of Object.values(this.clips)) a.setEffectiveWeight(0);
+    const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos' || this.mounted.def.id === 'trice' || this.mounted.def.id === 'carno');
+    const spread = wide ? 0.62 : 0.42;
+    this.bendBone('mixamorig:LeftUpLeg', -1.15, 0, spread);
+    this.bendBone('mixamorig:RightUpLeg', -1.15, 0, -spread);
+    this.bendBone('mixamorig:LeftLeg', 1.4, 0, 0);
+    this.bendBone('mixamorig:RightLeg', 1.4, 0, 0);
+    this.bendBone('mixamorig:Spine', 0.28, 0, 0);
+    this.bendBone('mixamorig:Spine1', 0.12, 0, 0);
+    this.bendBone('mixamorig:LeftArm', 1.45, 0, 0.15);
+    this.bendBone('mixamorig:RightArm', 1.45, 0, -0.15);
+    this.bendBone('mixamorig:LeftForeArm', -0.95, 0, 0);
+    this.bendBone('mixamorig:RightForeArm', -0.95, 0, 0);
+    this.bendBone('mixamorig:Head', -0.15, 0, 0);
+    if (this.cheerT > 0) {
+      this.bendBone('mixamorig:RightArm', 2.4, 0, -0.15);
+      this.bendBone('mixamorig:RightForeArm', -0.2, 0, 0);
+    }
+    this.alignAvatar();
+  }
+  locomotion(speed, dt) {
+    if (!this.attachSkin()) return;
+    const name = speed > 5.2 ? 'Running' : speed > 0.35 ? 'Walking' : '';
+    for (const [n, a] of Object.entries(this.clips)) {
+      const on = n === name;
+      a.setEffectiveWeight(on ? 1 : 0);
+      if (on) a.timeScale = n === 'Running' ? 1.15 : 1;
+    }
+    if (name) this.mixer.update(dt);
+    else for (const n in this.restQ) this.skinBones[n].quaternion.copy(this.restQ[n]);
+    if (this.avatar && this._hipRest) this.avatar.position.set(-this._hipRest.x, 0, -this._hipRest.z);
+    if (this.cheerT > 0) this.bendBone('mixamorig:RightArm', 2.4, 0, -0.2);
   }
   // ---- seat finding (cached per dino) ----
   static seatFor(mech) {
@@ -195,7 +282,9 @@ export class Rider {
     const sit = this.bare ? 0 : (this.real ? 0.035 : 0.045);
     this.root.position.y = sit + Math.abs(Math.sin((m.phase || 0) + 0.6)) * 0.04 * k + Math.sin(this.t * 2) * 0.004;
     this.root.rotation.z += (((d && d.turn) || 0) * 0.28 - this.root.rotation.z) * Math.min(1, dt * 6); // lean into turns
+    if (d && (d.roar > 0.25 || d.act)) this.cheerT = Math.max(this.cheerT, 0.45);
     this.setPose(dt, { k, hold });
+    this.applySkinPose();
   }
   cheer() { this.cheerT = 1.4; }
   wave(t = 2.5) { this.waveT = t; }

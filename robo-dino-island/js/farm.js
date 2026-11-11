@@ -1003,8 +1003,14 @@ export class KidMech {
       R.setPose(dt, { k: Math.min(1, k), hold: o.boost ? 0.7 : 0.2 }); if (this.throwT > 0) this.throwArm(); if (this.tootT > 0) { R.torso.rotation.x = 0.35; R.root.position.y += Math.max(0, Math.sin((0.8 - this.tootT) / 0.8 * Math.PI)) * 0.15; } return; }
     R.root.position.y = 0;
     const k = clamp(speed / 3, 0, 1), run = clamp((speed - 5) / 5, 0, 1); this.phase += dt * (speed > 0.3 ? 2.6 + speed * 1.05 : 0); const s = Math.sin(this.phase);
-    R.legs.forEach((g, i) => { const ss = i ? -s : s; g.hip.rotation.set(-ss * (0.65 + 0.3 * run) * k, 0, g.s * 0.05); g.knee.rotation.set(0.05 + Math.max(0, ss) * (0.8 + 0.6 * run) * k, 0, 0); g.foot.rotation.set(0, 0, 0); });
-    R.arms.forEach((a, i) => { const ss = i ? s : -s; a.sh.rotation.set(-ss * (0.6 + 0.5 * run) * k - 0.05, 0, a.s * (0.1 + 0.04 * Math.sin(t * 1.7))); a.el.rotation.set(-0.25 - 0.7 * run * k, 0, 0); });
+    R.attachSkin();
+    if (R.skinned && this.flipT <= 0 && this.slipT <= 0) R.locomotion(this.danceT > 0 ? 0 : speed, dt);
+    else {
+      R.legs.forEach((g, i) => { const ss = i ? -s : s; g.hip.rotation.set(-ss * (0.65 + 0.3 * run) * k, 0, g.s * 0.05); g.knee.rotation.set(0.05 + Math.max(0, ss) * (0.8 + 0.6 * run) * k, 0, 0); g.foot.rotation.set(0, 0, 0); });
+      R.arms.forEach((a, i) => { const ss = i ? s : -s; a.sh.rotation.set(-ss * (0.6 + 0.5 * run) * k - 0.05, 0, a.s * (0.1 + 0.04 * Math.sin(t * 1.7))); a.el.rotation.set(-0.25 - 0.7 * run * k, 0, 0); });
+    }
+    const headBone = R.bone('Head');
+    if (R.skinned && this.hat && headBone && this.hat.parent !== headBone) { headBone.add(this.hat); this.hat.position.set(0, 0.09, 0.02); this.hat.scale.setScalar(0.55); }
     R.hips.position.y = 0.7 + Math.abs(Math.cos(this.phase)) * 0.05 * k + (k < 0.05 ? Math.sin(t * 2) * 0.006 : 0); R.torso.rotation.set(0.05 * k + 0.15 * run, 0, 0); R.head.rotation.set(-0.08 * run, k < 0.05 ? Math.sin(t * 0.6) * 0.3 : 0, 0); R.root.position.y = 0;
     if (this.tootT > 0) { const u = 1 - this.tootT / 0.8; R.torso.rotation.x = 0.55 * Math.sin(Math.min(1, u * 2) * Math.PI * 0.5); R.hips.position.y -= 0.06; for (const a of R.arms) { a.sh.rotation.set(-0.7, 0, a.s * 0.2); a.el.rotation.set(-0.3, 0, 0); } R.head.rotation.x = -0.3; }
     if (this.squishT > 0) { R.head.rotation.x = 0.5; for (const a of R.arms) { a.sh.rotation.set(-0.3, 0, a.s * (1.2 + Math.sin(t * 25) * 0.3)); a.el.rotation.set(-0.4, 0, 0); } }
