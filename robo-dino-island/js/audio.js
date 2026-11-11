@@ -263,6 +263,7 @@ export const sfx = {
   freeze() { if (!ctx) return; const t = now(); for (let i = 0; i < 5; i++) tone(t + i * 0.04, 'triangle', 2400 + i * 400, 3200 + i * 300, 0.12, 0.06); noise(t, 0.4, 'highpass', 5000, 9000, 0.18, 1); },
   frost(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.2, 'highpass', 3500, 6500, 0.18 * v, 0.7); noise(t, 0.2, 'bandpass', 900, 1500, 0.1 * v, 0.8); },
   spit() { if (!ctx) return; const t = now(); noise(t, 0.18, 'bandpass', 1800, 600, 0.35, 2); tone(t, 'sine', 500, 160, 0.15, 0.15); },
+  rattle(v = 1) { if (!ctx) return; const t = now(); for (let i = 0; i < 5; i++) noise(t + i * 0.055, 0.04, 'bandpass', 1600 + i * 220, 700, 0.16 * v, 4); },
   splat() { if (!ctx) return; const t = now(); noise(t, 0.25, 'lowpass', 1200, 200, 0.4, 1.5); tone(t, 'sine', 180, 60, 0.2, 0.2); },
   honk() { if (!ctx) return; const t = now(); for (const [f, g] of [[110, 0.35], [165, 0.22], [220, 0.12]]) { const o = tone(t, 'sawtooth', f, f * 0.92, 1.1, g, 0.06); o.detune.value = Math.random() * 10; } noise(t, 1.0, 'bandpass', 600, 300, 0.15, 2); duck(0.5, 1); },
   flap(v = 1) { if (!ctx || v < 0.03) return; const t = now(); noise(t, 0.35, 'lowpass', 500, 120, 0.4 * v, 0.9); tone(t, 'sine', 60, 35, 0.3, 0.2 * v); },

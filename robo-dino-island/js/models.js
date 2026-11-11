@@ -147,3 +147,15 @@ export function cloneAllo() {
   if (!alloCache) throw new Error('allo model not loaded');
   return { scene: clone(alloCache.scene), animations: alloCache.animations };
 }
+
+const DILO_URL = 'assets/models/dilo.glb';
+let diloCache = null;
+
+export function preloadDilo(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(DILO_URL, gltf => { diloCache = gltf; }, undefined, err => console.error(DILO_URL, err));
+}
+export function cloneDilo() {
+  if (!diloCache) throw new Error('dilo model not loaded');
+  return { scene: clone(diloCache.scene), animations: diloCache.animations };
+}
