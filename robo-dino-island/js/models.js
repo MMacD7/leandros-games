@@ -123,3 +123,15 @@ export function cloneAnky() {
   if (!ankyCache) throw new Error('anky model not loaded');
   return { scene: clone(ankyCache.scene), animations: ankyCache.animations };
 }
+
+const STEGO_URL = 'assets/models/stego.glb';
+let stegoCache = null;
+
+export function preloadStego(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(STEGO_URL, gltf => { stegoCache = gltf; }, undefined, err => console.error(STEGO_URL, err));
+}
+export function cloneStego() {
+  if (!stegoCache) throw new Error('stego model not loaded');
+  return { scene: clone(stegoCache.scene), animations: stegoCache.animations };
+}

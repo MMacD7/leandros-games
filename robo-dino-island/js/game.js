@@ -24,6 +24,7 @@ import { TrikeMech } from './trike.js';
 import { CarnoMech } from './carno.js';
 import { RaptorMech } from './raptor.js';
 import { AnkyMech } from './anky.js';
+import { StegoMech } from './stego.js';
 import { Eggs } from './eggs.js';
 import { CostumeRex, COSTUME } from './costume.js';
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
@@ -32,7 +33,7 @@ export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stego
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const pool = new Map();
-export const makeDino = (def, assets, wild) => def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.kind === 'trex' ? new TrexMech(def) : def.id === 'brachio' ? new BrachioMech(def) : def.id === 'giga' ? new GigaMech(def) : def.id === 'spinos' ? new SpinoMech(def) : def.id === 'trice' ? new TrikeMech(def) : def.id === 'carno' ? new CarnoMech(def) : def.id === 'velo' ? new RaptorMech(def) : def.id === 'ankys' ? new AnkyMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
+export const makeDino = (def, assets, wild) => def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.kind === 'trex' ? new TrexMech(def) : def.id === 'brachio' ? new BrachioMech(def) : def.id === 'giga' ? new GigaMech(def) : def.id === 'spinos' ? new SpinoMech(def) : def.id === 'trice' ? new TrikeMech(def) : def.id === 'carno' ? new CarnoMech(def) : def.id === 'velo' ? new RaptorMech(def) : def.id === 'ankys' ? new AnkyMech(def) : def.id === 'stegos' ? new StegoMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
 export { LION, COSTUME };
 const ROID = ['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero']; // v5 "on steroids" dinos (every level)
 const STAMPEDERS = ['raptorpack', 'velo', 'megatrike', 'trice', 'pachy', 'para', 'raptor'];
@@ -174,6 +175,7 @@ export class Game {
     else if (p.def.id === 'carno' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.55 / (p.mech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
     else if (p.def.id === 'velo' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 1.35 / (p.mech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' });
     else if (p.def.id === 'ankys' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' });
+    else if (p.def.id === 'stegos' && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, world: 1.55, spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' });
     else R.mount(p.mech); }
   later(t, fn) { this.timers.push({ t, fn }); }
   get westiesOn() { return !!this.westies; }
@@ -482,6 +484,7 @@ export class Game {
     else if (k === 'hornrush') { d.act = { type: 'hornrush', t: 0, dur: 1.05, dir: fwd.clone(), speed: Math.max(32, d.st.speed * 1.7), hit: new Set(), slammed: false }; d.chargeA = 1; d.roar = 0.2; sfx.whoosh(0.9); if (d === this.player) this.hud.toast('🐂 HORN RUSH!'); return; }
     else if (k === 'raptorpounce') { const act = this.pounceAct(d, target, fwd); act.type = 'raptorpounce'; d.act = act; d.pounceA = 1; d.roar = 0.35; sfx.whoosh(1); if (d === this.player) this.hud.toast('🦖 RAPTOR POUNCE!'); return; }
     else if (k === 'tailclub') { d.act = { type: 'tailclub', t: 0, dur: 0.95, yaw0: d.yaw, slammed: false, hit: new Set() }; d.smashA = 1; d.roar = 0.35; sfx.whoosh(0.8); if (d === this.player) this.hud.toast('💥 TAIL SMASH!'); return; }
+    else if (k === 'spikeswing') { d.act = { type: 'spikeswing', t: 0, dur: 0.95, yaw0: d.yaw, slammed: false, hit: new Set() }; d.smashA = 1; d.roar = 0.4; sfx.whoosh(0.9); if (d === this.player) this.hud.toast('💥 SPIKE SWING!'); return; }
     else if (k === 'combo') d.act = { type: 'combo', t: 0, dur: 1.0, dir: fwd.clone(), n: 0, target };
     else if (k === 'spit') { d.frillT = 1.1; d.jaw = 1.4; this.later(0.25, () => { if (!d.alive) return; for (let i = 0; i < 3; i++) this.later(i * 0.09, () => d.alive && this.launchOrb(d, target, 'goo', i ? 0.08 : 0)); }); sfx.whoosh(0.7); return; }
     else if (k === 'headbutt') { d.act = { type: 'headbutt', t: 0, dur: 0.95, dir: fwd.clone(), speed: Math.max(24, d.st.speed * 2.5), hit: new Set() }; sfx.whoosh(0.6); return; }
@@ -631,6 +634,13 @@ export class Game {
         this.fx.ring(P, R, 0xffb14a); this.fx.ring(P, R * 0.55, 0xfff1c4); this.fx.ring(P.clone().addScaledVector(side, d.radius * 0.4), 5, 0xffc878);
         this.fx.dust(P, 18, 2.4, 9); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.75 : 0.32); sfx.stomp();
         for (const e of foes) { if (!e || !e.alive || A.hit.has(e)) continue; const away = tmp.subVectors(e.pos, d.pos).setY(0); const dist = away.length() - e.radius; if (dist > d.radius + 4.4) continue; if (away.lengthSq() < 1e-4) away.copy(fwd).multiplyScalar(-1); else away.normalize(); if (away.dot(fwd) > 0.15) continue; A.hit.add(e); e.hit(d.st.bite * 2.4, d.pos, d); e.knock.addScaledVector(away, 16); this.stun(e, 0.65); this.fx.impact(e.center.clone(), 1.3, e.real); } } }
+    else if (A.type === 'spikeswing') { d.smashA = 1; d.speedNow = 0; d.yaw = A.yaw0 + Math.sin(u * Math.PI) * 0.55;
+      if (u > 0.4 && !A.slammed) { A.slammed = true; const fwd = d.forward(new THREE.Vector3()), side = new THREE.Vector3(-fwd.z, 0, fwd.x);
+        const P = d.pos.clone().addScaledVector(fwd, -d.radius * 0.9); P.y = d.ground + 0.4;
+        const R = Math.max(8, d.radius * 2.4);
+        this.fx.ring(P, R, 0xff5a12); this.fx.ring(P, R * 0.62, 0xffc14a); this.fx.ring(P.clone().addScaledVector(side, d.radius * 0.85), 6, 0xffe08a);
+        this.fx.dust(P, 20, 2.6, 10); this.fx.shake = Math.max(this.fx.shake, d === this.player ? 0.8 : 0.34); sfx.stomp(); sfx.whoosh(0.7);
+        for (const e of foes) { if (!e || !e.alive || A.hit.has(e)) continue; const away = tmp.subVectors(e.pos, d.pos).setY(0); const dist = away.length() - e.radius; if (dist > d.radius + 5.2) continue; if (away.lengthSq() < 1e-4) away.copy(fwd).multiplyScalar(-1); else away.normalize(); if (away.dot(fwd) > 0.2) continue; A.hit.add(e); e.hit(d.st.bite * 2.2, d.pos, d); e.knock.addScaledVector(away, 18); this.stun(e, 0.6); this.fx.impact(e.center.clone(), 1.4, e.real); } } }
     else if (A.type === 'rocket') { const sp = A.speed * Math.min(1, u * 6) * (u > 0.85 ? (1 - u) / 0.15 : 1); slide(A.dir, sp); d.chargeA = 1; // Mega-Trike: rocket-powered horn charge, ends in a KABOOM
       const at = d.pos.clone().addScaledVector(A.dir, -d.radius).setY(d.pos.y + d.mech.height * 0.5); for (let i = 0; i < this.fx.n(2); i++) this.fx.fire.spawn({ pos: at, vel: { x: -A.dir.x * 16 + (this.r() - 0.5) * 3, y: 1 + this.r() * 2, z: -A.dir.z * 16 + (this.r() - 0.5) * 3 }, size: 1.2, size1: 3, life: 0.3, r: 3.2, g: 1.4, b: 0.35, alpha: 1, drag: 1.5, rv: 3 });
       if (this.r() < 0.6) this.fx.dust(d.pos, 1, 1.4 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.5, 60 * dt * 10, d);
@@ -1079,7 +1089,7 @@ export class Game {
     if (!pAlive) return;
     const facing = Math.cos(angDiff(e.yaw, Math.atan2(toP.x, toP.z))) > 0.6;
     if (facing && dist < reach + 1.5 && e.laserT <= 0) { e.laserT = e.st.rate; this.bite(e, p); }
-    const k = e.def.special, inRange = k === 'chomp' ? dist < (e.def.kind === 'trex' ? 18 : 12) : k === 'charge' || k === 'headbutt' || k === 'trikecharge' || k === 'hornrush' ? dist > 6 && dist < 30 : k === 'pounce' || k === 'raptorpounce' || k === 'spit' ? dist > 6 && dist < 24 : k === 'whip' || k === 'tailclub' ? dist < e.radius + 7 * s
+    const k = e.def.special, inRange = k === 'chomp' ? dist < (e.def.kind === 'trex' ? 18 : 12) : k === 'charge' || k === 'headbutt' || k === 'trikecharge' || k === 'hornrush' ? dist > 6 && dist < 30 : k === 'pounce' || k === 'raptorpounce' || k === 'spit' ? dist > 6 && dist < 24 : k === 'whip' || k === 'tailclub' || k === 'spikeswing' ? dist < e.radius + 7 * s
       : k === 'rage' ? dist < 22 : k === 'slash' ? dist < e.radius + 8 * s : k === 'splash' ? dist < e.radius + 7 : k === 'combo' ? dist < 11 : k === 'honk' ? dist < 18 * s + 4
       : k === 'tsunami' ? dist < 24 * s + 4 : k === 'rockethorn' ? dist > 7 && dist < 32 : k === 'pack' ? dist > 5 && dist < 26 : k === 'cannon' ? dist > 10 && dist < 50
       : k === 'lavaslam' ? dist < e.radius + 7 * s : k === 'bark' ? dist < 18
@@ -1170,7 +1180,7 @@ export class Game {
     // auto-follow behind the dino while moving (unless the player is steering the camera)
     if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI + (p.def.id === 'brachio' ? -0.62 : 0); c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
     if (p.def.id === 'brachio' && !inp.looking) c.pitch += (0.32 - c.pitch) * Math.min(1, dt * 2);
-    let dist = 4 + h * 1.55 + (p.def.farmKid ? 1.8 : 0) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
+    let dist = 4 + h * 1.55 + (p.def.farmKid ? 1.8 : 0) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.def.id === 'stegos' ? 5 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
     // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
