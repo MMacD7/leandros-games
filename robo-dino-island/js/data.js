@@ -207,7 +207,7 @@ export function loadSave() {
     const up = s.allUnlocked ? { ...f.up, ...(s.up || {}) } : maxUps(); // first load after the update: max out every upgrade
     for (const k in up) up[k] = Math.max(0, Math.min(MAX_UP, up[k] | 0));
     const out = { ...f, ...s, up, owned, allUnlocked: true };
-    if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex';
+    if (!DINOS.some(d => d.id === out.selected)) out.selected = 'rex'; // SUPER DINOS kept the same ids, so a saved T-Rex or Ankylosaurus still resolves
     if (!['peak', 'city', 'ocean', 'farm'].includes(out.level)) out.level = 'jungle';
     out.voice = out.voice !== false;
     out.jungleLion = out.jungleLion === true;
