@@ -396,6 +396,45 @@ body.farm .stink-btn { display: flex; }
 .jg-card:active { transform: scale(.98); }
 @media (max-width: 430px) { .jg-card { min-height: 92px; } .jg-card .jg-txt b { font-size: 17px; } .jg-card .jg-state { font-size: 12px; } }
 
+/* v5.9.5 SUPER DINOS sits at the top of the Dino Garage. The eight 3D upgrades live here, not in the Real list. */
+#g-super { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; padding: 8px 8px 10px; border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 230, 120, .35), transparent 42%),
+    radial-gradient(circle at 90% 20%, rgba(80, 170, 255, .28), transparent 46%),
+    linear-gradient(180deg, rgba(28, 36, 58, .92), rgba(12, 18, 32, .88));
+  border: 2px solid rgba(190, 220, 255, .55);
+  box-shadow: inset 0 0 22px rgba(90, 160, 255, .22), 0 0 16px rgba(80, 140, 255, .25); }
+#super-title { margin: 0; text-align: center; font-size: clamp(26px, 6.4vw, 40px); font-style: italic; letter-spacing: 1px; line-height: 1;
+  background: linear-gradient(180deg, #fff8d0 0%, #ffe14a 38%, #9ad7ff 72%, #4d7dff 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 0 #14182a) drop-shadow(0 0 10px rgba(120, 190, 255, .85)); }
+#super-title::before, #super-title::after { content: '⚡'; -webkit-text-fill-color: #ffe14a; color: #ffe14a; background: none; filter: none; }
+#super-title::before { margin-right: 6px; } #super-title::after { margin-left: 6px; }
+.sd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sd-card { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-height: 86px; padding: 6px; border-radius: 14px; text-align: center; color: #fff; touch-action: manipulation;
+  background: linear-gradient(180deg, rgba(70, 82, 104, .55), rgba(18, 22, 32, .8));
+  border: 2px solid rgba(186, 198, 214, .55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 3px 0 rgba(0,0,0,.35); }
+.sd-card .sd-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sd-card .sd-txt b { font-size: 12px; line-height: 1.15; }
+.sd-card .sd-txt small { font-size: 10px; font-weight: 800; letter-spacing: .2px; color: #ffe08a; text-shadow: 0 0 8px rgba(255, 200, 60, .45); }
+.sd-thumb { width: 100%; height: 52px; border-radius: 8px; flex: none; background: radial-gradient(circle at 50% 40%, #243044, #0c121c); box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); }
+.sd-card.on { border-color: #fff3b0; background: linear-gradient(180deg, rgba(255, 210, 70, .35), rgba(40, 70, 140, .55));
+  box-shadow: 0 0 14px rgba(120, 190, 255, .7), inset 0 0 12px rgba(255, 230, 120, .25); }
+.sd-card:active { transform: scale(.97); }
+@media (max-height: 430px) {
+  #g-super { margin-bottom: 8px; padding: 6px; gap: 6px; }
+  #super-title { font-size: 20px; }
+  .sd-grid { gap: 4px; }
+  .sd-card { min-height: 62px; padding: 3px; gap: 1px; }
+  .sd-card .sd-txt b { font-size: 10px; } .sd-card .sd-txt small { font-size: 9px; }
+  .sd-thumb { height: 30px; }
+}
+@media (min-width: 1000px) and (min-height: 700px) {
+  .sd-card { min-height: 110px; } .sd-card .sd-txt b { font-size: 15px; } .sd-card .sd-txt small { font-size: 12px; }
+  .sd-thumb { height: 72px; }
+}
+
 /* v5.4 Jungle Island combo callouts: SMASH! / MEGA! / DINO-MITE! (comic burst, never blocks touches) */
 #callout { position: fixed; z-index: 5; left: 50%; top: calc(var(--sat) + 30%); transform: translate(-50%, -50%) scale(0) rotate(-12deg); pointer-events: none; opacity: 0; white-space: nowrap;
   font-size: clamp(34px, min(10vw, 11vh), 92px); font-weight: 900; font-style: italic; letter-spacing: 1px; color: #fff23a; -webkit-text-stroke: 3px #b01010; text-shadow: 0 6px 0 #6a0a00, 0 0 28px rgba(255,160,0,.9); padding: .25em .6em;

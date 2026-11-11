@@ -382,8 +382,12 @@ let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo',
 // v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
 const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish', 'turtle']); // v5 (+ v5.5 sea turtle)
 const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
-const G_REALS = newFirst(REALS), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS), G_DOGS = WESTIES, G_SEA = SEA.filter(d => !d.wildOnly);
-const gListOf = () => gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;
+// v5.9.5: the eight 3D upgrades move out of the Real carousel into SUPER DINOS. Ids stay the same, so old saves still select them.
+const SUPER_ORDER = ['trex', 'brachio', 'giga', 'spinos', 'trice', 'carno', 'velo', 'ankys'];
+const SUPER_SET = new Set(SUPER_ORDER);
+const G_SUPER = SUPER_ORDER.map(id => REALS.find(d => d.id === id));
+const G_REALS = newFirst(REALS.filter(d => !SUPER_SET.has(d.id))), G_ROBOS = newFirst(ROBOS), G_DRAGONS = newFirst(DRAGONS), G_DOGS = WESTIES, G_SEA = SEA.filter(d => !d.wildOnly);
+const gListOf = () => gList === 'super' ? G_SUPER : gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;
 const NEW_GARAGE_KEY = 'robo-dino-island.seen.newgarage';
 const gMechs = {}, gRider = new Rider();
 function buildGarage() {
@@ -398,10 +402,69 @@ function buildGarage() {
   const fill = new THREE.HemisphereLight(0xa0c8ff, 0x202020, 0.55); gScene.add(fill);
   const rim2 = new THREE.SpotLight(0xff5a1a, 700, 60, 0.7, 0.6, 1.6); rim2.position.set(12, 7, -11); gScene.add(rim2, rim2.target);
   syncGarageToSelected();
+  buildSuperCards();
+  paintSuperThumbs();
 }
 function syncGarageToSelected() {
-  const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0]; gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d));
+  const d = (game && game.player && game.player.def) || DINOS.find(d => d.id === save.selected) || ROBOS[0];
+  gList = SUPER_SET.has(d.id) ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo';
+  gTab = gList; gIdx = Math.max(0, gListOf().indexOf(d));
 }
+function buildSuperCards() {
+  const root = $('g-super-grid'); if (!root || root.childElementCount) return;
+  root.innerHTML = G_SUPER.map(d => {
+    const move = (d.specialName || '').replace(/<br>/g, ' ');
+    return `<button class="sd-card" type="button" data-super="${d.id}" aria-pressed="false" aria-label="${d.name}. ${move}."><canvas class="sd-thumb" width="192" height="144" aria-hidden="true"></canvas><span class="sd-txt"><b>${d.name}</b><small>${move}</small></span></button>`;
+  }).join('');
+}
+let superThumbsStarted = false;
+async function paintSuperThumbs() {
+  if (superThumbsStarted) return;
+  superThumbsStarted = true;
+  const w = 192, h = 144;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  let thumbR = null;
+  try {
+    thumbR = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+    thumbR.outputColorSpace = THREE.SRGBColorSpace;
+    thumbR.toneMapping = THREE.ACESFilmicToneMapping;
+    thumbR.toneMappingExposure = 1.05;
+    thumbR.setSize(w, h, false);
+    const cam = new THREE.PerspectiveCamera(30, w / h, 0.1, 160);
+    for (const def of G_SUPER) {
+      const m = gMechs[def.id] || (gMechs[def.id] = makeDino(def, assets, false));
+      gRider.unmount();
+      gScene.add(m.obj);
+      m.obj.position.set(0, def.fly ? 1.2 : 0, 0);
+      m.obj.rotation.set(0, 0.85, 0);
+      m.obj.scale.setScalar(1);
+      for (let i = 0; i < 4; i++) m.animate(1 / 20, 0, {});
+      if (m.seatOnGround) { m.obj.position.y = 0; m.seatOnGround(() => 0); }
+      const hh = m.height || 4, R = Math.max(m.fitR || 5, hh * 0.7, 4);
+      cam.position.set(R * 0.7, hh * 0.55 + 0.4, R * 1.15);
+      cam.lookAt(0, hh * 0.38, 0);
+      thumbR.render(gScene, cam);
+      const dest = document.querySelector(`#g-super [data-super="${def.id}"] canvas`);
+      if (dest) dest.getContext('2d').drawImage(canvas, 0, 0, dest.width, dest.height);
+      gScene.remove(m.obj);
+    }
+  } catch (e) { console.warn('super thumbs', e); }
+  if (thumbR) thumbR.dispose();
+  if (screen === 'garage') refreshGarage();
+}
+$('g-super').addEventListener('click', e => {
+  const b = e.target.closest('[data-super]'); if (!b) return;
+  const def = G_SUPER.find(d => d.id === b.dataset.super); if (!def) return;
+  initAudio(); voice.prime();
+  gList = 'super'; gTab = 'super'; gIdx = G_SUPER.indexOf(def);
+  voice.say(def.name + '!', { prio: 2, cd: 1500, replace: true });
+  if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 1, cd: 6000 });
+  if (!save.owned.includes(def.id)) save.owned.push(def.id);
+  save.selected = def.id; save.landSel = def.id; gPicked = true;
+  sfx.ui(); persist(); refreshGarage();
+  if (gMech) { gMech.roar = 1.5; sfx.bigRoar(1.1 - (def.scale || 1) * 0.25, 1, false); }
+});
 function refreshLions() {
   const on = !!(save.jungleLion && save.farmLion), b = $('jg-lion'); if (!b) return;
   b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -427,6 +490,7 @@ function showLions() {
   $('g-dino').classList.add('hidden'); $('g-ups').classList.add('hidden');
   $('g-prev').parentElement.classList.add('hidden');
   for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups']) { const el = $('t-' + t); if (el) el.classList.remove('on'); }
+  for (const el of document.querySelectorAll('#g-super [data-super]')) { el.classList.remove('on'); el.setAttribute('aria-pressed', 'false'); }
   refreshLions(); setJunglePreview(); hud.bolts();
 }
 function setGarageMech() {
@@ -467,6 +531,10 @@ function refreshGarage() {
     <span class="upb"><button data-up="${u.id}" data-d="-1" ${l <= 0 ? 'disabled' : ''} aria-label="less">−</button><button data-up="${u.id}" data-d="1" ${l >= MAX_UP ? 'disabled' : ''} aria-label="more">+</button></span></div>`; }).join('');
   $('g-dino').classList.toggle('hidden', gTab === 'ups'); $('g-ups').classList.toggle('hidden', gTab !== 'ups');
   for (const t of ['real', 'robo', 'dragon', 'sea', 'dogs', 'ups']) { const el = $('t-' + t); if (el) el.classList.toggle('on', gTab === t); }
+  for (const el of document.querySelectorAll('#g-super [data-super]')) {
+    const on = gList === 'super' && G_SUPER[gIdx] && el.dataset.super === G_SUPER[gIdx].id;
+    el.classList.toggle('on', on); el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
   $('g-prev').parentElement.classList.toggle('hidden', gTab === 'ups');
   hud.bolts();
 }
@@ -622,4 +690,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 // test / debug hooks (no network, local only)
 function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); gList = d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = gListOf().indexOf(d); refreshGarage(); }, applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
