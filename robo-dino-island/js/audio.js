@@ -266,6 +266,7 @@ export const sfx = {
   rattle(v = 1) { if (!ctx) return; const t = now(); for (let i = 0; i < 5; i++) noise(t + i * 0.055, 0.04, 'bandpass', 1600 + i * 220, 700, 0.16 * v, 4); },
   splat() { if (!ctx) return; const t = now(); noise(t, 0.25, 'lowpass', 1200, 200, 0.4, 1.5); tone(t, 'sine', 180, 60, 0.2, 0.2); },
   honk() { if (!ctx) return; const t = now(); for (const [f, g] of [[110, 0.35], [165, 0.22], [220, 0.12]]) { const o = tone(t, 'sawtooth', f, f * 0.92, 1.1, g, 0.06); o.detune.value = Math.random() * 10; } noise(t, 1.0, 'bandpass', 600, 300, 0.15, 2); duck(0.5, 1); },
+  crestHonk(v = 1) { if (!ctx) return; const t = now(); tone(t, 'sawtooth', 196, 494, 0.42, 0.18 * v, 0.02); tone(t + 0.06, 'square', 247, 587, 0.38, 0.07 * v, 0.02); tone(t + 0.22, 'sawtooth', 392, 220, 0.5, 0.14 * v, 0.03); noise(t, 0.35, 'bandpass', 1100, 500, 0.08 * v, 2); },
   flap(v = 1) { if (!ctx || v < 0.03) return; const t = now(); noise(t, 0.35, 'lowpass', 500, 120, 0.4 * v, 0.9); tone(t, 'sine', 60, 35, 0.3, 0.2 * v); },
   rage() { if (!ctx) return; const t = now(); noise(t, 0.6, 'bandpass', 400, 1400, 0.3, 1.2); tone(t, 'sawtooth', 90, 180, 0.6, 0.12); },
   headbutt() { if (!ctx) return; const t = now(); tone(t, 'square', 300, 90, 0.18, 0.25); noise(t, 0.15, 'bandpass', 2500, 900, 0.4, 3); tone(t, 'sine', 90, 40, 0.4, 0.6); },

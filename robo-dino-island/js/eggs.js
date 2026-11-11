@@ -1,13 +1,13 @@
 // v5.9.7: spotted cartoon eggs on Jungle Island. Hatch one and a baby (0.25x of a 3D dino we already have) pops out.
 // Up to four babies follow Leandro. The rest wait on the BABY DINOS shelf. Kid-safe: collecting only adds a friend.
 import * as THREE from './vendor/three.bundle.min.js';
-import { cloneTrex, cloneBrachio, cloneGiga, cloneSpino, cloneTrike, cloneCarno, cloneRaptor, cloneAnky, cloneStego, cloneAllo, cloneDilo, clonePachy } from './models.js';
+import { cloneTrex, cloneBrachio, cloneGiga, cloneSpino, cloneTrike, cloneCarno, cloneRaptor, cloneAnky, cloneStego, cloneAllo, cloneDilo, clonePachy, clonePara } from './models.js';
 import { music } from './music.js';
 import { sfx } from './audio.js';
-const CLONE = { trex: cloneTrex, brachio: cloneBrachio, giga: cloneGiga, spinos: cloneSpino, trice: cloneTrike, carno: cloneCarno, velo: cloneRaptor, ankys: cloneAnky, stegos: cloneStego, allo: cloneAllo, dilo: cloneDilo, pachy: clonePachy };
-const NAMES = { trex: 'Baby T-Rex', brachio: 'Baby Brachio', giga: 'Baby Giga', spinos: 'Baby Spino', trice: 'Baby Trike', carno: 'Baby Carno', velo: 'Baby Raptor', ankys: 'Baby Anky', stegos: 'Baby Stego', allo: 'Baby Allo', dilo: 'Baby Dilo', pachy: 'Baby Pachy' };
+const CLONE = { trex: cloneTrex, brachio: cloneBrachio, giga: cloneGiga, spinos: cloneSpino, trice: cloneTrike, carno: cloneCarno, velo: cloneRaptor, ankys: cloneAnky, stegos: cloneStego, allo: cloneAllo, dilo: cloneDilo, pachy: clonePachy, para: clonePara };
+const NAMES = { trex: 'Baby T-Rex', brachio: 'Baby Brachio', giga: 'Baby Giga', spinos: 'Baby Spino', trice: 'Baby Trike', carno: 'Baby Carno', velo: 'Baby Raptor', ankys: 'Baby Anky', stegos: 'Baby Stego', allo: 'Baby Allo', dilo: 'Baby Dilo', pachy: 'Baby Pachy', para: 'Baby Para' };
 // Longest axis of the grown dino, so the baby is about a quarter of that.
-const ADULT = { trex: 9.6, brachio: 11, giga: 6.5, spinos: 8.45, trice: 8, carno: 10, velo: 6.8, ankys: 8, stegos: 9, allo: 10, dilo: 7, pachy: 6 };
+const ADULT = { trex: 9.6, brachio: 11, giga: 6.5, spinos: 8.45, trice: 8, carno: 10, velo: 6.8, ankys: 8, stegos: 9, allo: 10, dilo: 7, pachy: 6, para: 9.5 };
 const BABY = Object.fromEntries(Object.entries(ADULT).map(([id, n]) => [id, n * 0.25]));
 const FOLLOW = 4;
 
@@ -17,7 +17,7 @@ export const EGGS = [
   { id: 'e3', species: 'velo', x: 6, z: -64, where: 'falls' },
   { id: 'e4', species: 'giga', x: 200, z: -180, where: 'hill' },
   { id: 'e5', species: 'spinos', x: -180, z: 40, where: 'hill' },
-  { id: 'e6', species: 'trice', x: 160, z: 90, where: 'hill' },
+  { id: 'e6', species: 'para', x: 160, z: 90, where: 'hill' },
   { id: 'e7', species: 'carno', x: 380, z: -30, where: 'beach' },
   { id: 'e8', species: 'ankys', x: -80, z: 200, where: 'hill' },
   { id: 'e9', species: 'dilo', x: 40, z: 400, where: 'beach' },

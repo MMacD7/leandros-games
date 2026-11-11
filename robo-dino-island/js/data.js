@@ -75,8 +75,8 @@ export const REALS = [
   { id: 'pachy', name: 'Pachycephalosaurus', price: 0, kind: 'pachy', desc: 'A tough knobby dome. SKULL BASH lowers the head, sprints, and bonks foes flying.',
     hp: 170, speed: 13, bite: 16, biteRate: 0.48, special: 'skullbash', specialName: 'SKULL<br>BASH', specialCD: 4.2, roar: 1.3, scale: 1.0, radius: 2.2,
     back: 0x4a3a2a, belly: 0xb8a080, stripe: 0x22180e, accent: 0x3a8ab8, eye: 0xffa21a },
-  { id: 'para', name: 'Parasaurolophus', price: 0, kind: 'para', desc: 'Its trumpet crest blasts a SONIC HONK that knocks everything back!',
-    hp: 200, speed: 11, bite: 12, biteRate: 0.6, special: 'honk', specialName: 'SONIC<br>HONK', specialCD: 4.5, roar: 1.6, scale: 1.0, radius: 2.4,
+  { id: 'para', name: 'Parasaurolophus', price: 0, kind: 'para', gentle: true, desc: 'A gentle herd dino with a long teal crest. CREST HONK trumpets a cartoon blast that knocks foes back.',
+    hp: 160, speed: 12, bite: 10, biteRate: 0.55, special: 'cresthonk', specialName: 'CREST<br>HONK', specialCD: 4.5, roar: 1.5, scale: 1.0, radius: 3.3,
     back: 0x2a5a4a, belly: 0xc0b890, stripe: 0x0e2a22, accent: 0xff7a2a, eye: 0xffd21a },
   // ---- v5: OVER THE TOP. Huge, armored, spiked, glowing dinos (roid: glowing spikes + armor plates in the builder) ----
   { id: 'spinotitan', name: 'Spino-Titan', price: 0, kind: 'spinos', swim: true, roid: true, desc: 'A towering armored Spinosaurus with a glowing sail. Its TIDAL WAVE blasts everything away!',

@@ -171,3 +171,15 @@ export function clonePachy() {
   if (!pachyCache) throw new Error('pachy model not loaded');
   return { scene: clone(pachyCache.scene), animations: pachyCache.animations };
 }
+
+const PARA_URL = 'assets/models/para.glb';
+let paraCache = null;
+
+export function preloadPara(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(PARA_URL, gltf => { paraCache = gltf; }, undefined, err => console.error(PARA_URL, err));
+}
+export function clonePara() {
+  if (!paraCache) throw new Error('para model not loaded');
+  return { scene: clone(paraCache.scene), animations: paraCache.animations };
+}
