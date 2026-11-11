@@ -68,7 +68,7 @@ test('rex costume, lions stay, all levels, touch and pause', async ({ page }, in
   await ready(page);
   await dismissRotate(page);
 
-  await expect(page.locator('#ver')).toHaveText('v5.9.8');
+  await expect(page.locator('#ver')).toHaveText('v5.9.9');
   const sw = await page.evaluate(async () => (await fetch('./sw.js')).text());
   expect(sw).toContain('./js/costume.js');
   expect(sw).toContain('./js/lion.js');

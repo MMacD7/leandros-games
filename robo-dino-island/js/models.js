@@ -135,3 +135,15 @@ export function cloneStego() {
   if (!stegoCache) throw new Error('stego model not loaded');
   return { scene: clone(stegoCache.scene), animations: stegoCache.animations };
 }
+
+const ALLO_URL = 'assets/models/allo.glb';
+let alloCache = null;
+
+export function preloadAllo(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(ALLO_URL, gltf => { alloCache = gltf; }, undefined, err => console.error(ALLO_URL, err));
+}
+export function cloneAllo() {
+  if (!alloCache) throw new Error('allo model not loaded');
+  return { scene: clone(alloCache.scene), animations: alloCache.animations };
+}
