@@ -159,3 +159,15 @@ export function cloneDilo() {
   if (!diloCache) throw new Error('dilo model not loaded');
   return { scene: clone(diloCache.scene), animations: diloCache.animations };
 }
+
+const PACHY_URL = 'assets/models/pachy.glb';
+let pachyCache = null;
+
+export function preloadPachy(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(PACHY_URL, gltf => { pachyCache = gltf; }, undefined, err => console.error(PACHY_URL, err));
+}
+export function clonePachy() {
+  if (!pachyCache) throw new Error('pachy model not loaded');
+  return { scene: clone(pachyCache.scene), animations: pachyCache.animations };
+}

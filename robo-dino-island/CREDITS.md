@@ -75,6 +75,15 @@ Ankylosaurus 3D model generated with Meshy AI from original concept art.
 
 The bigger Jungle Island in v5.9.6 is original procedural art made for this game: the terrain, sandy shore, river, lake, waterfall, palms, broadleaf canopies, ferns, rocks, and the smoking volcano. No downloaded models.
 
+## Pachycephalosaurus
+
+Pachycephalosaurus 3D model generated with Meshy AI from original concept art.
+
+- File: `assets/models/pachy.glb`
+- The source mesh and the painted texture come from Meshy, made from this game's original Pachycephalosaurus concept. The biped rig and the Idle, Walk, Run, Roar, and Bash clips were made for this game.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- Blue hide, yellow stripes, and a big cream knobby dome. No logos.
+
 ## Dilophosaurus
 
 Dilophosaurus 3D model generated with Meshy AI from original concept art.
