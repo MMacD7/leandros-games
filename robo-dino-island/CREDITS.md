@@ -75,6 +75,16 @@ Ankylosaurus 3D model generated with Meshy AI from original concept art.
 
 The bigger Jungle Island in v5.9.6 is original procedural art made for this game: the terrain, sandy shore, river, lake, waterfall, palms, broadleaf canopies, ferns, rocks, and the smoking volcano. No downloaded models.
 
+## Ricky and Bobby
+
+Ricky and Bobby share one West Highland White Terrier model generated with Meshy AI from original concept art.
+
+- File: `assets/models/westie.glb` (one model for both dogs)
+- The source mesh and the painted texture come from Meshy, made from this game's original cartoon Westie concept. The quadruped rig and the Idle, Trot, Run, Sit, Wag, Bark, and Poop clips were made for this game.
+- Ricky wears a green collar and Bobby a white collar. Bobby is a little smaller. Floating name tags say Ricky and Bobby.
+- License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
+- White fur, black nose, pink inner ears, and a proud tail. No logos.
+
 ## Parasaurolophus
 
 Parasaurolophus 3D model generated with Meshy AI from original concept art.

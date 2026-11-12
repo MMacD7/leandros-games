@@ -10,105 +10,26 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { sfx } from './audio.js';
 import { voice } from './voice.js';
+import { buildWestie } from './westie.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-const DOG_S = 2.5; // v4.4: cute small-terrier size next to the dino (v4.3 was 4.4, v4.2 was 2.1)
-const HOP = 0.6;  // v4.4: hop heights scale with the dog, so lower hops keep them from floating up too high
-let furTex = null;
-function fur() { // soft white fur with fine strands (canvas texture)
-  if (furTex) return furTex; const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
-  g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 900; i++) { const x = Math.random() * 128, y = Math.random() * 128, l = 3 + Math.random() * 6, a = Math.PI / 2 + (Math.random() - 0.5) * 0.9, v = 205 + Math.random() * 50 | 0;
-    g.strokeStyle = `rgba(${v},${v - 4},${v - 12},.7)`; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); }
-  furTex = new THREE.CanvasTexture(c); furTex.colorSpace = THREE.SRGBColorSpace; furTex.wrapS = furTex.wrapT = THREE.RepeatWrapping; return furTex;
-}
-// a fluffy blob: icosphere with jittered vertices so the silhouette looks shaggy
-function fluff(r, seed, sx = 1, sy = 1, sz = 1, amt = 0.16) {
-  const g = new THREE.SphereGeometry(r, 22, 16), p = g.attributes.position; let s = seed;
-  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const memo = new Map();
-  for (let i = 0; i < p.count; i++) { const k = p.getX(i).toFixed(3) + p.getY(i).toFixed(3) + p.getZ(i).toFixed(3); let f = memo.get(k); if (f === undefined) { f = 1 + (rnd() - 0.4) * amt; memo.set(k, f); }
-    p.setXYZ(i, p.getX(i) * f * sx, p.getY(i) * f * sy, p.getZ(i) * f * sz); }
-  g.computeVertexNormals(); return g;
-}
-export function buildWestie(name, accent) {
-  const root = new THREE.Group(); root.name = 'westie-' + name;
-  const white = new THREE.MeshStandardMaterial({ color: 0xffffff, map: fur(), roughness: 0.95, metalness: 0, emissive: 0x2a2826 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x0c0a0a, roughness: 0.35, metalness: 0.1 });
-  const pink = new THREE.MeshStandardMaterial({ color: 0xd8707a, roughness: 0.6 });
-  const acc = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.45, metalness: 0.3, emissive: accent, emissiveIntensity: 0.15 });
-  const metal = new THREE.MeshStandardMaterial({ color: 0xe8e8f0, roughness: 0.2, metalness: 1 });
-  const body = new THREE.Group(); root.add(body); body.position.y = 0.55;
-  const torso = new THREE.Mesh(fluff(0.42, 7 + name.length, 1, 0.82, 1.35), white); body.add(torso);
-  const chest = new THREE.Mesh(fluff(0.3, 13, 1.05, 1, 0.9, 0.25), white); chest.position.set(0, -0.05, 0.42); body.add(chest);
-  // head (big fluffy round head, the classic westie "chrysanthemum" face)
-  const head = new THREE.Group(); head.position.set(0, 0.38, 0.55); body.add(head);
-  head.add(new THREE.Mesh(fluff(0.32, 21 + name.length, 1.08, 1, 1, 0.24), white));
-  const muzzle = new THREE.Mesh(fluff(0.15, 5, 1, 0.85, 1.1, 0.18), white); muzzle.position.set(0, -0.07, 0.25); head.add(muzzle);
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), black); nose.scale.set(1.25, 0.85, 1); nose.position.set(0, -0.02, 0.41); head.add(nose);
-  for (const s of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.048, 10, 8), black); eye.position.set(s * 0.12, 0.06, 0.26); head.add(eye);
-    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffffff })); hl.position.set(s * 0.12 + 0.015, 0.08, 0.305); head.add(hl);
-    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 7), white); ear.position.set(s * 0.15, 0.33, -0.02); ear.rotation.z = -s * 0.22; head.add(ear);
-    const inner = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.19, 5), pink); inner.position.set(s * 0.15, 0.32, 0.035); inner.rotation.z = -s * 0.22; head.add(inner);
-  }
-  const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), pink); jaw.scale.set(1, 0.45, 1); jaw.position.set(0, -0.16, 0.3); head.add(jaw);
-  // tiny spiked collar
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.04, 6, 20), acc); collar.rotation.x = Math.PI / 2 - 0.5; collar.position.set(0, 0.22, 0.47); body.add(collar);
-  const spikes = []; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, c = new THREE.ConeGeometry(0.025, 0.09, 5); c.rotateZ(-Math.PI / 2); c.rotateY(-a); c.translate(Math.cos(a) * 0.28, 0, Math.sin(a) * 0.28); spikes.push(c); }
-  const sp = new THREE.Mesh(mergeGeometries(spikes), metal); sp.rotation.x = -0.5; sp.position.copy(collar.position); body.add(sp);
-  // little superhero cape
-  const capeG = new THREE.PlaneGeometry(0.55, 0.7, 4, 6); capeG.translate(0, -0.35, 0);
-  const cape = new THREE.Mesh(capeG, new THREE.MeshStandardMaterial({ color: accent, roughness: 0.55, side: THREE.DoubleSide, emissive: accent, emissiveIntensity: 0.1 }));
-  cape.position.set(0, 0.36, 0.3); cape.rotation.x = 1.3; body.add(cape);
-  // carrot-shaped tail, held up proud
-  const tail = new THREE.Group(); tail.position.set(0, 0.2, -0.52); body.add(tail);
-  const tm = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.38, 7), white); tm.position.y = 0.19; tail.add(tm); tail.rotation.x = -0.45;
-  // short legs with fluffy feet
-  const legs = [];
-  for (const [x, z] of [[-0.2, 0.36], [0.2, 0.36], [-0.2, -0.34], [0.2, -0.34]]) {
-    const l = new THREE.Group(); l.position.set(x, -0.18, z); body.add(l);
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.07, 0.36, 7), white); m.position.y = -0.18; l.add(m);
-    const f = new THREE.Mesh(fluff(0.085, 3, 1, 0.7, 1.25), white); f.position.set(0, -0.36, 0.03); l.add(f); legs.push(l);
-  }
-  // ---- v5 SCUBA GEAR (toggleable add-on group, parented to head / body / feet so it follows every animation) ----
-  const scuba = [];
-  const rubber = new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.5, metalness: 0.1 });
-  const glass = new THREE.MeshStandardMaterial({ color: 0x9ae8ff, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.45, emissive: 0x1a6a8a, emissiveIntensity: 0.4 });
-  const tankM = new THREE.MeshStandardMaterial({ color: 0xffc81a, roughness: 0.3, metalness: 0.6, emissive: 0x3a2a00 });
-  const finM = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.4, metalness: 0.1, emissive: accent, emissiveIntensity: 0.2 });
-  const add = (parent, mesh) => { parent.add(mesh); scuba.push(mesh); return mesh; };
-  const frame = add(head, new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.2, 0.06), rubber)); frame.position.set(0, 0.07, 0.29);
-  const lens = add(head, new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.14, 0.04), glass)); lens.position.set(0, 0.07, 0.315);
-  const strap = add(head, new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.025, 6, 22), rubber)); strap.rotation.x = Math.PI / 2; strap.position.set(0, 0.07, 0.02); strap.scale.set(1.02, 1.05, 1);
-  const reg = add(head, new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.1, 8), rubber)); reg.rotation.x = Math.PI / 2; reg.position.set(0.05, -0.12, 0.38);
-  const tank = add(body, new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.6, 12), tankM)); tank.rotation.x = Math.PI / 2 - 0.12; tank.position.set(0, 0.42, -0.08);
-  const cap = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), tankM)); cap.rotation.x = Math.PI / 2 - 0.12; cap.position.set(0, 0.455, 0.22);
-  const valve = add(body, new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8), metal)); valve.rotation.x = Math.PI / 2 - 0.12; valve.position.set(0, 0.47, 0.33);
-  const hoseC = new THREE.CatmullRomCurve3([V(0, 0.47, 0.38), V(0.16, 0.5, 0.5), V(0.18, 0.3, 0.75), V(0.06, 0.29, 0.93)]);
-  add(body, new THREE.Mesh(new THREE.TubeGeometry(hoseC, 10, 0.022, 5), rubber));
-  for (const z of [-0.2, 0.12]) { const b = add(body, new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.025, 5, 20), rubber)); b.position.set(0, 0.04, z); b.scale.set(1.05, 0.95, 1); }
-  for (const l of legs) { const f = add(l, new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.03, 0.36), finM)); f.position.set(0, -0.4, 0.2); f.rotation.x = 0.12;
-    const tip = add(l, new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.025, 0.12), finM)); tip.position.set(0, -0.415, 0.4); tip.rotation.x = 0.12; }
-  for (const m of scuba) m.visible = false;
-  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return { root, body, head, jaw, tail, legs, cape, collar, torso, scuba, scubaOn: false };
-}
-
+const DOG_S = 1; // the 3D mesh is already a real Westie (about 36 cm at the shoulder)
+const HOP = 0.16;  // hops stay small so a real-sized terrier does not launch into the sky
+export const POOP_LINE = "Look it's Ricky and Bobby, they are going to POOP!";
 // v5: put the scuba gear on (ocean) or take it off (land). The cape comes off underwater (the tank sits there).
 export function setScuba(w, on) { on = !!on; if (w.scubaOn === on) return; w.scubaOn = on; for (const m of w.scuba) m.visible = on; w.cape.visible = !on; }
 
 // ---- v5: a playable westie. Same interface the game uses on Beast/Mech (obj, height, mats, socketPos, footPos, animate, ...)
-export const DOG_P = 3.3; // playable size: bigger than the helper dogs so he reads on an iPhone screen, still small next to a T-rex
+export const DOG_P = 1.45; // playable Westie: a little easier to see than the 36 cm companions, still a real dog next to Leandro
 export class Pup {
   constructor(def) {
     this.def = def; this.real = true; this.quad = true; this.flyer = false; this.westie = true;
     const w = buildWestie(def.id, def.accent); this.w = w;
-    this.obj = new THREE.Group(); w.root.scale.setScalar(DOG_P); this.obj.add(w.root);
-    const fur = w.torso.material, acc = w.collar.material;
+    this.obj = new THREE.Group(); w.root.scale.setScalar(DOG_P * (w.mul || 1)); this.obj.add(w.root);
+    const fur = Array.isArray(w.torso.material) ? w.torso.material[0] : w.torso.material, acc = w.collar.material;
     this.mats = { plate: fur, frame: acc, glow: acc, glowColor: new THREE.Color(def.accent).multiplyScalar(1.6) };
     this.meshes = []; this.obj.traverse(o => { if (o.isMesh) this.meshes.push(o); });
-    this.height = 1.3 * DOG_P; this.fitR = 1.1 * DOG_P; this.b = {}; this.sockets = {};
+    this.height = 0.62; this.fitR = 0.7; this.b = {}; this.sockets = {};
     this.phase = 0; this.t = 0; this.flash = 0; this.ko = 0; this.spin = 0; this._v = V();
   }
   socketPos(name, out) { return this.w.jaw.getWorldPosition(out); }
@@ -120,10 +41,10 @@ export class Pup {
     const legSw = fly ? 0.7 : 0.95 * run;
     w.legs[0].rotation.x = sw * legSw; w.legs[1].rotation.x = -sw * legSw * 0.6; w.legs[2].rotation.x = -sw * legSw; w.legs[3].rotation.x = sw * legSw * 0.6;
     this.spin = o.charge > 0.05 ? this.spin + dt * 22 : 0; // zoomies spin
-    w.body.position.y = 0.55 + Math.abs(Math.sin(ph)) * 0.16 * run + (o.rear || 0) * 0.15; w.body.rotation.x = -(o.rear || 0) * 0.7 + (fly ? -0.25 : 0);
+    w.body.position.y = Math.abs(Math.sin(ph)) * 0.05 * run + (o.rear || 0) * 0.06; w.body.rotation.x = -(o.rear || 0) * 0.7 + (fly ? -0.25 : 0);
     w.body.rotation.y = this.spin; w.body.rotation.z = this.ko * 0.5 + Math.sin(ph) * 0.05 * run;
     const bite = o.bite || 0, bark = Math.max(o.roar || 0, (o.jaw || 0) * 0.5);
-    w.head.rotation.x = -0.35 * bite - 0.3 * bark + Math.sin(t * 2.2) * 0.04; w.jaw.position.y = -0.16 - 0.08 * Math.max(bite, bark);
+    w.head.rotation.x = -0.35 * bite - 0.3 * bark + Math.sin(t * 2.2) * 0.04; w.jaw.rotation.x = 0.45 * Math.max(bite, bark);
     w.tail.rotation.z = Math.sin(t * (speed > 1 ? 30 : 18)) * 0.6;
     w.cape.rotation.x = fly || speed > 8 ? 1.0 + Math.sin(t * 30) * 0.4 : 1.3 + run * 0.2 + Math.sin(t * 9) * 0.1;
     this.flash = Math.max(0, this.flash - dt * 4); this.mats.plate.emissive.setRGB(0.165 + this.flash * 0.9, 0.157 + this.flash * 0.25, 0.15 + this.flash * 0.25);
@@ -134,7 +55,7 @@ export class Westies {
   constructor(game) {
     this.g = game; this.S = DOG_S; this.state = 'off'; this.t = 0; this.cool = 70 + Math.random() * 60; this.lastEnd = -1e9; this.count = 0; this.clock = 0;
     this.dogs = [{ name: 'RICKY', ...buildWestie('ricky', 0xd82a2a) }, { name: 'BOBBY', ...buildWestie('bobby', 0x2a6ad8) }];
-    for (const d of this.dogs) { d.root.scale.setScalar(DOG_S); d.root.visible = false; d.pos = V(); d.yaw = 0; d.ph = Math.random() * 6; d.bark = 0; d.hop = 0; game.scene.add(d.root); }
+    for (const d of this.dogs) { d.root.scale.setScalar(DOG_S * (d.mul || 1)); d.root.visible = false; d.pos = V(); d.yaw = 0; d.ph = Math.random() * 6; d.bark = 0; d.hop = 0; game.scene.add(d.root); }
     // spotlight beams + glowing floor discs (cheap additive meshes, no real lights)
     const bm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.5, 1.2), transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     const dm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.3, 1.0), transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -159,7 +80,7 @@ export class Westies {
     this.reason = reason; this.count++; this.introduced = false; this.barkQ = []; this.danced = 0; this.flew = false; this.log.push(reason); this.target = null; this.helped = 0;
     this.sea = !!(g.world && g.world.ocean); // v5 Deep Sea: SCUBA DOGS
     this.S = g.farm ? 1.15 : DOG_S; // v5.1: farm-dog size next to Leandro (2.5 is dino scale)
-    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(this.S); d.bark = 0; d.hop = 0; d.spin = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
+    for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(this.S * (d.mul || 1)); d.bark = 0; d.hop = 0; d.spin = 0; d.poopT = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
     if (reason === 'button') { // v5 HELPER MODE: swoop in beside the player and follow
       this.helper = true; this.stage = null; const f = P.forward(V()), side = V(-f.z, 0, f.x);
       this.dogs.forEach((d, i) => { const s = i ? 1 : -1; d.stageY = null; d.pos.set(P.pos.x, 0, P.pos.z).addScaledVector(side, s * 26).addScaledVector(f, -12); d.alt = 9; d.yaw = P.yaw; });
@@ -235,10 +156,79 @@ export class Westies {
     this.fartExit = !!this.g.farm; if (this.fartExit) { this.fartExits = (this.fartExits || 0) + 1; sfx.fart && sfx.fart('trumpet', 0.9); this.g.later && this.g.later(0.5, () => sfx.fart && sfx.fart('stutter', 0.7)); this.g.hud.toast('💨🚀 Ricky & Bobby FART-ROCKETED away! 😂'); }
     this.dogs.forEach((d, i) => { d.vy = 2 + i * 0.6; d.alt = d.alt || 0; }); this.stage = null; }
   end() { this.state = 'off'; this.lastEnd = this.clock; this.helper = false; this.stage = null; this.target = null; for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; d.goalAlt = undefined; } for (const s of this.spots) s.visible = false; }
+  // Ricky and Bobby live on Jungle Island: they trot beside Leandro (on foot or on a dino) and never get in the way.
+  companions(dt) {
+    const g = this.g, P = g.player;
+    const land = g.level === 'jungle' && !g.farm && !(g.world && g.world.ocean) && g.mode !== 'battle';
+    if (!land || !P || !P.alive) {
+      if (this.pals) { this.pals = false; for (const d of this.dogs) d.root.visible = false; }
+      return false;
+    }
+    this.pals = true;
+    const f = P.forward(V()), side = V(-f.z, 0, f.x), moving = (P.speedNow || 0) > 0.8;
+    this.dogs.forEach((d, i) => {
+      if (d.off) { d.root.visible = false; return; }
+      d.root.visible = true; setScuba(d, false);
+      const s = i ? 1 : -1, behind = (P.radius || 2) + 2.2;
+      const gx = P.pos.x - f.x * behind + side.x * s * 1.6, gz = P.pos.z - f.z * behind + side.z * s * 1.6;
+      let dx = gx - d.pos.x, dz = gz - d.pos.z, dist = Math.hypot(dx, dz);
+      if (!d.placed) { d.pos.set(gx, 0, gz); d.placed = true; dist = 0; }
+      if (dist > 32) { d.pos.set(gx, 0, gz); dist = 0; }
+      else if (dist > 0.25) {
+        const sp = dist > 10 ? 16 : dist > 4 ? 9 : 5, step = Math.min(dist, sp * dt);
+        d.pos.x += dx / dist * step; d.pos.z += dz / dist * step; d.yaw = Math.atan2(dx, dz);
+      }
+      const pd = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z), minD = (P.radius || 1) + 1.15;
+      if (pd < minD && pd > 0.01) { d.pos.x = P.pos.x + (d.pos.x - P.pos.x) / pd * minD; d.pos.z = P.pos.z + (d.pos.z - P.pos.z) / pd * minD; }
+      if (g.world.collide) g.world.collide(d.pos, 0.28, false);
+      d.pos.y = this.ground(d.pos); d.root.position.copy(d.pos); d.root.rotation.y = d.yaw;
+      d.root.scale.setScalar(this.S * (d.mul || 1));
+      const going = dist > 0.35 || moving;
+      d.ph = (d.ph || 0) + dt * (going ? (dist > 6 ? 18 : 12) : 3);
+      const sw = Math.sin(d.ph), amp = going ? (dist > 6 ? 0.9 : 0.55) : 0.04;
+      d.body.position.y = going ? Math.abs(sw) * 0.03 : 0; d.body.rotation.x = 0; d.body.rotation.z = 0;
+      const knee = b => b && b.children.find(c => c.isBone);
+      if (d.poopT > 0) {
+        d.poopT -= dt; d.body.rotation.x = 0.42;
+        d.legs[0].rotation.x = 0.35; d.legs[1].rotation.x = 0.35; d.legs[2].rotation.x = -1.05; d.legs[3].rotation.x = -1.05;
+        const lk = knee(d.legs[2]), rk = knee(d.legs[3]); if (lk) lk.rotation.x = 1.15; if (rk) rk.rotation.x = 1.15;
+        d.tail.rotation.z = 0.15; d.head.rotation.x = 0.25; d.jaw.rotation.x = 0.1;
+        if (!d.pooped && d.poopT < 0.85) {
+          d.pooped = true; sfx.fart && sfx.fart('tiny', 0.8);
+          const bx = d.pos.x - Math.sin(d.yaw) * 0.28, bz = d.pos.z - Math.cos(d.yaw) * 0.28;
+          for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2;
+            g.fx.glow.spawn({ pos: { x: bx + Math.cos(a) * 0.1, y: d.pos.y + 0.06, z: bz + Math.sin(a) * 0.1 }, vel: { x: Math.cos(a) * 0.25, y: 0.3, z: Math.sin(a) * 0.25 }, size: 0.1, life: 0.7, r: 0.45, g: 0.2, b: 0.06, alpha: 0.95, grav: 1.1 }); }
+          g.fx.glow.spawn({ pos: { x: bx, y: d.pos.y + 0.14, z: bz }, vel: { x: -Math.sin(d.yaw) * 0.2, y: 0.55, z: -Math.cos(d.yaw) * 0.2 }, size: 0.2, life: 0.5, r: 0.8, g: 0.78, b: 0.55, alpha: 0.5, grav: -0.15 });
+        }
+      } else if (!going && (d.sit || 0) > 1.1) {
+        d.legs[0].rotation.x = 0.75; d.legs[1].rotation.x = 0.75; d.legs[2].rotation.x = -1.15; d.legs[3].rotation.x = -1.15;
+        d.body.rotation.x = -0.2; d.tail.rotation.z = Math.sin(this.clock * 14 + i) * 0.7; d.head.rotation.x = Math.sin(this.clock * 2) * 0.06; d.jaw.rotation.x = 0;
+      } else {
+        d.legs[0].rotation.x = sw * amp; d.legs[3].rotation.x = sw * amp; d.legs[1].rotation.x = -sw * amp; d.legs[2].rotation.x = -sw * amp;
+        for (const leg of d.legs) { const k = knee(leg); if (k) k.rotation.x = Math.max(0, -leg.rotation.x) * 0.85; }
+        d.tail.rotation.z = Math.sin(this.clock * (going ? 16 : 10) + i) * 0.55; d.head.rotation.x = 0; d.jaw.rotation.x = 0;
+        if (going && Math.random() < dt * 0.12) d.hop = 0.22;
+      }
+      if (d.hop > 0) { d.hop -= dt; d.body.position.y += Math.max(0, Math.sin((0.22 - d.hop) / 0.22 * Math.PI)) * 0.1; d.head.rotation.x = -0.35; d.jaw.rotation.x = 0.4; }
+      d.sit = going ? 0 : (d.sit || 0) + dt;
+      d.cape.rotation.x = going ? 1.15 + Math.sin(this.clock * 12 + i) * 0.12 : 1.25;
+      if (d.tag) d.tag.visible = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z) < 14;
+    });
+    this.poopClock = (this.poopClock == null ? 6.5 : this.poopClock) - dt;
+    if (this.poopClock <= 0) {
+      this.poopClock = 26 + Math.random() * 14;
+      const live = this.dogs.filter(d => !d.off), d = live[(Math.random() * live.length) | 0];
+      if (d) { d.poopT = 1.4; d.pooped = false;
+        if (g.hud.shout) g.hud.shout(POOP_LINE, 3.4); else g.hud.banner(POOP_LINE, 3.2, true);
+        voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 2, cd: 8000, pitch: 1.1, rate: 1.0 }); }
+    }
+    return true;
+  }
   update(dt) {
     this.clock += dt; const g = this.g;
-    if (!this.active) { // occasional surprise visit while exploring
-      if (g.mode === 'roam' && !g.battle && g.player && g.player.alive) { this.cool -= dt; if (this.cool <= 0) { this.cool = 150 + Math.random() * 150; this.trigger('roam'); } }
+    if (!this.active) { // on the jungle they follow along; other worlds still get the occasional surprise visit
+      const pals = this.companions(dt);
+      if (!pals && g.mode === 'roam' && !g.battle && g.player && g.player.alive) { this.cool -= dt; if (this.cool <= 0) { this.cool = 150 + Math.random() * 150; this.trigger('roam'); } }
       return;
     }
     this.t += dt; const T = this.t, DANCE = 5;
@@ -262,7 +252,7 @@ export class Westies {
         d.vy += dt * (this.sea ? 9 + i * 2 : 14 + i * 3); d.alt += d.vy * dt; flap = 1; tailSp = 40; spin = Math.sin(T * 3 + i) * 0.4; rear = 0.5; if (this.sea && Math.random() < 0.5) this.g.bubbles(d.head.getWorldPosition(V()), 2, 0.4, 4);
         if (Math.random() < 0.9) this.sparkle(d);
         if (this.fartExit && this.g.farm && Math.random() < 0.3) this.g.farm.cloud(V(d.pos.x, this.ground(d.pos) + d.alt, d.pos.z), V(0, -1, 0), 2, 0.7);
-        const sc = this.S * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
+        const sc = this.S * (d.mul || 1) * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
       }
       const side = V(Math.cos(d.yaw), 0, -Math.sin(d.yaw));
       d.ph += dt * (speed > 1 ? 16 : 5); const run = Math.min(1, speed / 8), sw = Math.sin(d.ph);
@@ -271,9 +261,10 @@ export class Westies {
       d.pos.y = Math.max(this.ground(d.pos), d.stageY ?? -1e9) + (d.castleHop || 0); // v5.3 bouncy castle
       if (this.helper && this.state !== 'fly') { if (d.alt > 0 && d.goalAlt === undefined) d.alt = Math.max(0, d.alt - dt * 9); if (d.goalAlt !== undefined) d.alt += (d.goalAlt - d.alt) * Math.min(1, dt * 10); }
       d.root.position.copy(d.pos).addScaledVector(side, sideX); d.root.position.y += d.alt || 0; d.root.rotation.y = d.yaw + spin;
-      d.body.position.y = 0.55 + hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.18 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
-      d.bark = Math.max(0, d.bark - dt); d.head.rotation.x = d.bark > 0 ? -0.25 * Math.sin(d.bark / 0.3 * Math.PI) : sniff; d.jaw.position.y = -0.16 - (this.state === 'dance' ? 0.05 : 0) - (d.bark > 0 ? 0.06 : 0);
+      d.body.position.y = hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.05 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
+      d.bark = Math.max(0, d.bark - dt); d.head.rotation.x = d.bark > 0 ? -0.25 * Math.sin(d.bark / 0.3 * Math.PI) : sniff; d.jaw.rotation.x = (this.state === 'dance' ? 0.18 : 0) + (d.bark > 0 ? 0.35 : 0);
       d.tail.rotation.z = Math.sin(this.clock * tailSp + i) * (this.state === 'dance' ? 0.75 : 0.5);
+      if (d.tag && g.player) d.tag.visible = Math.hypot(d.pos.x - g.player.pos.x, d.pos.z - g.player.pos.z) < 14;
       d.cape.rotation.x = flap ? 1.0 + Math.sin(this.clock * 30 + i) * 0.45 : 1.3 + run * 0.22 + Math.sin(this.clock * 9 + i) * 0.1;
       this.spots[i].position.set(d.pos.x, d.pos.y, d.pos.z);
     }

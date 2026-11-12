@@ -183,3 +183,15 @@ export function clonePara() {
   if (!paraCache) throw new Error('para model not loaded');
   return { scene: clone(paraCache.scene), animations: paraCache.animations };
 }
+
+const WESTIE_URL = 'assets/models/westie.glb';
+let westieCache = null;
+
+export function preloadWestie(mgr) {
+  const loader = new GLTFLoader(mgr);
+  loader.load(WESTIE_URL, gltf => { westieCache = gltf; }, undefined, err => console.error(WESTIE_URL, err));
+}
+export function cloneWestie() {
+  if (!westieCache) throw new Error('westie model not loaded');
+  return { scene: clone(westieCache.scene), animations: westieCache.animations };
+}
