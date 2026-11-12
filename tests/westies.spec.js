@@ -13,7 +13,7 @@ async function poll(page, fn, ms = 90000) {
   throw new Error('timed out');
 }
 
-test('v5.10.3 Ricky and Bobby 3D dogs, follow, and the exact POOP line', async ({ page }, info) => {
+test('v5.10.4 Ricky and Bobby at 60% size, follow, and the exact POOP line', async ({ page }, info) => {
   test.setTimeout(240000);
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
@@ -96,8 +96,8 @@ test('v5.10.3 Ricky and Bobby 3D dogs, follow, and the exact POOP line', async (
   expect(ricky.collar).not.toBe(bobby.collar);
   expect(bobby.scale).toBeLessThan(ricky.scale);
   for (const d of report.dogs) {
-    expect(d.shoulder, d.tag).toBeGreaterThan(0.26);
-    expect(d.shoulder, d.tag).toBeLessThan(0.55);
+    expect(d.shoulder, d.tag).toBeGreaterThan(0.15);
+    expect(d.shoulder, d.tag).toBeLessThan(0.32);
     expect(d.gap, d.tag).toBeGreaterThan(-0.08);
     expect(d.gap, d.tag).toBeLessThan(0.2);
     expect(d.dist, d.tag).toBeGreaterThan(1.5);
@@ -158,7 +158,7 @@ test('v5.10.3 Ricky and Bobby 3D dogs, follow, and the exact POOP line', async (
         W.S = 1; W.state = 'off'; W.helper = false;
         W.dogs.forEach((d, i) => {
           d.off = false; d.root.visible = true; d.poopT = poop ? 0.55 : 0; d.pooped = true;
-          const s = i ? 0.16 : -0.16;
+          const s = i ? 0.1 : -0.1;
           d.pos.set(x + Math.cos(yaw) * s, 0, z - Math.sin(yaw) * s); d.yaw = yaw;
           d.pos.y = W.ground(d.pos); d.root.position.copy(d.pos); d.root.rotation.y = d.yaw;
           d.root.scale.setScalar((d.mul || 1));
@@ -181,13 +181,13 @@ test('v5.10.3 Ricky and Bobby 3D dogs, follow, and the exact POOP line', async (
           const d = W.dogs[0];
           const bx = d.pos.x - Math.sin(d.yaw) * 0.12 + Math.cos(d.yaw) * 0.18, bz = d.pos.z - Math.cos(d.yaw) * 0.12 - Math.sin(d.yaw) * 0.18;
           for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2;
-            g.fx.glow.spawn({ pos: { x: bx + Math.cos(a) * 0.08, y: d.pos.y + 0.05, z: bz + Math.sin(a) * 0.08 }, vel: { x: 0, y: 0.05, z: 0 }, size: 0.09, life: 2, r: 0.5, g: 0.22, b: 0.06, alpha: 1, grav: 0 }); }
-          g.fx.glow.spawn({ pos: { x: bx, y: d.pos.y + 0.16, z: bz }, vel: { x: 0, y: 0.05, z: 0 }, size: 0.16, life: 2, r: 0.85, g: 0.82, b: 0.6, alpha: 0.7, grav: 0 });
+            g.fx.glow.spawn({ pos: { x: bx + Math.cos(a) * 0.05, y: d.pos.y + 0.03, z: bz + Math.sin(a) * 0.05 }, vel: { x: 0, y: 0.02, z: 0 }, size: 0.05, life: 2, r: 0.5, g: 0.22, b: 0.06, alpha: 1, grav: 0 }); }
+          g.fx.glow.spawn({ pos: { x: bx, y: d.pos.y + 0.1, z: bz }, vel: { x: 0, y: 0.02, z: 0 }, size: 0.09, life: 2, r: 0.85, g: 0.82, b: 0.6, alpha: 0.7, grav: 0 });
         } else hideLine();
         const gy = g.world.height(x, z);
-        cam.fov = 42; cam.updateProjectionMatrix();
-        cam.position.set(x + Math.sin(yaw) * 1.7, gy + 0.55, z + Math.cos(yaw) * 1.7);
-        cam.lookAt(x, gy + 0.22, z);
+        cam.fov = 36; cam.updateProjectionMatrix();
+        cam.position.set(x + Math.sin(yaw) * 1.05, gy + 0.34, z + Math.cos(yaw) * 1.05);
+        cam.lookAt(x, gy + 0.14, z);
       } else if (pose === 'ride') {
         G.save.jungleLion = false; G.save.jungleCostume = false; G.save.selected = 'trex';
         if (G.level !== 'jungle') G.setLevel('jungle');
@@ -198,12 +198,44 @@ test('v5.10.3 Ricky and Bobby 3D dogs, follow, and the exact POOP line', async (
         for (let i = 0; i < 6; i++) p.updateVisual(1 / 20);
         if (g.rider) g.rider.update(0.05, p);
         hideLine();
-        const yaw = p.yaw, side = Math.cos(yaw), fwd = Math.sin(yaw);
-        placePair(p.pos.x + fwd * 2.2 + side * 2.4, p.pos.z + Math.cos(yaw) * 2.2 - Math.sin(yaw) * 2.4, yaw, false);
-        const look = p.pos.clone(); look.y = g.world.height(p.pos.x, p.pos.z) + 1.3;
-        cam.fov = 48; cam.updateProjectionMatrix();
-        cam.position.set(p.pos.x + Math.sin(yaw) * 11 + Math.cos(yaw) * 4, look.y + 2.4, p.pos.z + Math.cos(yaw) * 11 - Math.sin(yaw) * 4);
-        cam.lookAt(look.x + Math.cos(yaw) * 1.2, look.y, look.z - Math.sin(yaw) * 1.2);
+        const yaw = p.yaw;
+        p.mech.obj.updateMatrixWorld(true);
+        const camGuess = new THREE.Vector3(p.pos.x + Math.sin(yaw) * 8, p.pos.y + 2, p.pos.z + Math.cos(yaw) * 8);
+        let fp = null, bestD = 1e9;
+        p.mech.obj.traverse(o => {
+          if (o.isBone && /foot$/.test(o.name)) {
+            const v = new THREE.Vector3(); o.getWorldPosition(v);
+            const d = v.distanceTo(camGuess);
+            if (d < bestD) { bestD = d; fp = v.clone(); }
+          }
+        });
+        if (!fp) fp = p.pos.clone();
+        const camFx = Math.sin(yaw), camFz = Math.cos(yaw);
+        const dx = fp.x + camFx * 1.15, dz = fp.z + camFz * 1.15;
+        placePair(dx, dz, yaw, false);
+        const gy = g.world.height(dx, dz);
+        cam.fov = 38; cam.updateProjectionMatrix();
+        cam.position.set(dx + camFx * 2.4, gy + 0.7, dz + camFz * 2.4);
+        cam.lookAt(fp.x, gy + 0.25, fp.z);
+      } else if (pose === 'foot') {
+        G.save.jungleLion = false; G.save.jungleCostume = false; G.save.ride = true; G.save.selected = 'trex';
+        if (G.level !== 'jungle') G.setLevel('jungle');
+        G.show('play');
+        g.spawnPlayer(false);
+        const p = g.player;
+        p.pos.set(90, 0, 30); p.yaw = 0.25; p.speedNow = 0; p.groundY();
+        g.mountRider();
+        if (g.rider) g.rider.update(0.05, p);
+        g.rider.pop();
+        for (let i = 0; i < 45; i++) g.rider.update(1 / 30, p);
+        if (p.mech && p.mech.obj) p.mech.obj.visible = false;
+        hideLine();
+        const lp = g.rider.obj.position;
+        placePair(lp.x + 0.75, lp.z + 0.15, 0.15, false);
+        const gy = g.world.height(lp.x, lp.z);
+        cam.fov = 32; cam.updateProjectionMatrix();
+        cam.position.set(lp.x + 2.2, gy + 1.05, lp.z + 3.1);
+        cam.lookAt(lp.x + 0.35, gy + 0.55, lp.z);
       } else {
         G.save.selected = 'trex';
         if (G.level !== 'jungle') G.setLevel('jungle');
@@ -221,8 +253,7 @@ test('v5.10.3 Ricky and Bobby 3D dogs, follow, and the exact POOP line', async (
     await page.screenshot({ path: OUT + '/' + file });
   };
 
-  await shoot('westies-farm.png', 'farm');
-  await shoot('westies-poop.png', 'poop');
-  await shoot('westies-ride.png', 'ride');
-  await shoot('westies-collars.png', 'close');
+  await shoot('westies2-farm.png', 'poop');
+  await shoot('westies2-ride.png', 'ride');
+  await shoot('westies2-foot.png', 'foot');
 });

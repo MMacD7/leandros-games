@@ -13,8 +13,8 @@ import { voice } from './voice.js';
 import { buildWestie } from './westie.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-const DOG_S = 1; // the 3D mesh is already a real Westie (about 36 cm at the shoulder)
-const HOP = 0.16;  // hops stay small so a real-sized terrier does not launch into the sky
+const DOG_S = 1; // mesh shoulder is already the v5.10.4 size (60% of v5.10.3)
+const HOP = 0.096;  // hops scaled with the smaller dogs
 export const POOP_LINE = "Look it's Ricky and Bobby, they are going to POOP!";
 // v5: put the scuba gear on (ocean) or take it off (land). The cape comes off underwater (the tank sits there).
 export function setScuba(w, on) { on = !!on; if (w.scubaOn === on) return; w.scubaOn = on; for (const m of w.scuba) m.visible = on; w.cape.visible = !on; }
@@ -29,7 +29,7 @@ export class Pup {
     const fur = Array.isArray(w.torso.material) ? w.torso.material[0] : w.torso.material, acc = w.collar.material;
     this.mats = { plate: fur, frame: acc, glow: acc, glowColor: new THREE.Color(def.accent).multiplyScalar(1.6) };
     this.meshes = []; this.obj.traverse(o => { if (o.isMesh) this.meshes.push(o); });
-    this.height = 0.62; this.fitR = 0.7; this.b = {}; this.sockets = {};
+    this.height = 0.37; this.fitR = 0.42; this.b = {}; this.sockets = {};
     this.phase = 0; this.t = 0; this.flash = 0; this.ko = 0; this.spin = 0; this._v = V();
   }
   socketPos(name, out) { return this.w.jaw.getWorldPosition(out); }
@@ -41,7 +41,7 @@ export class Pup {
     const legSw = fly ? 0.7 : 0.95 * run;
     w.legs[0].rotation.x = sw * legSw; w.legs[1].rotation.x = -sw * legSw * 0.6; w.legs[2].rotation.x = -sw * legSw; w.legs[3].rotation.x = sw * legSw * 0.6;
     this.spin = o.charge > 0.05 ? this.spin + dt * 22 : 0; // zoomies spin
-    w.body.position.y = Math.abs(Math.sin(ph)) * 0.05 * run + (o.rear || 0) * 0.06; w.body.rotation.x = -(o.rear || 0) * 0.7 + (fly ? -0.25 : 0);
+    w.body.position.y = Math.abs(Math.sin(ph)) * 0.03 * run + (o.rear || 0) * 0.036; w.body.rotation.x = -(o.rear || 0) * 0.7 + (fly ? -0.25 : 0);
     w.body.rotation.y = this.spin; w.body.rotation.z = this.ko * 0.5 + Math.sin(ph) * 0.05 * run;
     const bite = o.bite || 0, bark = Math.max(o.roar || 0, (o.jaw || 0) * 0.5);
     w.head.rotation.x = -0.35 * bite - 0.3 * bark + Math.sin(t * 2.2) * 0.04; w.jaw.rotation.x = 0.45 * Math.max(bite, bark);
@@ -169,8 +169,8 @@ export class Westies {
     this.dogs.forEach((d, i) => {
       if (d.off) { d.root.visible = false; return; }
       d.root.visible = true; setScuba(d, false);
-      const s = i ? 1 : -1, behind = (P.radius || 2) + 2.2;
-      const gx = P.pos.x - f.x * behind + side.x * s * 1.6, gz = P.pos.z - f.z * behind + side.z * s * 1.6;
+      const s = i ? 1 : -1, behind = (P.radius || 2) + 1.32;
+      const gx = P.pos.x - f.x * behind + side.x * s * 0.96, gz = P.pos.z - f.z * behind + side.z * s * 0.96;
       let dx = gx - d.pos.x, dz = gz - d.pos.z, dist = Math.hypot(dx, dz);
       if (!d.placed) { d.pos.set(gx, 0, gz); d.placed = true; dist = 0; }
       if (dist > 32) { d.pos.set(gx, 0, gz); dist = 0; }
@@ -178,15 +178,15 @@ export class Westies {
         const sp = dist > 10 ? 16 : dist > 4 ? 9 : 5, step = Math.min(dist, sp * dt);
         d.pos.x += dx / dist * step; d.pos.z += dz / dist * step; d.yaw = Math.atan2(dx, dz);
       }
-      const pd = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z), minD = (P.radius || 1) + 1.15;
+      const pd = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z), minD = (P.radius || 1) + 0.69;
       if (pd < minD && pd > 0.01) { d.pos.x = P.pos.x + (d.pos.x - P.pos.x) / pd * minD; d.pos.z = P.pos.z + (d.pos.z - P.pos.z) / pd * minD; }
-      if (g.world.collide) g.world.collide(d.pos, 0.28, false);
+      if (g.world.collide) g.world.collide(d.pos, 0.17, false);
       d.pos.y = this.ground(d.pos); d.root.position.copy(d.pos); d.root.rotation.y = d.yaw;
       d.root.scale.setScalar(this.S * (d.mul || 1));
       const going = dist > 0.35 || moving;
       d.ph = (d.ph || 0) + dt * (going ? (dist > 6 ? 18 : 12) : 3);
       const sw = Math.sin(d.ph), amp = going ? (dist > 6 ? 0.9 : 0.55) : 0.04;
-      d.body.position.y = going ? Math.abs(sw) * 0.03 : 0; d.body.rotation.x = 0; d.body.rotation.z = 0;
+      d.body.position.y = going ? Math.abs(sw) * 0.018 : 0; d.body.rotation.x = 0; d.body.rotation.z = 0;
       const knee = b => b && b.children.find(c => c.isBone);
       if (d.poopT > 0) {
         d.poopT -= dt; d.body.rotation.x = 0.42;
@@ -195,10 +195,10 @@ export class Westies {
         d.tail.rotation.z = 0.15; d.head.rotation.x = 0.25; d.jaw.rotation.x = 0.1;
         if (!d.pooped && d.poopT < 0.85) {
           d.pooped = true; sfx.fart && sfx.fart('tiny', 0.8);
-          const bx = d.pos.x - Math.sin(d.yaw) * 0.28, bz = d.pos.z - Math.cos(d.yaw) * 0.28;
+          const bx = d.pos.x - Math.sin(d.yaw) * 0.17, bz = d.pos.z - Math.cos(d.yaw) * 0.17;
           for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2;
-            g.fx.glow.spawn({ pos: { x: bx + Math.cos(a) * 0.1, y: d.pos.y + 0.06, z: bz + Math.sin(a) * 0.1 }, vel: { x: Math.cos(a) * 0.25, y: 0.3, z: Math.sin(a) * 0.25 }, size: 0.1, life: 0.7, r: 0.45, g: 0.2, b: 0.06, alpha: 0.95, grav: 1.1 }); }
-          g.fx.glow.spawn({ pos: { x: bx, y: d.pos.y + 0.14, z: bz }, vel: { x: -Math.sin(d.yaw) * 0.2, y: 0.55, z: -Math.cos(d.yaw) * 0.2 }, size: 0.2, life: 0.5, r: 0.8, g: 0.78, b: 0.55, alpha: 0.5, grav: -0.15 });
+            g.fx.glow.spawn({ pos: { x: bx + Math.cos(a) * 0.06, y: d.pos.y + 0.04, z: bz + Math.sin(a) * 0.06 }, vel: { x: Math.cos(a) * 0.15, y: 0.18, z: Math.sin(a) * 0.15 }, size: 0.06, life: 0.7, r: 0.45, g: 0.2, b: 0.06, alpha: 0.95, grav: 1.1 }); }
+          g.fx.glow.spawn({ pos: { x: bx, y: d.pos.y + 0.08, z: bz }, vel: { x: -Math.sin(d.yaw) * 0.12, y: 0.33, z: -Math.cos(d.yaw) * 0.12 }, size: 0.12, life: 0.5, r: 0.8, g: 0.78, b: 0.55, alpha: 0.5, grav: -0.15 });
         }
       } else if (!going && (d.sit || 0) > 1.1) {
         d.legs[0].rotation.x = 0.75; d.legs[1].rotation.x = 0.75; d.legs[2].rotation.x = -1.15; d.legs[3].rotation.x = -1.15;
@@ -209,7 +209,7 @@ export class Westies {
         d.tail.rotation.z = Math.sin(this.clock * (going ? 16 : 10) + i) * 0.55; d.head.rotation.x = 0; d.jaw.rotation.x = 0;
         if (going && Math.random() < dt * 0.12) d.hop = 0.22;
       }
-      if (d.hop > 0) { d.hop -= dt; d.body.position.y += Math.max(0, Math.sin((0.22 - d.hop) / 0.22 * Math.PI)) * 0.1; d.head.rotation.x = -0.35; d.jaw.rotation.x = 0.4; }
+      if (d.hop > 0) { d.hop -= dt; d.body.position.y += Math.max(0, Math.sin((0.22 - d.hop) / 0.22 * Math.PI)) * 0.06; d.head.rotation.x = -0.35; d.jaw.rotation.x = 0.4; }
       d.sit = going ? 0 : (d.sit || 0) + dt;
       d.cape.rotation.x = going ? 1.15 + Math.sin(this.clock * 12 + i) * 0.12 : 1.25;
       if (d.tag) d.tag.visible = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z) < 14;
@@ -261,7 +261,7 @@ export class Westies {
       d.pos.y = Math.max(this.ground(d.pos), d.stageY ?? -1e9) + (d.castleHop || 0); // v5.3 bouncy castle
       if (this.helper && this.state !== 'fly') { if (d.alt > 0 && d.goalAlt === undefined) d.alt = Math.max(0, d.alt - dt * 9); if (d.goalAlt !== undefined) d.alt += (d.goalAlt - d.alt) * Math.min(1, dt * 10); }
       d.root.position.copy(d.pos).addScaledVector(side, sideX); d.root.position.y += d.alt || 0; d.root.rotation.y = d.yaw + spin;
-      d.body.position.y = hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.05 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
+      d.body.position.y = hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.03 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
       d.bark = Math.max(0, d.bark - dt); d.head.rotation.x = d.bark > 0 ? -0.25 * Math.sin(d.bark / 0.3 * Math.PI) : sniff; d.jaw.rotation.x = (this.state === 'dance' ? 0.18 : 0) + (d.bark > 0 ? 0.35 : 0);
       d.tail.rotation.z = Math.sin(this.clock * tailSp + i) * (this.state === 'dance' ? 0.75 : 0.5);
       if (d.tag && g.player) d.tag.visible = Math.hypot(d.pos.x - g.player.pos.x, d.pos.z - g.player.pos.z) < 14;
@@ -321,7 +321,7 @@ export class Westies {
       if (T > 1.7) { this.state = this.dogs[0].off || this.dogs[1].off ? 'toot' : 'tug'; this.t = 0; if (this.state === 'tug') g.hud.toast('🧦 Ricky & Bobby found a SOCK! Tug-of-war! 😂'); } }
     else if (this.state === 'toot') { if (!this.tooted && T > 0.25) { this.tooted = true; this.dogToots = (this.dogToots || 0) + 1; const i = this.dogs[1].off ? 0 : 1, d = this.dogs[i]; sfx.fart && sfx.fart('tiny', 1);
         if (g.farm) g.farm.cloud(V(d.pos.x - Math.sin(d.yaw) * 1.2, d.pos.y + 1, d.pos.z - Math.cos(d.yaw) * 1.2), V(-Math.sin(d.yaw), 0, -Math.cos(d.yaw)), 8, 0.8);
-        g.hud.toast(i ? '💨 Bobby tooted… and SCARED HIMSELF! 😱😂' : '💨 Ricky tooted… and SCARED HIMSELF! 😱😂'); this.scared = (this.scared || 0) + 1; if (g.farm) { const bx = d.pos.x - Math.sin(d.yaw) * 1.4, bz = d.pos.z - Math.cos(d.yaw) * 1.4; g.farm.dropPoop(bx, bz, 0.45, d.pos.y + 0.8); this.dogPoops = (this.dogPoops || 0) + 1; } for (const q of this.activeDogs()) { g.farm && g.farm.emote('bang', null, 1, V(q.pos.x, q.pos.y + 2.4, q.pos.z)); } this.woof(i, 2); }
+        g.hud.toast(i ? '💨 Bobby tooted… and SCARED HIMSELF! 😱😂' : '💨 Ricky tooted… and SCARED HIMSELF! 😱😂'); this.scared = (this.scared || 0) + 1; if (g.farm) { const bx = d.pos.x - Math.sin(d.yaw) * 0.84, bz = d.pos.z - Math.cos(d.yaw) * 0.84; g.farm.dropPoop(bx, bz, 0.27, d.pos.y + 0.48); this.dogPoops = (this.dogPoops || 0) + 1; } for (const q of this.activeDogs()) { g.farm && g.farm.emote('bang', null, 1, V(q.pos.x, q.pos.y + 2.4, q.pos.z)); } this.woof(i, 2); }
       if (T > 1.5) { this.tooted = false; this.state = 'cheer'; this.t = 0; this.bark2(2); for (const d of this.activeDogs()) this.confetti(d.pos, 18); } }
   }
   anim(d, i, dt, T) {
