@@ -72,11 +72,11 @@ export const REALS = [
   { id: 'dilo', name: 'Dilophosaurus', price: 0, kind: 'dilo', desc: 'Quick and nimble. Twin red crests and a neck frill. FRILL BLAST fans the frill and spits a cartoon slime cone.',
     hp: 85, speed: 18, bite: 12, biteRate: 0.32, special: 'frillblast', specialName: 'FRILL<br>BLAST', specialCD: 4.2, roar: 1.3, scale: 1.0, radius: 2.4,
     back: 0x3a4a1a, belly: 0xc8c08a, stripe: 0x1a2208, accent: 0xff5a1a, eye: 0xd8ff3a },
-  { id: 'pachy', name: 'Pachycephalosaurus', price: 0, kind: 'pachy', desc: 'A rock-hard dome head. Charges in for a HEAD-BUTT that sends foes flying!',
-    hp: 150, speed: 13.5, bite: 14, biteRate: 0.5, special: 'headbutt', specialName: 'HEAD<br>BUTT', specialCD: 3.5, roar: 1.3, scale: 0.86, radius: 1.8,
+  { id: 'pachy', name: 'Pachycephalosaurus', price: 0, kind: 'pachy', desc: 'A tough knobby dome. SKULL BASH lowers the head, sprints, and bonks foes flying.',
+    hp: 170, speed: 13, bite: 16, biteRate: 0.48, special: 'skullbash', specialName: 'SKULL<br>BASH', specialCD: 4.2, roar: 1.3, scale: 1.0, radius: 2.2,
     back: 0x4a3a2a, belly: 0xb8a080, stripe: 0x22180e, accent: 0x3a8ab8, eye: 0xffa21a },
-  { id: 'para', name: 'Parasaurolophus', price: 0, kind: 'para', desc: 'Its trumpet crest blasts a SONIC HONK that knocks everything back!',
-    hp: 200, speed: 11, bite: 12, biteRate: 0.6, special: 'honk', specialName: 'SONIC<br>HONK', specialCD: 4.5, roar: 1.6, scale: 1.0, radius: 2.4,
+  { id: 'para', name: 'Parasaurolophus', price: 0, kind: 'para', gentle: true, desc: 'A gentle herd dino with a long teal crest. CREST HONK trumpets a cartoon blast that knocks foes back.',
+    hp: 160, speed: 12, bite: 10, biteRate: 0.55, special: 'cresthonk', specialName: 'CREST<br>HONK', specialCD: 4.5, roar: 1.5, scale: 1.0, radius: 3.3,
     back: 0x2a5a4a, belly: 0xc0b890, stripe: 0x0e2a22, accent: 0xff7a2a, eye: 0xffd21a },
   // ---- v5: OVER THE TOP. Huge, armored, spiked, glowing dinos (roid: glowing spikes + armor plates in the builder) ----
   { id: 'spinotitan', name: 'Spino-Titan', price: 0, kind: 'spinos', swim: true, roid: true, desc: 'A towering armored Spinosaurus with a glowing sail. Its TIDAL WAVE blasts everything away!',
@@ -120,9 +120,9 @@ export const MEGA_REX = { ...REALS.find(d => d.id === 'giga'), id: 'megarex', na
 // v5: Ricky & Bobby are playable (small, fast West Highland terriers: bite, bark blast, zoomies, big jump + flying hop)
 export const WESTIES = [
   { id: 'ricky', name: 'Ricky', price: 0, kind: 'westie', westie: true, accent: 0xd82a2a, desc: 'A tiny terrier with a HUGE heart (red cape). Super fast, big jumps and a mighty BARK!',
-    hp: 150, speed: 20, bite: 22, biteRate: 0.22, special: 'bark', specialName: 'BARK<br>BLAST', specialCD: 1, roar: 1.5, scale: 0.85, radius: 1.3 },
+    hp: 150, speed: 20, bite: 22, biteRate: 0.22, special: 'bark', specialName: 'BARK<br>BLAST', specialCD: 1, roar: 1.5, scale: 0.85, radius: 0.78 },
   { id: 'bobby', name: 'Bobby', price: 0, kind: 'westie', westie: true, accent: 0x2a6ad8, desc: "Blue cape. Zoomies so fast he's a blur, and a bark that knocks dinos over!",
-    hp: 150, speed: 20.5, bite: 21, biteRate: 0.22, special: 'bark', specialName: 'BARK<br>BLAST', specialCD: 1, roar: 1.5, scale: 0.85, radius: 1.3 },
+    hp: 150, speed: 20.5, bite: 21, biteRate: 0.22, special: 'bark', specialName: 'BARK<br>BLAST', specialCD: 1, roar: 1.5, scale: 0.85, radius: 0.72 },
 ];
 WESTIES.forEach(d => { d.real = true; d.melee = d.bite; });
 // v5 DEEP SEA SHOWDOWN: playable sea creatures (they SWIM: free 3D movement with the ▲/▼ buttons) + wild sea monsters
