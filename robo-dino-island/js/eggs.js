@@ -1,6 +1,6 @@
-// v5.10.5: 24 spotted eggs on Jungle Island. Every hatched baby follows Leandro.
-// The old cap of 4 (ids.slice(-FOLLOW)) dropped the newest baby or swapped it for an older one,
-// so a hatch often looked like nothing came out. There is no cap any more.
+// v5.10.6: 40 spotted eggs. Hatching is a short wobble, a shell burst, then the baby pops out.
+// e1–e24 keep their ids so a 24-egg save still counts. The farm is its own level, so the hunt stays on the jungle.
+// The old cap of 4 (ids.slice(-FOLLOW)) dropped the newest baby, so a hatch looked empty. There is no cap.
 import * as THREE from './vendor/three.bundle.min.js';
 import { cloneTrex, cloneBrachio, cloneGiga, cloneSpino, cloneTrike, cloneCarno, cloneRaptor, cloneAnky, cloneStego, cloneAllo, cloneDilo, clonePachy, clonePara } from './models.js';
 import { music } from './music.js';
@@ -40,7 +40,39 @@ export const EGGS = [
   { id: 'e22', species: 'allo', x: -260, z: -30, where: 'canopy' },
   { id: 'e23', species: 'dilo', x: 110, z: -250, where: 'hill' },
   { id: 'e24', species: 'pachy', x: -150, z: 300, where: 'canopy' },
+  { id: 'e25', species: 'trex', x: -60, z: -180, where: 'volcano' },
+  { id: 'e26', species: 'brachio', x: 30, z: -210, where: 'volcano' },
+  { id: 'e27', species: 'velo', x: -70, z: -70, where: 'falls' },
+  { id: 'e28', species: 'giga', x: 115, z: -45, where: 'falls' },
+  { id: 'e29', species: 'spinos', x: 120, z: 70, where: 'river' },
+  { id: 'e30', species: 'para', x: 250, z: 90, where: 'river' },
+  { id: 'e31', species: 'carno', x: 330, z: 120, where: 'beach' },
+  { id: 'e32', species: 'ankys', x: -120, z: 370, where: 'beach' },
+  { id: 'e33', species: 'dilo', x: 180, z: 360, where: 'beach' },
+  { id: 'e34', species: 'pachy', x: -340, z: 40, where: 'canopy' },
+  { id: 'e35', species: 'stegos', x: -40, z: -240, where: 'canopy' },
+  { id: 'e36', species: 'allo', x: 250, z: -120, where: 'hill' },
+  { id: 'e37', species: 'trice', x: -160, z: 140, where: 'canopy' },
+  { id: 'e38', species: 'trex', x: 120, z: 160, where: 'hill' },
+  { id: 'e39', species: 'brachio', x: -200, z: -80, where: 'hill' },
+  { id: 'e40', species: 'giga', x: 20, z: 330, where: 'beach' },
 ];
+const WOBBLE_T = 1.35;
+const REVEAL_T = 0.9;
+const CRACK_AT = [
+  { x: 0.2, y: 0.42, z: 0.58, rz: 0.8, ry: 0.15 },
+  { x: -0.32, y: 0.02, z: 0.52, rz: -0.55, ry: -0.25 },
+  { x: 0.18, y: -0.22, z: 0.48, rz: 1.15, ry: 0.35 },
+];
+const CRACK_GEO = new THREE.BoxGeometry(0.9, 0.08, 0.08);
+const CRACK_MAT = new THREE.MeshBasicMaterial({ color: 0x3a2414 });
+const FRAG_GEO = new THREE.BoxGeometry(0.28, 0.1, 0.18);
+function reduceMotion() {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+function babyLabel(species) {
+  return (NAMES[species] || 'DINO').replace(/^Baby /, '').toUpperCase();
+}
 
 function eggTexture(spots) {
   const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -92,7 +124,30 @@ export class Eggs {
     this.g = game;
     this.group = new THREE.Group(); this.group.name = 'eggs'; game.scene.add(this.group);
     this.list = []; this.followers = []; this.built = false; this.roarLatch = false; this.wasJungle = false;
+    this.fragLive = []; this.fragPeak = 0; this.fragCursor = 0; this.bannerAt = 0; this.lastBanner = '';
+    this.poolFx();
     this.sync();
+  }
+  poolFx() {
+    this.crackMeshes = [];
+    for (let i = 0; i < 9; i++) {
+      const m = new THREE.Mesh(CRACK_GEO, CRACK_MAT);
+      m.visible = false; m.name = 'egg-crack'; m.frustumCulled = false;
+      this.crackMeshes.push(m);
+    }
+    this.fragMeshes = [];
+    const colors = [0xfff6e0, 0xf0d0a0, 0xffe08a, 0xfffaf2];
+    for (let i = 0; i < 32; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0, depthWrite: false });
+      const m = new THREE.Mesh(FRAG_GEO, mat);
+      m.visible = false; m.castShadow = false; m.frustumCulled = true; m.name = 'egg-shell';
+      this.group.add(m);
+      this.fragMeshes.push(m);
+    }
+    this.flashMat = new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+    this.flash = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), this.flashMat);
+    this.flash.visible = false; this.flash.name = 'egg-flash'; this.flash.userData.t = 0;
+    this.group.add(this.flash);
   }
   hatchedIds() { return Array.isArray(this.g.save.hatched) ? this.g.save.hatched : (this.g.save.hatched = []); }
   knownId(id) { return EGGS.some(e => e.id === id); }
@@ -122,7 +177,7 @@ export class Eggs {
       const beacon = new THREE.Mesh(BEACON_GEO, BEACON_MAT);
       beacon.position.y = 4.2; beacon.name = 'egg-beacon'; mesh.add(beacon);
       this.group.add(mesh);
-      const egg = { ...def, x: spot.x, z: spot.z, y: spot.h, mesh, beacon, hatched: done.has(def.id), phase: '', t: 0, hatching: false, chimed: false };
+      const egg = { ...def, x: spot.x, z: spot.z, y: spot.h, mesh, beacon, hatched: done.has(def.id), phase: '', t: 0, age: 0, hatching: false, chimed: false, cracks: 0, hops: 0, hop: 0, burst: false };
       if (egg.hatched) mesh.visible = false;
       this.list.push(egg);
     });
@@ -171,7 +226,7 @@ export class Eggs {
       const act = mixer.clipAction(clip);
       act.play(); act.setEffectiveWeight(clip.name === 'Idle' ? 1 : 0); actions[clip.name] = act;
     }
-    const baby = { id: egg.id, species: egg.species, name: NAMES[egg.species], obj, mixer, actions, clip: 'Idle', pop: pop ? 0.01 : 1, adult: ADULT[egg.species] || target / 0.25, target, roarT: 0, acc: 0, snap: false, hatching: false };
+    const baby = { id: egg.id, species: egg.species, name: NAMES[egg.species], obj, mixer, actions, clip: 'Idle', pop: pop ? 0.01 : 1, adult: ADULT[egg.species] || target / 0.25, target, roarT: 0, acc: 0, snap: false, hatching: false, reveal: 0, cheered: false, cheeped: false };
     this.followers.push(baby);
     this.play(baby, 'Idle');
     return baby;
@@ -183,9 +238,9 @@ export class Eggs {
     for (const [n, act] of Object.entries(b.actions)) act.setEffectiveWeight(n === (b.actions[name] ? name : 'Idle') ? 1 : 0);
   }
   slot(i, p, fwd, side) {
-    const row = i >> 1, col = i % 2 === 0 ? -1 : 1;
-    const back = (p.radius || 2) + 4.2 + row * 2.5;
-    const lateral = col * (4.4 + (row % 3) * 0.35);
+    const row = i >> 2, col = (i % 4) - 1.5;
+    const back = (p.radius || 2) + 3.6 + row * 2.35;
+    const lateral = col * 3.15;
     return { x: p.pos.x - fwd.x * back + side.x * lateral, z: p.pos.z - fwd.z * back + side.z * lateral };
   }
   update(dt) {
@@ -196,7 +251,7 @@ export class Eggs {
     for (const e of this.list) {
       if (e.hatched && !e.hatching) continue;
       if (e.hatching) e.age = (e.age || 0) + dt;
-      if (e.hatching && e.age > 2.2) { this.finishHatch(e); continue; }
+      if (e.hatching && e.age > 3.2) { this.forceFinish(e); continue; }
       if (!e.phase) {
         const bob = Math.sin(t * 2.4 + e.x) * 0.08;
         e.mesh.position.y = e.y + 0.94 + bob;
@@ -208,28 +263,26 @@ export class Eggs {
         if (p.alive && d < reach) this.beginHatch(e);
         continue;
       }
-      e.t += dt;
-      if (e.phase === 'wobble') {
-        e.mesh.rotation.z = Math.sin(e.t * 28) * 0.35;
-        e.mesh.rotation.x = Math.cos(e.t * 22) * 0.18;
-        if (e.t > 0.55) { e.phase = 'crack'; e.t = 0; sfx.squeak(1.4); }
-      } else if (e.phase === 'crack') {
-        const u = Math.min(1, e.t / 0.4);
-        e.mesh.scale.set(1 + u * 0.35, 1 - u * 0.45, 1 + u * 0.2);
-        e.mesh.rotation.z = Math.sin(e.t * 40) * 0.5 * (1 - u);
-        if (u >= 1) this.finishHatch(e);
-      }
+      if (e.phase === 'wobble') { e.t += dt; this.stepWobble(e, dt); }
     }
+    this.tickFrags(dt);
+    this.tickFlash(dt);
     const roaring = p.roar > 0.25;
-    if (roaring && !this.roarLatch) { this.roarLatch = true; for (const b of this.followers) { b.roarT = 0.7; if (this.followers.indexOf(b) < 6) sfx.squeakRoar && sfx.squeakRoar(); } }
+    if (roaring && !this.roarLatch) { this.roarLatch = true; for (const b of this.followers) { b.roarT = 0.7; if (this.followers.indexOf(b) < 6 && !(b.reveal > 0)) sfx.squeakRoar && sfx.squeakRoar(); } }
     if (!roaring) this.roarLatch = false;
     const fwd = p.forward ? p.forward(new THREE.Vector3()) : new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw));
     const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
     this.followers.forEach((b, i) => {
-      b.pop = Math.min(1, b.pop + dt * 2.2);
       b.roarT = Math.max(0, b.roarT - dt);
       b.obj.visible = true;
-      b.hatching = false;
+      if (b.reveal > 0) {
+        this.poseBaby(b, dt);
+        b.reveal -= dt;
+        if (b.reveal <= 0) this.endReveal(b);
+        b.mixer.update(dt);
+        return;
+      }
+      b.pop = Math.min(1, b.pop + dt * 2.2);
       const slot = this.slot(i, p, fwd, side);
       const dx0 = slot.x - b.obj.position.x, dz0 = slot.z - b.obj.position.z;
       const away = dx0 * dx0 + dz0 * dz0;
@@ -239,6 +292,7 @@ export class Eggs {
       b.obj.position.y = this.g.world.height(b.obj.position.x, b.obj.position.z) + hop;
       const dx = slot.x - b.obj.position.x, dz = slot.z - b.obj.position.z;
       if (dx * dx + dz * dz > 0.04) b.obj.rotation.y = Math.atan2(dx, dz);
+      b.obj.rotation.z = 0;
       b.obj.scale.setScalar(0.4 + 0.6 * b.pop);
       const far = i >= 8;
       b.acc += dt;
@@ -248,29 +302,202 @@ export class Eggs {
     });
     this.hud();
   }
-  beginHatch(e) {
-    if (e.hatched || e.hatching) return;
-    e.hatching = true; e.phase = 'wobble'; e.t = 0;
-    music.hatch(); sfx.squeak(1);
-    if (this.g.hud && this.g.hud.toast) this.g.hud.toast('🥚 The egg is wobbling!');
+  stepWobble(e, dt) {
+    const u = Math.min(1, e.t / WOBBLE_T);
+    const freq = 7 + u * 26;
+    const amp = 0.06 + u * 0.48;
+    e.mesh.rotation.z = Math.sin(e.t * freq) * amp;
+    e.mesh.rotation.x = Math.cos(e.t * freq * 0.75) * amp * 0.55;
+    const hopAt = [0.32, 0.7, 1.08];
+    if ((e.hops || 0) < 3 && e.t >= hopAt[e.hops || 0]) { e.hops = (e.hops || 0) + 1; e.hop = 0.16; }
+    e.hop = Math.max(0, (e.hop || 0) - dt);
+    const hop = e.hop > 0 ? Math.sin((1 - e.hop / 0.16) * Math.PI) * 0.48 : 0;
+    e.mesh.position.y = e.y + 0.94 + hop;
+    const crackAt = [0.4, 0.78, 1.12];
+    while ((e.cracks || 0) < 3 && e.t >= crackAt[e.cracks || 0]) { this.showCrack(e, e.cracks || 0); e.cracks = (e.cracks || 0) + 1; }
+    const mat = e.mesh.material;
+    if (mat && mat.emissive) { mat.emissive.setHex(0xffb43a); mat.emissiveIntensity = 0.25 + u * 1.45; }
+    if (e.t >= WOBBLE_T) this.burst(e);
   }
-  finishHatch(e) {
-    if (e.hatched && this.followers.some(b => b.id === e.id)) { e.phase = ''; e.hatching = false; if (e.mesh) e.mesh.visible = false; return; }
-    e.phase = ''; e.hatching = false;
-    if (e.mesh) e.mesh.visible = false;
+  showCrack(e, i) {
+    const mesh = this.crackMeshes.find(m => !m.parent || !m.parent.visible) || this.crackMeshes[i % this.crackMeshes.length];
+    if (mesh.parent) mesh.parent.remove(mesh);
+    e.mesh.add(mesh);
+    const at = CRACK_AT[i % CRACK_AT.length];
+    mesh.position.set(at.x, at.y, at.z);
+    mesh.rotation.set(0, at.ry || 0, at.rz || 0);
+    mesh.visible = true;
+  }
+  burst(e) {
+    if (e.burst) { e.phase = 'reveal'; e.hatching = true; return; }
+    e.burst = true; e.phase = 'reveal'; e.t = 0; e.hatched = true; e.hatching = true;
+    if (e.mesh) {
+      e.mesh.visible = false;
+      if (e.mesh.material && e.mesh.material.emissive) e.mesh.material.emissiveIntensity = 0;
+    }
     const ids = this.hatchedIds();
     if (!ids.includes(e.id)) ids.push(e.id);
     if (this.g.persist) this.g.persist();
     let baby = this.followers.find(b => b.id === e.id) || this.spawnBaby(e, true);
     if (!baby) baby = this.spawnBaby(e, true);
     if (baby) {
-      baby.pop = 0.05; baby.hatching = false; baby.obj.visible = true;
+      baby.reveal = REVEAL_T; baby.pop = 0.18; baby.obj.visible = true;
       baby.obj.position.set(e.x, this.g.world.height(e.x, e.z), e.z);
     }
-    e.hatched = true;
-    if (this.g.hud && this.g.hud.toast) this.g.hud.toast('🥚 ' + (NAMES[e.species] || 'A baby') + ' hatched!');
-    if (this.g.fx) this.g.fx.sparks(new THREE.Vector3(e.x, e.y + 1, e.z), 16, { r: 1, g: 0.9, b: 0.4 }, 1);
+    this.launchFrags(e);
+    this.flashAt(e);
+    if (this.g.fx) {
+      const at = new THREE.Vector3(e.x, e.y + 1.1, e.z);
+      this.g.fx.sparks(at, 10, { r: 1, g: 0.86, b: 0.35 }, 1.4);
+      this.g.fx.sparks(at.clone(), 8, { r: 1, g: 0.45, b: 0.75 }, 1.1);
+      if (!reduceMotion()) this.g.fx.shake = Math.min(0.34, Math.max(this.g.fx.shake, 0.22));
+    }
+    if (sfx.eggPop) sfx.eggPop();
     this.hud();
+  }
+  launchFrags(e) {
+    const n = 8 + (e.id.charCodeAt(1) + e.id.charCodeAt(e.id.length - 1)) % 7;
+    const y = e.y + 1.05;
+    for (let i = 0; i < n; i++) {
+      const mesh = this.fragMeshes[this.fragCursor % this.fragMeshes.length];
+      this.fragCursor++;
+      this.fragLive = this.fragLive.filter(f => f.mesh !== mesh);
+      const ang = (i / n) * Math.PI * 2 + (i % 3) * 0.17;
+      const sp = 2.3 + (i % 4) * 0.85;
+      mesh.position.set(e.x + Math.cos(ang) * 0.28, y, e.z + Math.sin(ang) * 0.28);
+      mesh.rotation.set(i * 0.7, i * 0.4, i * 0.9);
+      mesh.scale.setScalar(0.42 + (i % 4) * 0.14);
+      mesh.visible = true;
+      mesh.material.opacity = 1;
+      this.fragLive.push({
+        mesh,
+        v: new THREE.Vector3(Math.cos(ang) * sp, 3.1 + (i % 5) * 0.62, Math.sin(ang) * sp),
+        spin: new THREE.Vector3((i % 5) - 2, 2 + (i % 3), (i % 4) - 1.5),
+        life: 1.5,
+      });
+    }
+    this.fragPeak = Math.max(this.fragPeak || 0, this.fragLive.length);
+  }
+  tickFrags(dt) {
+    const world = this.g.world;
+    for (const f of this.fragLive) {
+      f.life -= dt;
+      if (f.life <= 0) { f.mesh.visible = false; continue; }
+      f.v.y -= 11 * dt;
+      f.mesh.position.addScaledVector(f.v, dt);
+      const h = world.height(f.mesh.position.x, f.mesh.position.z);
+      if (f.mesh.position.y < h + 0.05) { f.mesh.position.y = h + 0.05; if (f.v.y < 0) f.v.y *= -0.28; }
+      f.mesh.rotation.x += f.spin.x * dt;
+      f.mesh.rotation.y += f.spin.y * dt;
+      f.mesh.rotation.z += f.spin.z * dt;
+      f.mesh.material.opacity = Math.max(0, f.life / 1.5);
+    }
+    this.fragLive = this.fragLive.filter(f => f.life > 0);
+  }
+  flashAt(e) {
+    this.flash.visible = true;
+    this.flash.position.set(e.x, e.y + 1.05, e.z);
+    this.flash.userData.t = 0.28;
+    this.flash.scale.setScalar(0.45);
+    this.flashMat.opacity = 0.9;
+  }
+  tickFlash(dt) {
+    const m = this.flash;
+    if (!m.visible) return;
+    m.userData.t -= dt;
+    const u = Math.max(0, m.userData.t / 0.28);
+    m.scale.setScalar(0.45 + (1 - u) * 3.4);
+    this.flashMat.opacity = u * 0.9;
+    if (m.userData.t <= 0) m.visible = false;
+  }
+  poseBaby(b, dt) {
+    const egg = this.list.find(e => e.id === b.id);
+    const x = egg ? egg.x : b.obj.position.x;
+    const z = egg ? egg.z : b.obj.position.z;
+    const u = 1 - Math.max(0, b.reveal) / REVEAL_T;
+    const jump = Math.sin(Math.min(1, u) * Math.PI) * 1.28;
+    let sx = 1, sy = 1;
+    if (u < 0.22) { const k = u / 0.22; sx = 1.45 - k * 0.15; sy = 0.55 + k * 0.4; }
+    else if (u < 0.55) { const k = (u - 0.22) / 0.33; sx = 1.3 - k * 0.35; sy = 0.95 + k * 0.4; }
+    else { const k = Math.min(1, (u - 0.55) / 0.45); sx = 0.95 + k * 0.05; sy = 1.35 - k * 0.35; }
+    const sc = 0.2 + 0.8 * Math.min(1, u / 0.82);
+    b.obj.scale.set(sc * sx, sc * sy, sc * sx);
+    b.obj.position.set(x, this.g.world.height(x, z) + jump, z);
+    b.obj.rotation.y += dt * (u < 0.75 ? 7.5 : 2);
+    b.obj.rotation.z = Math.sin(u * 16) * 0.14 * (1 - u);
+    if (!b.cheeped && u > 0.4) { b.cheeped = true; if (sfx.babyCheep) sfx.babyCheep(); }
+    if (!b.cheered && u > 0.62) this.celebrate(b);
+    b.pop = Math.min(1, sc);
+    b.obj.visible = true;
+  }
+  endReveal(b) {
+    b.reveal = 0; b.pop = 1; b.obj.rotation.z = 0; b.obj.scale.setScalar(1);
+    const egg = this.list.find(e => e.id === b.id);
+    if (egg) { egg.phase = ''; egg.hatching = false; if (egg.mesh) egg.mesh.visible = false; }
+    this.celebrate(b);
+  }
+  celebrate(b) {
+    if (!b || b.cheered) return;
+    b.cheered = true;
+    this.hud();
+    this.tickCounter();
+    const now = performance.now();
+    const label = babyLabel(b.species);
+    this.lastBanner = 'NEW BABY ' + label + '!';
+    if (now - (this.bannerAt || 0) < 650) return;
+    this.bannerAt = now;
+    if (this.g.hud && this.g.hud.banner) {
+      this.g.hud.banner(this.lastBanner, 2);
+      const el = document.getElementById('banner');
+      if (el) el.classList.add('baby');
+    }
+  }
+  tickCounter() {
+    const n = this.hatchedIds().filter(id => this.knownId(id)).length + '/' + EGGS.length;
+    const pop = document.getElementById('eggs-pop');
+    if (pop) { pop.textContent = 'Babies ' + n; pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show'); }
+    const box = document.getElementById('eggs-box');
+    if (box) { box.classList.remove('tick'); void box.offsetWidth; box.classList.add('tick'); }
+  }
+  forceFinish(e) {
+    if (!e.burst) this.burst(e);
+    const b = this.followers.find(x => x.id === e.id);
+    if (b) { b.reveal = 0; b.pop = 1; b.obj.rotation.z = 0; b.obj.scale.setScalar(1); }
+    e.phase = ''; e.hatching = false;
+    if (e.mesh) e.mesh.visible = false;
+    if (b) this.celebrate(b);
+  }
+  resetHunt() {
+    this.g.save.hatched = [];
+    for (const b of this.followers) {
+      if (b.obj) this.group.remove(b.obj);
+      if (b.mixer) b.mixer.stopAllAction();
+    }
+    this.followers = [];
+    for (const e of this.list) {
+      e.hatched = false; e.hatching = false; e.phase = ''; e.t = 0; e.age = 0; e.burst = false;
+      e.cracks = 0; e.hops = 0; e.hop = 0; e.chimed = false;
+      if (!e.mesh) continue;
+      const cracks = e.mesh.children.filter(c => c.name === 'egg-crack');
+      for (const c of cracks) { e.mesh.remove(c); c.visible = false; }
+      e.mesh.visible = true;
+      e.mesh.scale.set(1, 1, 1);
+      e.mesh.rotation.set(0, 0, 0);
+      e.mesh.position.set(e.x, e.y + 0.94, e.z);
+      if (e.mesh.material && e.mesh.material.emissive) { e.mesh.material.emissive.setHex(0x000000); e.mesh.material.emissiveIntensity = 0; }
+    }
+    for (const f of this.fragLive) { f.life = 0; if (f.mesh) f.mesh.visible = false; }
+    this.fragLive = [];
+    if (this.flash) { this.flash.visible = false; if (this.flashMat) this.flashMat.opacity = 0; }
+    if (this.g.persist) this.g.persist();
+    this.hud();
+    this.lastBanner = '';
+  }
+  beginHatch(e) {
+    if (!e || e.hatched || e.hatching || e.burst) return;
+    e.hatching = true; e.phase = 'wobble'; e.t = 0; e.age = 0; e.cracks = 0; e.hops = 0; e.hop = 0;
+    music.hatch(); sfx.squeak(1);
+    if (this.g.hud && this.g.hud.toast) this.g.hud.toast('🥚 The egg is wobbling!');
   }
   catalog() {
     const ids = new Set(this.hatchedIds());
