@@ -256,6 +256,25 @@ function updateHUD(dt) {
   drawRadar(p);
 }
 const rc = $('radar').getContext('2d');
+let eggRadarSnap = { eggs: [], babies: [], n: 0 };
+function drawEggPip(x, y, pulse, edge) {
+  rc.save(); rc.translate(x, y);
+  if (edge) {
+    const ang = Math.atan2(y, x);
+    rc.save(); rc.rotate(ang);
+    rc.fillStyle = '#ffe566';
+    rc.beginPath(); rc.moveTo(12, 0); rc.lineTo(4, 5); rc.lineTo(4, -5); rc.closePath(); rc.fill();
+    rc.restore();
+  }
+  const w = (edge ? 13 : 16) * pulse, h = w * 1.28;
+  rc.shadowColor = '#ffe14a'; rc.shadowBlur = edge ? 0 : 8;
+  rc.fillStyle = '#fff6df'; rc.strokeStyle = '#3a2410'; rc.lineWidth = 1.6;
+  rc.beginPath(); rc.ellipse(0, 0, w * 0.46, h * 0.5, 0, 0, 7); rc.fill(); rc.stroke();
+  rc.shadowBlur = 0;
+  rc.fillStyle = '#ff2d42'; rc.beginPath(); rc.arc(w * 0.12, -h * 0.1, Math.max(2.1, w * 0.16), 0, 7); rc.fill();
+  rc.fillStyle = '#1d7dff'; rc.beginPath(); rc.arc(-w * 0.14, h * 0.14, Math.max(1.7, w * 0.13), 0, 7); rc.fill();
+  rc.restore();
+}
 function drawRadar(p) {
   const S = 220, R = 105, worldR = game.world && game.world.playR > 400 ? 280 : 120, scale = R / worldR, yaw = game.cam.yaw; rc.clearRect(0, 0, S, S);
   rc.save(); rc.translate(S / 2, S / 2); rc.beginPath(); rc.arc(0, 0, R, 0, 7); rc.clip();
@@ -265,15 +284,27 @@ function drawRadar(p) {
   if (game.farm) { dot(BASE.x, BASE.z + 18, '#ff6a5a', 9); for (const d of game.farm.radar()) dot(d.x, d.z, d.c, 4.5); } // v5.1 farm: the farmhouse, hungry (yellow) and fed (green) animals, golden poop
   else { if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 9); dot(ARENA.x, ARENA.z, '#ffd34a', 7); dot(BASE.x, BASE.z, '#3de8ff', 9); }
   for (const k of game.pickups) if (k.alive && k.type === 'core') dot(k.x, k.z, 'rgba(120,240,255,.8)', 3);
-  if (game.eggs) for (const e of game.eggs.list) {
-    if (e.hatched) continue;
-    const d = Math.hypot(e.x - p.pos.x, e.z - p.pos.z); if (d > 90) continue;
-    const dx = (e.x - p.pos.x) * scale, dz = (e.z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
-    let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 8) { rx *= (R - 8) / L; ry *= (R - 8) / L; }
-    rc.fillStyle = '#fff6e8'; rc.beginPath(); rc.ellipse(-rx, -ry, 5, 7, 0, 0, 7); rc.fill();
-    rc.fillStyle = '#e23a4a'; rc.beginPath(); rc.arc(-rx + 1.2, -ry - 1, 1.7, 0, 7); rc.fill();
-  }
   for (const e of game.enemies) if (e.alive) dot(e.pos.x, e.pos.z, '#ff3a2a', 6);
+  const eggMarks = [], babyMarks = [];
+  if (game.eggs && game.eggs.followers) for (const b of game.eggs.followers) {
+    if (!b.obj) continue;
+    dot(b.obj.position.x, b.obj.position.z, '#3dff7a', 3.4);
+    babyMarks.push(b.id);
+  }
+  if (game.eggs && game.eggs.list) {
+    const pulse = 0.9 + 0.1 * Math.sin((game.world && game.world.time || 0) * 4);
+    const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
+    for (const e of game.eggs.list) {
+      if (e.hatched) continue;
+      const dx = (e.x - p.pos.x) * scale, dz = (e.z - p.pos.z) * scale;
+      let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry);
+      const edge = L > R - 18;
+      if (edge && L > 0.001) { rx *= (R - 18) / L; ry *= (R - 18) / L; }
+      drawEggPip(-rx, -ry, pulse, edge);
+      eggMarks.push({ id: e.id, edge });
+    }
+  }
+  eggRadarSnap = { eggs: eggMarks, babies: babyMarks, n: eggMarks.length };
   rc.restore();
   rc.fillStyle = '#fff'; rc.beginPath(); rc.moveTo(S / 2, S / 2 - 12); rc.lineTo(S / 2 + 8, S / 2 + 8); rc.lineTo(S / 2 - 8, S / 2 + 8); rc.fill();
 }
@@ -729,4 +760,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 // test / debug hooks (no network, local only)
 function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : game.player.def.id === 'stegos' ? 5 : game.player.def.id === 'allo' ? 4 : game.player.def.id === 'dilo' ? 3 : game.player.def.id === 'pachy' ? 3 : game.player.def.id === 'para' ? 5 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, audioCtx, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+window.G = { drawRadar: () => { if (game && game.player) drawRadar(game.player); return eggRadarSnap; }, get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, audioCtx, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
