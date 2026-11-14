@@ -101,6 +101,7 @@ body.real-dino #a-missile { font-size: 11px; }
 .up .ic { font-size: 24px; } .up h4 { margin: 0; font-size: 15px; } .up p { margin: 0; font-size: 12px; opacity: .8; } .up .pips { letter-spacing: 2px; color: #6cff6a; font-size: 12px; }
 .up button { padding: 8px 12px; border-radius: 12px; font-weight: 900; background: linear-gradient(180deg, #ffd34a, #e09a1b); color: #2a1800; min-width: 74px; } .up button[disabled] { filter: grayscale(1); opacity: .5; }
 @media (orientation: portrait) {
+  #radar { width: 158px; height: 158px; border-width: 3px; }
   #actions { transform: scale(.85); transform-origin: right bottom; }
   .g-panel { left: calc(var(--sal) + 12px); right: calc(var(--sar) + 12px); width: auto; top: 52%; }
   .g-nav { width: calc(100% - 16px); top: 28%; }
