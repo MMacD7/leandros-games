@@ -318,6 +318,7 @@ function show(s) {
   const playing = s === 'play';
   $('hud').classList.toggle('hidden', !(playing || s === 'pause' || s === 'results' || s === 'levels'));
   document.body.classList.toggle('playing', playing);
+  document.body.classList.toggle('paused', s === 'pause');
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${DINOS.filter(d => !d.wildOnly && save.owned.includes(d.id)).length}/${DINOS.filter(d => !d.wildOnly).length} dinos`; }
   if (playing && game && game.player && game.player.def.costume && !game._costumeTold) { game._costumeTold = true; hud.toast('🦖 Rex Costume! Straw hat, hoops and white shorts. Steer with the stick.'); }
@@ -407,6 +408,17 @@ function toggleRobos() { robosOn = !robosOn; try { localStorage.setItem(ROBO_KEY
   hud.toast(robosOn ? '🤖 Robo Dinos ON' : '🦖 Robo Dinos OFF: regular dinos only!'); voice.say(robosOn ? 'Robo dinos on!' : 'Real dinos only!', { prio: 1, cd: 1500, replace: true }); if (screen === 'garage') refreshGarage(); }
 tap('b-robo', toggleRobos); tap('p-robo', toggleRobos); roboLabel();
 tap('p-garage', () => { garageFrom = 'pause'; show('garage'); });
+const openEggReset = () => { initAudio(); $('egg-reset').classList.remove('hidden'); };
+const closeEggReset = () => $('egg-reset').classList.add('hidden');
+tap('p-eggs', openEggReset); tap('g-eggs-reset', openEggReset);
+tap('egg-reset-no', () => { sfx.ui(); closeEggReset(); });
+tap('egg-reset-yes', () => {
+  if (game && game.eggs) game.eggs.resetHunt();
+  if (sfx.eggHunt) sfx.eggHunt();
+  hud.toast('🆕 NEW EGG HUNT!');
+  closeEggReset();
+  paintBabies();
+});
 tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.collapseCam = null; game.swoop = null; game.koCam = null; game.startRoam(); titleEnemies(); show('title'); });
 tap('r-ok', () => { game.startRoam(); show('play'); });
 const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '🔊'; $('p-sound').textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on'; };
