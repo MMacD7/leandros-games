@@ -26,6 +26,10 @@ body.playing #touch-zone { display: block; }
 #eggs-pop.show { max-height: 18px; animation: eggPopIn .9s ease; }
 @keyframes eggPopIn { 0% { opacity: 0; transform: translateY(4px) scale(.7); } 30% { opacity: 1; transform: translateY(0) scale(1.12); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; } }
 #eggs-box.tick { animation: eggTick .4s ease; }
+#pause .panel { max-height: calc(100dvh - 24px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+button.egg-reset, #egg-reset-yes, #egg-reset-no { min-height: 48px; }
+#egg-reset { z-index: 8; }
+#g-eggs-reset { width: 100%; margin: 0 0 8px; }
 @keyframes eggTick { 40% { transform: scale(1.16); } }
 body.paused #eggs-pop, body.paused #banner { animation-play-state: paused; }
 #p-vol { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; }

@@ -365,4 +365,134 @@ test('v5.10.6 forty eggs, hatch show, every baby follows', async ({ page }, info
   expect(kept.visible).toBe(40);
   expect(kept.far).toBe(0);
   expect(kept.hud).toBe('40/40');
+
+  const beforeNo = await page.evaluate(() => {
+    const g = G.game;
+    G.show('play');
+    G.save.ride = true; G.save.selected = 'trex';
+    g.spawnPlayer(false);
+    const egg = g.eggs.list.find(e => e.hatched);
+    g.eggs.beginHatch(egg);
+    for (let i = 0; i < 8; i++) g.eggs.update(1 / 20);
+    return {
+      bolts: G.save.bolts,
+      hud: document.getElementById('eggs-n').textContent,
+      followers: g.eggs.followers.length,
+      hatching: g.eggs.list.some(e => e.hatching || e.phase),
+      riding: !!(g.rider && g.rider.mounted),
+    };
+  });
+  expect(beforeNo.followers).toBe(40);
+  expect(beforeNo.riding).toBe(true);
+
+  await page.evaluate(() => { const rot = document.getElementById('rotate'); if (rot && getComputedStyle(rot).display !== 'none') document.getElementById('rot-ok').click(); });
+  await page.locator('#b-pause').click();
+  await expect(page.locator('#p-eggs')).toBeVisible();
+  const resetBox = await page.locator('#p-eggs').boundingBox();
+  expect(resetBox.height).toBeGreaterThanOrEqual(44);
+  await page.locator('#p-eggs').click();
+  await expect(page.locator('#egg-reset')).toBeVisible();
+  await expect(page.locator('#egg-reset')).toContainText('Start the egg hunt again? Your babies will go back in their eggs!');
+  if (info.project.name === 'iphone') {
+    fs.mkdirSync(OUT, { recursive: true });
+    await page.screenshot({ path: OUT + '/eggs-reset-confirm.png' });
+  }
+  await page.locator('#egg-reset-no').click();
+  await expect(page.locator('#egg-reset')).toBeHidden();
+  const afterNo = await page.evaluate(() => ({
+    hud: document.getElementById('eggs-n').textContent,
+    followers: G.game.eggs.followers.length,
+    hatched: G.game.eggs.list.filter(e => e.hatched).length,
+    bolts: G.save.bolts,
+    paused: document.body.classList.contains('paused'),
+  }));
+  expect(afterNo.hud).toBe(beforeNo.hud);
+  expect(afterNo.followers).toBe(40);
+  expect(afterNo.hatched).toBe(40);
+  expect(afterNo.bolts).toBe(beforeNo.bolts);
+  expect(afterNo.paused).toBe(true);
+
+  await page.locator('#p-eggs').click();
+  await page.locator('#egg-reset-yes').click();
+  const afterYes = await page.evaluate(() => {
+    const g = G.game;
+    const eggsUp = g.eggs.list.filter(e => e.mesh && e.mesh.visible && !e.hatched && !e.hatching && !e.phase).length;
+    const radar = G.drawRadar();
+    return {
+      hud: document.getElementById('eggs-n').textContent,
+      followers: g.eggs.followers.length,
+      eggsUp,
+      radar: radar.n,
+      bolts: G.save.bolts,
+      toast: document.getElementById('toast').textContent,
+      hunt: G.sfx.nEggHunt || 0,
+      riding: !!(g.rider && g.rider.mounted),
+      saved: (G.save.hatched || []).length,
+    };
+  });
+  expect(afterYes.hud).toBe('0/40');
+  expect(afterYes.followers).toBe(0);
+  expect(afterYes.eggsUp).toBe(40);
+  expect(afterYes.radar).toBe(40);
+  expect(afterYes.bolts).toBe(beforeNo.bolts);
+  expect(afterYes.toast).toContain('NEW EGG HUNT!');
+  expect(afterYes.hunt).toBeGreaterThan(0);
+  expect(afterYes.riding).toBe(true);
+  expect(afterYes.saved).toBe(0);
+  expect(await page.locator('#g-eggs-reset').count()).toBe(1);
+
+  if (info.project.name === 'iphone') {
+    await page.locator('#p-resume').click();
+    await page.evaluate(() => {
+      window.__hold = true;
+      const g = G.game, p = g.player, e = g.eggs.list.find(x => x.where === 'start');
+      G.show('play');
+      p.pos.set(e.x - 18, 0, e.z - 8); p.yaw = Math.atan2(18, 8); p.groundY();
+      const toast = document.getElementById('toast');
+      if (toast && !toast.textContent.includes('NEW EGG HUNT')) toast.textContent = '🆕 NEW EGG HUNT!';
+      G.drawRadar();
+      const cam = g.camera;
+      cam.aspect = 390 / 844; cam.fov = 48; cam.updateProjectionMatrix();
+      G.renderer.setSize(390, 844, false);
+      cam.position.set(p.pos.x - 2, e.y + 3.2, p.pos.z + 6);
+      cam.lookAt(e.x, e.y + 2.2, e.z);
+      G.renderer.render(g.scene, cam);
+    });
+    await page.screenshot({ path: OUT + '/eggs-reset-done.png' });
+  }
+
+  const mid = await page.evaluate(() => {
+    const g = G.game, bolts = G.save.bolts, e = g.eggs.list[12];
+    g.eggs.beginHatch(e);
+    for (let i = 0; i < 6; i++) g.eggs.update(1 / 20);
+    const wobbling = e.phase === 'wobble' && e.hatching;
+    g.eggs.resetHunt();
+    return {
+      wobbling,
+      followers: g.eggs.followers.length,
+      eggs: g.eggs.list.filter(x => x.mesh && x.mesh.visible && !x.hatched && !x.phase && !x.hatching).length,
+      hud: document.getElementById('eggs-n').textContent,
+      bolts: G.save.bolts === bolts,
+    };
+  });
+  expect(mid.wobbling).toBe(true);
+  expect(mid.followers).toBe(0);
+  expect(mid.eggs).toBe(40);
+  expect(mid.hud).toBe('0/40');
+  expect(mid.bolts).toBe(true);
+
+  await page.reload();
+  await poll(page, () => !!(window.G && G.game && G.game.eggs && G.game.eggs.built));
+  const resetKept = await page.evaluate(() => ({
+    hud: document.getElementById('eggs-n').textContent,
+    followers: G.game.eggs.followers.length,
+    eggs: G.game.eggs.list.filter(e => e.mesh && e.mesh.visible && !e.hatched).length,
+    saved: (G.save.hatched || []).length,
+    bolts: G.save.bolts,
+  }));
+  expect(resetKept.hud).toBe('0/40');
+  expect(resetKept.followers).toBe(0);
+  expect(resetKept.eggs).toBe(40);
+  expect(resetKept.saved).toBe(0);
+  expect(resetKept.bolts).toBe(beforeNo.bolts);
 });

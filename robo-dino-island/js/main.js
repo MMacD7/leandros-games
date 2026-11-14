@@ -408,6 +408,17 @@ function toggleRobos() { robosOn = !robosOn; try { localStorage.setItem(ROBO_KEY
   hud.toast(robosOn ? '🤖 Robo Dinos ON' : '🦖 Robo Dinos OFF: regular dinos only!'); voice.say(robosOn ? 'Robo dinos on!' : 'Real dinos only!', { prio: 1, cd: 1500, replace: true }); if (screen === 'garage') refreshGarage(); }
 tap('b-robo', toggleRobos); tap('p-robo', toggleRobos); roboLabel();
 tap('p-garage', () => { garageFrom = 'pause'; show('garage'); });
+const openEggReset = () => { initAudio(); $('egg-reset').classList.remove('hidden'); };
+const closeEggReset = () => $('egg-reset').classList.add('hidden');
+tap('p-eggs', openEggReset); tap('g-eggs-reset', openEggReset);
+tap('egg-reset-no', () => { sfx.ui(); closeEggReset(); });
+tap('egg-reset-yes', () => {
+  if (game && game.eggs) game.eggs.resetHunt();
+  if (sfx.eggHunt) sfx.eggHunt();
+  hud.toast('🆕 NEW EGG HUNT!');
+  closeEggReset();
+  paintBabies();
+});
 tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.collapseCam = null; game.swoop = null; game.koCam = null; game.startRoam(); titleEnemies(); show('title'); });
 tap('r-ok', () => { game.startRoam(); show('play'); });
 const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '🔊'; $('p-sound').textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on'; };

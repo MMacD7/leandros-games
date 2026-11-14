@@ -467,6 +467,32 @@ export class Eggs {
     if (e.mesh) e.mesh.visible = false;
     if (b) this.celebrate(b);
   }
+  resetHunt() {
+    this.g.save.hatched = [];
+    for (const b of this.followers) {
+      if (b.obj) this.group.remove(b.obj);
+      if (b.mixer) b.mixer.stopAllAction();
+    }
+    this.followers = [];
+    for (const e of this.list) {
+      e.hatched = false; e.hatching = false; e.phase = ''; e.t = 0; e.age = 0; e.burst = false;
+      e.cracks = 0; e.hops = 0; e.hop = 0; e.chimed = false;
+      if (!e.mesh) continue;
+      const cracks = e.mesh.children.filter(c => c.name === 'egg-crack');
+      for (const c of cracks) { e.mesh.remove(c); c.visible = false; }
+      e.mesh.visible = true;
+      e.mesh.scale.set(1, 1, 1);
+      e.mesh.rotation.set(0, 0, 0);
+      e.mesh.position.set(e.x, e.y + 0.94, e.z);
+      if (e.mesh.material && e.mesh.material.emissive) { e.mesh.material.emissive.setHex(0x000000); e.mesh.material.emissiveIntensity = 0; }
+    }
+    for (const f of this.fragLive) { f.life = 0; if (f.mesh) f.mesh.visible = false; }
+    this.fragLive = [];
+    if (this.flash) { this.flash.visible = false; if (this.flashMat) this.flashMat.opacity = 0; }
+    if (this.g.persist) this.g.persist();
+    this.hud();
+    this.lastBanner = '';
+  }
   beginHatch(e) {
     if (!e || e.hatched || e.hatching || e.burst) return;
     e.hatching = true; e.phase = 'wobble'; e.t = 0; e.age = 0; e.cracks = 0; e.hops = 0; e.hop = 0;

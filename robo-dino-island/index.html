@@ -99,6 +99,7 @@
     <section id="g-babies" aria-labelledby="babies-title">
       <h2 id="babies-title">BABY DINOS</h2>
       <p class="jg-note">Hatch spotted eggs on Jungle Island. Every baby follows Leandro. <b id="babies-count">0/40</b></p>
+      <button id="g-eggs-reset" class="btn egg-reset" type="button">🥚 RESET EGG HUNT</button>
       <div id="g-baby-grid" class="bb-grid"></div>
     </section>
     <div class="g-tabs"><button id="t-real" class="tab">🦖 Real<sup class="tnew">NEW</sup></button><button id="t-robo" class="tab">🤖 Robots<sup class="tnew">NEW</sup></button><button id="t-dragon" class="tab">🐉 Dragons</button><button id="t-sea" class="tab">🦈 Sea<sup class="tnew">NEW</sup></button><button id="t-dogs" class="tab">🐶 Dogs<sup class="tnew">NEW</sup></button><button id="t-ups" class="tab">⚙️ Upgrades</button></div>
@@ -117,6 +118,7 @@
     <div class="p-main"><button id="p-resume" class="btn primary">▶ Resume</button><button id="p-restart" class="btn">🔄 Restart level</button><button id="p-home" class="btn">⌂ Home</button></div>
     <button id="p-map" class="btn">🗺️ Change level</button>
     <button id="p-garage" class="btn">🦖 Dino Garage</button>
+    <button id="p-eggs" class="btn egg-reset" type="button">🥚 RESET EGG HUNT</button>
     <button id="p-sound" class="btn">🔊 Sound on</button>
     <button id="p-music" class="btn">🎵 Music on</button>
     <label id="p-vol" class="vol">Music volume <input id="p-music-vol" type="range" min="0" max="100" value="90" aria-label="Music volume"></label>
@@ -136,6 +138,14 @@
 
 <div id="results" class="screen dim hidden">
   <div class="panel"><h2>Battle over!</h2><p id="r-text"></p><button id="r-ok" class="btn primary">OK</button></div>
+</div>
+
+<div id="egg-reset" class="screen dim hidden" role="dialog" aria-modal="true" aria-labelledby="egg-reset-title">
+  <div class="panel">
+    <h2 id="egg-reset-title">🥚 Reset egg hunt</h2>
+    <p>Start the egg hunt again? Your babies will go back in their eggs!</p>
+    <div class="p-main"><button id="egg-reset-yes" class="btn primary" type="button">YES</button><button id="egg-reset-no" class="btn" type="button">NO</button></div>
+  </div>
 </div>
 
 <div id="rotate" class="screen dim hidden">
