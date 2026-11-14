@@ -318,6 +318,7 @@ function show(s) {
   const playing = s === 'play';
   $('hud').classList.toggle('hidden', !(playing || s === 'pause' || s === 'results' || s === 'levels'));
   document.body.classList.toggle('playing', playing);
+  document.body.classList.toggle('paused', s === 'pause');
   if (input) { input.enabled = playing; input.reset(); }
   if (s === 'title') { $('title-bolts').innerHTML = `<span class="nut">⬢</span> ${save.bolts} bolts · ${DINOS.filter(d => !d.wildOnly && save.owned.includes(d.id)).length}/${DINOS.filter(d => !d.wildOnly).length} dinos`; }
   if (playing && game && game.player && game.player.def.costume && !game._costumeTold) { game._costumeTold = true; hud.toast('🦖 Rex Costume! Straw hat, hoops and white shorts. Steer with the stick.'); }
