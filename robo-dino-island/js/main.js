@@ -675,13 +675,37 @@ function loop(now) {
     gMech.roar = Math.max(0, (gMech.roar || 0) - dt); if (gRider.mounted) gRider.update(dt, { speedNow: 0, roar: gMech.roar, turn: 0 }); if (gMech.def.fly) gMech.obj.position.y = 1.5 + Math.sin(titleT * 2) * 0.2;
     const W = window.innerWidth, H = window.innerHeight, portrait = H > W, h = gMech.height, R = Math.max(gMech.def.dragon ? gMech.fitR * 0.62 : gMech.fitR, 6);
     if (garageFrame && garageFrame.fit) {
-      const y0 = gMech.obj.position.y, dist = Math.max(h, 4) * (garageFrame.zoom || 1.35) * (h < 5.5 ? 1.45 : 1);
-      const cy = y0 + h * 0.5;
-      gCam.position.set(dist * 0.62, cy + h * 0.15, dist * 0.9); gCam.lookAt(0, cy, 0);
-      gCam.setViewOffset(W, H, 0, portrait ? H * (h < 5.5 ? 0.04 : 0.18) : 0, W, H);
+      // Fit the whole animal, head included, in the open band above the info panel.
+      // Distance comes from both height and width. The look target sits below the body
+      // so that band (not the screen center, which the panel covers) holds the dino.
+      gCam.clearViewOffset();
+      const y0 = gMech.obj.position.y;
+      const sc = gMech._fitScale || (gMech._fitScale = new THREE.Vector3());
+      if (gMech.rig) gMech.rig.getWorldScale(sc); else sc.set(1, 1, 1);
+      // Ankylo is scaled longer than it is tall. fitR follows the height scale, so the camera would sit inside the shell.
+      const stretch = Math.max(sc.x, sc.z) / Math.max(sc.y, 0.001);
+      const mid = y0 + h * 0.52;
+      const halfH = Math.max(0.9, h * 0.58);
+      const halfW = Math.max(gMech.fitR || 3, gMech.pack ? 3.6 : 2.4) * (stretch > 1.2 ? stretch * 1.15 : 1.05);
+      const vHalf = Math.tan(THREE.MathUtils.degToRad(gCam.fov) / 2), hHalf = vHalf * (W / H);
+      const bandTop = portrait ? 0.12 : 0.08, bandBot = portrait ? 0.36 : 0.84;
+      const band = bandBot - bandTop, bandCenter = (bandTop + bandBot) * 0.5;
+      const center = h < 4.2 ? Math.min(0.34, bandCenter + 0.04) : bandCenter;
+      const dist = Math.max(halfH / (vHalf * band * 0.92), halfW / (hHalf * 0.8), 4) * (garageFrame.zoom || 1);
+      const lookY = mid - (1 - 2 * center) * dist * vHalf;
+      // A low ankylo reads as a shell from above. Sit the camera at its shoulder so the legs, head and club show.
+      // lift drops the look target so a long low animal (the raptor pack) rises clear of the info panel.
+      // The tall-dino path already frames from `center`, so lift stays 0 there.
+      const low = h < 4.2;
+      const lookDrop = (garageFrame.lift || 0) * Math.max(h, 2);
+      gCam.position.set(dist * (low ? 1.05 : 0.58), (low ? y0 + h * 0.55 : lookY + halfH * 0.02) - lookDrop * 0.2, dist * (low ? 0.28 : 0.86));
+      gCam.lookAt(0, (low ? y0 + h * 0.42 : lookY) - lookDrop, 0);
+      // The garage fog fades out at 60 m. A tall dino needs a further camera, and would vanish into that fog.
+      if (gScene.fog) { gScene.fog.near = Math.max(18, dist * 0.5); gScene.fog.far = dist * 2.6; }
       gScene.userData.ring.material.color.setHSL(gMech.real ? 0.06 : 0.52, 1, 0.55);
       renderer.render(gScene, gCam); return;
     }
+    if (gScene.fog) { gScene.fog.near = 20; gScene.fog.far = 60; }
     const t = Math.tan(THREE.MathUtils.degToRad(gCam.fov / 2)), dist = (R / (portrait ? t * gCam.aspect * 1.0 : Math.min(t * 0.95, t * gCam.aspect * 0.52)) * (portrait ? 1.0 : 0.8) + 2) * (garageFrame && garageFrame.zoom ? garageFrame.zoom : 1);
     const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio', cy = h * (tall ? 0.85 : 0.5) + (gMech.def.fly ? 1.2 : 0) - ((garageFrame && garageFrame.drop) || 0);
     gCam.position.set(dist * 0.62, cy + dist * (gMech.def.dragon ? 0.3 : gMech.def.fly ? 0.62 : 0.28), dist * 0.78); gCam.lookAt(0, cy, 0);

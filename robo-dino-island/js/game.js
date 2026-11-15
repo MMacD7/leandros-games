@@ -499,10 +499,10 @@ export class Game {
     else if (k === 'nuzzle') { d.roar = 1.05; d.jaw = 0.65; if (d.mech.happy !== undefined) d.mech.happy = 1.15; sfx.bigRoar(1.45, d === this.player ? 0.5 : 0.22, false); this.fx.ring(d.pos.clone().setY(d.pos.y + d.mech.height * 0.8), 3.5, 0xffd56a); if (d === this.player) this.hud.toast('😺 The lion nuzzles hello!'); this.nuzzles = (this.nuzzles || 0) + 1; return; }
     // ---- v5 "on steroids" signature specials ----
     else if (k === 'tsunami') { d.splashA = 1.5; this.tsunami(d); return; }
-    else if (k === 'rockethorn') { d.act = { type: 'rocket', t: 0, dur: 1.05, dir: fwd.clone(), speed: Math.max(34, d.st.speed * 3), hit: new Set() }; sfx.jet(); d.roar = 0.8; return; }
+    else if (k === 'rockethorn') { d.act = { type: 'rocket', t: 0, dur: 1.05, dir: fwd.clone(), speed: Math.max(34, d.st.speed * 3), hit: new Set() }; sfx.jet(); d.roar = 0.8; if (d === this.player) this.hud.toast('🚀 ROCKET HORNS!'); return; }
     else if (k === 'pack') { this.packPounce(d, target, 3); return; }
     else if (k === 'cannon') { this.megaCannon(d, target); return; }
-    else if (k === 'lavaslam') { d.act = { type: 'whip', t: 0, dur: 0.75, yaw0: d.yaw, dir: this.r() < 0.5 ? 1 : -1, hit: new Set(), lava: true }; sfx.whoosh(1); return; }
+    else if (k === 'lavaslam') { d.act = { type: 'whip', t: 0, dur: 0.75, yaw0: d.yaw, dir: this.r() < 0.5 ? 1 : -1, hit: new Set(), lava: true }; d.smashA = 1; sfx.whoosh(1); if (d === this.player) this.hud.toast('🌋 LAVA SLAM!'); return; }
     else if (k === 'bark') { this.barkBlast(d); return; }
     else if (k === 'breath') { this.dragonBreath(d); return; }
     // ---- v5 Deep Sea signature moves ----
@@ -570,6 +570,7 @@ export class Game {
   // Spino-Titan: a giant TIDAL WAVE that blasts everything in front away
   tsunami(d) {
     const s = d.def.scale, fwd = d.forward(new THREE.Vector3()), isP = d === this.player; d.roar = 1.6; d.jaw = 1.5; sfx.honk(); sfx.rumble(1.6, isP ? 0.9 : 0.4); this.fx.shake = Math.max(this.fx.shake, isP ? 1.1 : 0.4);
+    if (isP) this.hud.toast('🌊 TIDAL WAVE!');
     const col = new THREE.Color(0.3, 0.8, 1.2);
     for (let i = 0; i < 6; i++) this.later(i * 0.1, () => { const c = d.pos.clone().addScaledVector(fwd, 5 + i * 5.5); c.y = d.ground + 0.2; this.fx.ring(c, 7 + i * 3, 0x5ad8ff);
       for (let j = 0; j < this.fx.n(8); j++) this.fx.glow.spawn({ pos: { x: c.x + (this.r() - 0.5) * (8 + i * 4), y: c.y + this.r() * 2, z: c.z + (this.r() - 0.5) * (8 + i * 4) }, vel: { x: fwd.x * 14, y: 7 + this.r() * 8, z: fwd.z * 14 }, size: 0.7, size1: 0.2, life: 0.9, r: 0.6, g: 1.6, b: 2.4, alpha: 0.9, grav: 18 });
@@ -780,9 +781,10 @@ export class Game {
       const n = hitFoes(d.radius + 1.6, d.st.bite * 2.6, 34, 1.8, A.hit, e => A.dir.clone().add(new THREE.Vector3(0, 0, 0)));
       if (n) { this.fx.shake = Math.max(this.fx.shake, 0.9); sfx.headbutt(); this.fx.ring(this.mouthPos(d), 7, 0xfff080); for (const e of A.hit) if (!e.dizzyFx) { e.dizzyFx = 1; for (let i = 0; i < 6; i++) this.later(i * 0.12, () => this.fx.dizzy(e, true)); } A.t = Math.max(A.t, A.dur * 0.8); }
       if (this.r() < 0.7) this.fx.dust(d.pos, 1, 1.3 * s, 4); this.mh.damageAt(d.pos, d.radius + 1.2, 40 * dt * 10, d); }
-    if (A.type === 'whip' && A.lava && u > 0.5 && !A.lavaDone) { A.lavaDone = true; // Lava Ankylo: a ring of fire + a molten blast
-      const P = d.pos; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, q = new THREE.Vector3(P.x + Math.cos(a) * 7 * s, 0, P.z + Math.sin(a) * 7 * s); q.y = this.world.height(q.x, q.z); this.mh.addFire(q, 2.4, 3.5, d); }
-      this.mh.blast(P.clone().setY(P.y + 1), 1.2, { by: d, dmg: d.st.bite * 1.6, R: 9 * s, only: e => (d.wild ? e === this.player : e !== this.player), fire: false }); this.fx.ring(P, 16 * s, 0xff5a10); this.fx.ring(P, 9 * s, 0xffd040); }
+    if (A.type === 'whip' && A.lava && u > 0.5 && !A.lavaDone) { A.lavaDone = true; // Lava Ankylo: a ring of fire around the club slam. Small enough to see the dino.
+      const P = d.pos, ring = Math.max(5.2, d.radius * 1.55);
+      for (let i = 0; i < 6; i++) { const a = i / 6 * 6.28, q = new THREE.Vector3(P.x + Math.cos(a) * ring * 0.75, 0, P.z + Math.sin(a) * ring * 0.75); q.y = this.world.height(q.x, q.z); this.mh.addFire(q, 1.15, 2.2, d); }
+      this.mh.blast(P.clone().setY(P.y + 0.6), 0.42, { by: d, dmg: d.st.bite * 1.6, R: ring + 1.5, only: e => (d.wild ? e === this.player : e !== this.player), fire: false }); this.fx.ring(P, ring, 0xff5a10); this.fx.ring(P, ring * 0.62, 0xffe08a); }
     if (A.t >= A.dur) { d.act = null; d.chargeA = 0; d.pounceA = 0; d.smashA = 0; d.air = 0; d.rearA = 0; d.whipA = 0; d.slashA = 0; d.splashA = 0; if (A.hit) for (const e of A.hit) e.dizzyFx = 0; if (A.next) d.act = A.next; }
     return true;
   }

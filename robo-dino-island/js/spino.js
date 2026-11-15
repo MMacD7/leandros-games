@@ -58,8 +58,9 @@ export class SpinoMech {
                 float luma = dot(diffuseColor.rgb, vec3(0.30, 0.59, 0.11));
                 float warm = smoothstep(0.04, 0.22, diffuseColor.r - diffuseColor.b);
                 vec3 deep = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.18)) * vec3(0.55, 0.72, 0.82);
-                diffuseColor.rgb = mix(deep, vec3(0.0, 0.28, 0.42), warm);
-                diffuseColor.rgb += vec3(0.0, 0.12, 0.2) * warm;
+                vec3 cyan = vec3(0.12, 0.72, 0.92);
+                diffuseColor.rgb = mix(deep, cyan, warm);
+                diffuseColor.rgb += vec3(0.04, 0.18, 0.28) * warm;
                 diffuseColor.rgb += vec3(0.2, 0.7, 1.0) * uSplash * warm;`);
               shader.fragmentShader = 'uniform float uSplash;\n' + shader.fragmentShader;
             };

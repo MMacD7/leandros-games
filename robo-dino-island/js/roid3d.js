@@ -192,18 +192,37 @@ function dressLava(mech) {
   mech.lava = true;
   mech.rig.traverse(o => {
     if (!o.isMesh || !o.material) return;
-    for (const m of [].concat(o.material)) {
-      if (m.color) m.color.multiply(new THREE.Color(0.42, 0.28, 0.22));
-      if (m.emissive) { m.emissive.set(0xff4a12); m.emissiveIntensity = 0.65; }
+    const mats = [].concat(o.material);
+    for (const m of mats) {
+      if (m.color) m.color.set(0xffffff);
+      if (m.emissive) { m.emissive.set(0x000000); m.emissiveIntensity = 0; }
+      // Orange patches in the hide become magma cracks. The rest is dark rock.
+      m.customProgramCacheKey = () => 'lavaanky-rock';
+      m.onBeforeCompile = (shader) => {
+        shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
+          #include <color_fragment>
+          float warm = smoothstep(0.04, 0.22, diffuseColor.r - diffuseColor.b);
+          float luma = dot(diffuseColor.rgb, vec3(0.30, 0.59, 0.11));
+          vec3 rock = vec3(0.34, 0.25, 0.18);
+          vec3 magma = vec3(1.15, 0.38, 0.05);
+          float crack = smoothstep(0.42, 0.82, luma) * warm;
+          diffuseColor.rgb = mix(diffuseColor.rgb * vec3(0.4, 0.32, 0.26), rock, warm);
+          diffuseColor.rgb = mix(diffuseColor.rgb, magma, crack);
+          diffuseColor.rgb += magma * crack * 0.55;`);
+      };
+      m.needsUpdate = true;
     }
   });
-  const magma = new THREE.MeshStandardMaterial({ color: 0x3a1208, emissive: 0xff5a12, emissiveIntensity: 1.7, roughness: 0.5, metalness: 0.04 });
+  const magma = new THREE.MeshStandardMaterial({ color: 0x2a1008, emissive: 0xff5a12, emissiveIntensity: 1.45, roughness: 0.45, metalness: 0.05 });
+  mech.lavaGlow = magma;
+  const rock = new THREE.MeshStandardMaterial({ color: 0x2c241c, roughness: 0.9, metalness: 0.08 });
   const spine = bone(mech, 'spine', 'chest');
-  for (let i = 0; i < 4; i++) piece(spine, box, magma, 0.025, 0.012, 0.16, (i - 1.5) * 0.04, 0.1, 0.02 * i, [0.2, 0.3, 0.7]);
+  for (let i = 0; i < 4; i++) piece(spine, box, rock, 0.09, 0.02, 0.07, (i % 2 ? 0.06 : -0.06), 0.08, -0.02 + i * 0.04);
+  for (let i = 0; i < 5; i++) piece(spine, box, magma, 0.012, 0.008, 0.1, (i - 2) * 0.025, 0.095, 0.01 * i, [0.15, 0.2, 0.5]);
   let tip = null, best = -1;
   mech.rig.traverse(o => { if (o.isBone && /tail/i.test(o.name) && o.name.length > best) { tip = o; best = o.name.length; } });
   const mount = tip || bone(mech, 'hips');
-  const club = piece(mount, new THREE.SphereGeometry(0.1, 10, 8), magma, 1, 1, 1, 0, 0.02, 0.1);
-  piece(mount, new THREE.CylinderGeometry(0.028, 0.038, 0.16, 6), magma, 1, 1, 1, 0, 0.02, 0.02);
+  const club = piece(mount, new THREE.SphereGeometry(0.09, 10, 8), magma, 1, 1, 1, 0, 0.03, 0.12);
+  piece(mount, new THREE.CylinderGeometry(0.025, 0.034, 0.14, 6), magma, 1, 1, 1, 0, 0.02, 0.03);
   mech.club = club;
 }

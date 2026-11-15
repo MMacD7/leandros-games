@@ -206,14 +206,8 @@ export class AnkyMech {
     this.flash = Math.max(0, this.flash - dt * 4);
     if (this.smash) this.smash.value = Math.max(smash, this.flash * 0.35);
     const plate = this.mats.plate;
-    if (this.lava) {
-      for (const mesh of this.meshes) for (const m of [].concat(mesh.material)) {
-        if (!m || !m.color) continue;
-        m.color.setRGB(0.72, 0.38, 0.22);
-        if (m.emissive) m.emissive.setRGB(1.15, 0.32, 0.04);
-        m.emissiveIntensity = 1.05 + smash * 0.4;
-      }
-    } else if (plate && plate.emissive) plate.emissive.setRGB(0.16 + smash * 0.55, 0.06 + smash * 0.12, 0.02);
+    if (this.lava && this.lavaGlow) this.lavaGlow.emissiveIntensity = 1.35 + Math.sin(this.t * 5) * 0.2 + smash * 0.55;
+    else if (plate && plate.emissive) plate.emissive.setRGB(0.16 + smash * 0.55, 0.06 + smash * 0.12, 0.02);
     this.seatOnBack();
   }
 }
