@@ -175,5 +175,6 @@ export class BrachioMech {
     this.flash = Math.max(0, this.flash - dt * 4);
     const plate = this.mats.plate;
     if (plate && plate.emissive) plate.emissive.setRGB(0.04, 0.16 + this.flash * 0.4, 0.18);
+    if (this.cannonKick > 0) { this.cannonKick = Math.max(0, this.cannonKick - dt * 2.4); if (this.cannonBarrel) this.cannonBarrel.position.z = 0.22 - this.cannonKick * 0.14; }
   }
 }

@@ -203,6 +203,7 @@ export class TrikeMech {
     if (this.charge) this.charge.value = Math.max(charge, this.flash * 0.35);
     const plate = this.mats.plate;
     if (plate && plate.emissive) plate.emissive.setRGB(0.05 + charge * 0.45, 0.12 + charge * 0.18, 0.04);
+    if (this.flames) for (const f of this.flames) { f.visible = charge > 0.12; const w = 0.75 + Math.sin(this.t * 28) * 0.22; f.scale.set(0.055 * w, 0.22 * (0.7 + charge * 0.8), 0.055 * w); }
     this.seatOnBack();
   }
 }
