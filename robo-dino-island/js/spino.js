@@ -34,9 +34,13 @@ export class SpinoMech {
     const meshes = [];
     const splash = { value: 0 };
     this.splash = splash;
+    const sailY = { value: 1 };
+    this.sailY = sailY;
+    const titan = def.id === 'spinotitan';
     scene.traverse(o => {
       if (o.isBone) bones[o.name] = o;
       if (o.isMesh) {
+        if (titan) o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone();
         o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; o.raycast = () => {};
         meshes.push(o);
         const mats = [].concat(o.material);
@@ -45,7 +49,21 @@ export class SpinoMech {
           if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
           m.roughness = 0.6; m.metalness = 0.0; m.envMapIntensity = 0.42;
           m.emissive = new THREE.Color(0x0a3048); m.emissiveIntensity = 0.06;
-          m.onBeforeCompile = (shader) => { const u = RIM(shader); if (u) u.value = splash.value; shader.uniforms.uSplash = splash; };
+          if (titan) {
+            m.customProgramCacheKey = () => 'spinotitan-sail';
+            m.onBeforeCompile = (shader) => {
+              shader.uniforms.uSplash = splash;
+              shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
+                #include <color_fragment>
+                float luma = dot(diffuseColor.rgb, vec3(0.30, 0.59, 0.11));
+                float warm = smoothstep(0.04, 0.22, diffuseColor.r - diffuseColor.b);
+                vec3 deep = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.18)) * vec3(0.55, 0.72, 0.82);
+                diffuseColor.rgb = mix(deep, vec3(0.0, 0.28, 0.42), warm);
+                diffuseColor.rgb += vec3(0.0, 0.12, 0.2) * warm;
+                diffuseColor.rgb += vec3(0.2, 0.7, 1.0) * uSplash * warm;`);
+              shader.fragmentShader = 'uniform float uSplash;\n' + shader.fragmentShader;
+            };
+          } else m.onBeforeCompile = (shader) => { const u = RIM(shader); if (u) u.value = splash.value; shader.uniforms.uSplash = splash; };
         }
       }
     });
@@ -62,6 +80,7 @@ export class SpinoMech {
     let sailTip = 0;
     for (let i = 1; i < attr0.count; i++) if (attr0.getY(i) > attr0.getY(sailTip)) sailTip = i;
     this._sailTip = sailTip;
+    sailY.value = Math.max(0.001, attr0.getY(sailTip));
     this.b = { pelvis: bones.hips, chest: bones.chest, neck: bones.neck, head: bones.head, jaw: bones.jaw };
     const box = new THREE.Box3().setFromObject(scene);
     const size = box.getSize(new THREE.Vector3());
@@ -213,6 +232,7 @@ export class SpinoMech {
     if (this.splash) this.splash.value = Math.max(splash, this.flash * 0.4);
     const plate = this.mats.plate;
     if (plate && plate.emissive) plate.emissive.setRGB(0.05 + splash * 0.7, 0.12 + splash * 0.22, 0.22);
+    if (this.sailMat) this.sailMat.emissiveIntensity = 1.15 + Math.sin(this.t * 3.2) * 0.4 + splash * 1.1;
     this.seatOnBack();
   }
 }

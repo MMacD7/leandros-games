@@ -253,7 +253,8 @@ export class Rider {
     if (this.bare && this.grip === 'neck') {
       // Hips on the hide, legs down both flanks, both hands on the base of the neck, face up.
       // The Giga's back is wide, so the same sit has to reach farther out or his feet plant on the hide.
-      const wide = this.mounted && this.mounted.def && (this.mounted.def.id === 'giga' || this.mounted.def.id === 'spinos' || this.mounted.def.id === 'trice' || this.mounted.def.id === 'carno' || this.mounted.def.id === 'ankys');
+      const id = this.mounted && this.mounted.def && this.mounted.def.id;
+      const wide = id === 'giga' || id === 'spinos' || id === 'spinotitan' || id === 'trice' || id === 'megatrike' || id === 'carno' || id === 'ankys' || id === 'lavaanky' || id === 'brachiotank';
       for (const g of L) {
         g.hip.rotation.set(wide ? -1.05 : -0.42, 0, g.s * (wide ? 1.42 : 1.05));
         g.knee.rotation.set(wide ? 1.45 : 0.95, 0, 0);
@@ -308,4 +309,25 @@ export class Rider {
     for (const a of this.arms) { a.sh.rotation.set(u < 1 ? -2.6 : -0.2, 0, a.s * (u < 1 ? 0.5 : 0.15)); a.el.rotation.set(-0.2, 0, 0); }
     if (u >= 1) { const R = this.arms[1]; R.sh.rotation.set(-2.5, 0, 0.55 + 0.35 * Math.sin(this.t * 9)); this.obj.position.y = ground + Math.abs(Math.sin(this.t * 5)) * 0.08; } }
   reset() { this.hips.position.y = 0.13; this.seatGroup.visible = true; this.popT = -1; }
+}
+
+// Same sit the SUPER DINOS use, including the five Real-garage giants that share those rigs.
+export function rideOpts(def, mech) {
+  if (!def || !mech || !mech.seat) return null;
+  const id = def.id;
+  const neck = (scaleOf, spread, shinOut) => ({ mech, scale: 1.55 / (mech.modelScale || scaleOf), spread, shinOut, saddle: false, grip: 'neck' });
+  const world = (spread, shinOut) => ({ mech, world: 1.55, spread, shinOut, saddle: false, grip: 'neck' });
+  if (def.kind === 'trex') return neck(4, 1.05, 0.05);
+  if (id === 'brachio' || id === 'brachiotank') return neck(8, 1.05, 0.08);
+  if (id === 'giga') return neck(6.5, 1.05, 0.05);
+  if (id === 'spinos' || id === 'spinotitan') return neck(8, 1.05, 0.05);
+  if (id === 'trice' || id === 'megatrike') return neck(5, 1.05, 0.05);
+  if (id === 'carno') return neck(5, 1.05, 0.05);
+  if (id === 'velo' || id === 'raptorpack') return { mech, scale: 1.35 / (mech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' };
+  if (id === 'ankys' || id === 'lavaanky') return world(1.2, 0.16);
+  if (id === 'stegos') return world(1.05, 0.08);
+  if (id === 'allo') return world(1.05, 0.05);
+  if (id === 'dilo' || id === 'pachy') return world(0.95, 0.04);
+  if (id === 'para') return world(1.0, 0.05);
+  return null;
 }
