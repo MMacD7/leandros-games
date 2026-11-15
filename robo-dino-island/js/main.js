@@ -10,7 +10,7 @@ import { Game } from './game.js';
 import { makeDino, UNROBO } from './game.js';
 import { Input } from './input.js';
 import { music } from './music.js';
-import { Rider } from './rider.js';
+import { Rider, rideOpts } from './rider.js';
 import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave, writeSave, statsFor } from './data.js';
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
@@ -427,7 +427,7 @@ tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
-const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (gMech.def.lion && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else gRider.unmount(); } else if (gMech.def.kind === 'trex' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 4), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'brachio' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'giga' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 6.5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'spinos' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'trice' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'carno' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'velo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.35 / (gMech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'ankys' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'stegos' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'allo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'dilo' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 0.95, shinOut: 0.04, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'pachy' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 0.95, shinOut: 0.04, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (gMech.def.id === 'para' && gMech.seat) { if (save.ride !== false) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.0, shinOut: 0.05, saddle: false, grip: 'neck' }); else gRider.unmount(); } else if (save.ride && !gMech.def.westie && !gMech.def.costume) gRider.mount(gMech); else gRider.unmount(); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); };
+const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (save.ride === false || gMech.def.westie || gMech.def.sea) gRider.unmount(); else if (gMech.def.lion && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else { const ro = rideOpts(gMech.def, gMech); if (ro) gRider.mountAt(gMech.seat, ro); else gRider.mount(gMech); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); } };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
 const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $('b-voice').setAttribute('aria-label', save.voice ? 'Announcer voice on' : 'Announcer voice off'); $('p-voice').textContent = save.voice ? '🗣️ Voice on' : '🗣️ Voice off'; };
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
@@ -567,19 +567,8 @@ function setGarageMech() {
   gMech = gMechs[def.id] || (gMechs[def.id] = makeDino(def, assets, false)); gScene.add(gMech.obj);
   gMech.obj.position.set(0, 0, 0); if (def.fly) gMech.obj.position.y = 1.2;
   if (save.ride !== false && !def.westie && !def.sea) {
-    if (def.kind === 'trex' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 4), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'brachio' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' });
-    else if (def.id === 'giga' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 6.5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'spinos' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 8), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'trice' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'carno' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.55 / (gMech.modelScale || 5), spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'velo' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 1.35 / (gMech.modelScale || 3.5), spread: 0.9, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'ankys' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.2, shinOut: 0.16, saddle: false, grip: 'neck' });
-    else if (def.id === 'stegos' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.08, saddle: false, grip: 'neck' });
-    else if (def.id === 'allo' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.05, shinOut: 0.05, saddle: false, grip: 'neck' });
-    else if (def.id === 'dilo' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 0.95, shinOut: 0.04, saddle: false, grip: 'neck' });
-    else if (def.id === 'pachy' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 0.95, shinOut: 0.04, saddle: false, grip: 'neck' });
-    else if (def.id === 'para' && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, world: 1.55, spread: 1.0, shinOut: 0.05, saddle: false, grip: 'neck' });
+    const ro = rideOpts(def, gMech);
+    if (ro) gRider.mountAt(gMech.seat, ro);
     else gRider.mount(gMech);
   } else gRider.unmount();
 }
@@ -685,10 +674,43 @@ function loop(now) {
     if (!gMech.roarT || titleT > gMech.roarT) { gMech.roarT = titleT + 6 + Math.random() * 3; if (gMech.roarT > 7) gMech.roar = 1.6; }
     gMech.roar = Math.max(0, (gMech.roar || 0) - dt); if (gRider.mounted) gRider.update(dt, { speedNow: 0, roar: gMech.roar, turn: 0 }); if (gMech.def.fly) gMech.obj.position.y = 1.5 + Math.sin(titleT * 2) * 0.2;
     const W = window.innerWidth, H = window.innerHeight, portrait = H > W, h = gMech.height, R = Math.max(gMech.def.dragon ? gMech.fitR * 0.62 : gMech.fitR, 6);
+    if (garageFrame && garageFrame.fit) {
+      // Fit the whole animal, head included, in the open band above the info panel.
+      // Distance comes from both height and width. The look target sits below the body
+      // so that band (not the screen center, which the panel covers) holds the dino.
+      gCam.clearViewOffset();
+      const y0 = gMech.obj.position.y;
+      const sc = gMech._fitScale || (gMech._fitScale = new THREE.Vector3());
+      if (gMech.rig) gMech.rig.getWorldScale(sc); else sc.set(1, 1, 1);
+      // Ankylo is scaled longer than it is tall. fitR follows the height scale, so the camera would sit inside the shell.
+      const stretch = Math.max(sc.x, sc.z) / Math.max(sc.y, 0.001);
+      const mid = y0 + h * 0.52;
+      const halfH = Math.max(0.9, h * 0.58);
+      const halfW = Math.max(gMech.fitR || 3, gMech.pack ? 3.6 : 2.4) * (stretch > 1.2 ? stretch * 1.15 : 1.05);
+      const vHalf = Math.tan(THREE.MathUtils.degToRad(gCam.fov) / 2), hHalf = vHalf * (W / H);
+      const bandTop = portrait ? 0.12 : 0.08, bandBot = portrait ? 0.36 : 0.84;
+      const band = bandBot - bandTop, bandCenter = (bandTop + bandBot) * 0.5;
+      const center = h < 4.2 ? Math.min(0.34, bandCenter + 0.04) : bandCenter;
+      const dist = Math.max(halfH / (vHalf * band * 0.92), halfW / (hHalf * 0.8), 4) * (garageFrame.zoom || 1);
+      const lookY = mid - (1 - 2 * center) * dist * vHalf;
+      // A low ankylo reads as a shell from above. Sit the camera at its shoulder so the legs, head and club show.
+      // lift drops the look target so a long low animal (the raptor pack) rises clear of the info panel.
+      // The tall-dino path already frames from `center`, so lift stays 0 there.
+      const low = h < 4.2;
+      const lookDrop = (garageFrame.lift || 0) * Math.max(h, 2);
+      gCam.position.set(dist * (low ? 1.05 : 0.58), (low ? y0 + h * 0.55 : lookY + halfH * 0.02) - lookDrop * 0.2, dist * (low ? 0.28 : 0.86));
+      gCam.lookAt(0, (low ? y0 + h * 0.42 : lookY) - lookDrop, 0);
+      // The garage fog fades out at 60 m. A tall dino needs a further camera, and would vanish into that fog.
+      if (gScene.fog) { gScene.fog.near = Math.max(18, dist * 0.5); gScene.fog.far = dist * 2.6; }
+      gScene.userData.ring.material.color.setHSL(gMech.real ? 0.06 : 0.52, 1, 0.55);
+      renderer.render(gScene, gCam); return;
+    }
+    if (gScene.fog) { gScene.fog.near = 20; gScene.fog.far = 60; }
     const t = Math.tan(THREE.MathUtils.degToRad(gCam.fov / 2)), dist = (R / (portrait ? t * gCam.aspect * 1.0 : Math.min(t * 0.95, t * gCam.aspect * 0.52)) * (portrait ? 1.0 : 0.8) + 2) * (garageFrame && garageFrame.zoom ? garageFrame.zoom : 1);
-    const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio', cy = h * (tall ? 0.85 : 0.5) + (gMech.def.fly ? 1.2 : 0);
+    const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio', cy = h * (tall ? 0.85 : 0.5) + (gMech.def.fly ? 1.2 : 0) - ((garageFrame && garageFrame.drop) || 0);
     gCam.position.set(dist * 0.62, cy + dist * (gMech.def.dragon ? 0.3 : gMech.def.fly ? 0.62 : 0.28), dist * 0.78); gCam.lookAt(0, cy, 0);
-    gCam.setViewOffset(W, H, portrait ? 0 : (0.5 - 0.28) * W, portrait ? (0.5 - 0.3) * H : 0, W, H);
+    const view = garageFrame && garageFrame.view != null ? garageFrame.view : 1;
+    gCam.setViewOffset(W, H, portrait ? 0 : (0.5 - 0.28) * W, portrait ? (0.5 - 0.3) * H * view : 0, W, H);
     gScene.userData.ring.material.color.setHSL(gMech.def.dragon ? 0.0 : gMech.real ? 0.06 : 0.52, 1, 0.5 + 0.2 * Math.sin(titleT * 3));
     renderer.render(gScene, gCam); return;
   }
@@ -772,4 +794,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 
 // test / debug hooks (no network, local only)
 function simulate(sec, dt0 = 1 / 30) { for (let t = 0; t < sec; t += dt0) { let dt = dt0; if (game.slowmo > 0) { game.slowmo -= dt; dt *= 0.28; } const inp = input.read(); if (screen === 'play') game.update(dt, inp); else if (screen === 'title') { game.mh.safe = true; for (const d of [game.player, ...game.enemies]) { if (d.breathT > 0) game.mh.updateBreath(d, dt); d.updateVisual(dt); } game.mh.updateTitle(dt); if (game.farm) game.farm.update(dt, true); } emitSmoke(dt); world.update(dt, camera.position, { x: game.player.pos.x, z: game.player.pos.z, scale: game.player.def.scale, clear: game.player.def.id === 'brachio' ? 12 : game.player.def.id === 'giga' ? 8 : game.player.def.id === 'spinos' ? 9 : game.player.def.id === 'trice' ? 6 : game.player.def.id === 'carno' ? 5 : game.player.def.id === 'velo' ? 4 : game.player.def.id === 'ankys' ? 5 : game.player.def.id === 'stegos' ? 5 : game.player.def.id === 'allo' ? 4 : game.player.def.id === 'dilo' ? 3 : game.player.def.id === 'pachy' ? 3 : game.player.def.id === 'para' ? 5 : 0 }); if (world.peak) peakAmbience(dt); fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog); } if (screen === 'play') updateHUD(dt0); }
-window.G = { drawRadar: () => { if (game && game.player) drawRadar(game.player); return eggRadarSnap; }, get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, audioCtx, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };
+window.G = { get mech() { return gMech; }, get renderer() { return renderer; }, drawRadar: () => { if (game && game.player) drawRadar(game.player); return eggRadarSnap; }, get farm() { return game.farm; }, sfx, FART_KINDS, renderFart, audioCtx, defs: () => DINOS, voice, hud, setLevel, travel, get level() { return level; }, get world() { return world; }, worlds, get gRider() { return gRider; }, get gCam() { return gCam; }, frameGarage: (f) => { garageFrame = f; }, Rider, music, get mh() { return game.mh; }, sim: simulate, get game() { return game; }, get save() { return save; }, get screen() { return screen; }, get quality() { return Q; }, get fps() { return measured; }, get frames() { return frames; }, get cpuMs() { return cpuMs; }, show, garage: (i, tab) => { const d = typeof i === 'string' ? DINOS.find(x => x.id === i) : DINOS[i]; garageFrom = 'title'; show('garage'); const superOne = d && SUPER_SET.has(d.id); gList = superOne ? 'super' : d.sea ? 'sea' : d.westie ? 'dogs' : d.dragon ? 'dragon' : d.real ? 'real' : 'robo'; gTab = tab || gList; gIdx = Math.max(0, gListOf().indexOf(d)); refreshGarage(); }, superIds: SUPER_ORDER, realIds: () => G_REALS.map(d => d.id), applyQuality: t => { autoQ = false; applyQuality(TIERS[t]); }, TIERS, renderer, THREE };

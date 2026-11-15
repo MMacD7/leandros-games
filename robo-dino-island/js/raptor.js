@@ -1,6 +1,7 @@
 // v5.9.3 Velociraptor. Meshy model from the approved concept, rigged in this game.
 import * as THREE from './vendor/three.bundle.min.js';
 import { cloneRaptor } from './models.js';
+import { stepPack } from './roid3d.js';
 
 const RIM = (shader) => {
   shader.uniforms.uPounce = { value: 0 };
@@ -36,6 +37,7 @@ export class RaptorMech {
     scene.traverse(o => {
       if (o.isBone) bones[o.name] = o;
       if (o.isMesh) {
+        if (def.id === 'raptorpack') o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone();
         o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; o.raycast = () => {};
         meshes.push(o);
         const mats = [].concat(o.material);
@@ -200,6 +202,7 @@ export class RaptorMech {
     this.roar = Math.max(0, (this.roar || 0) - dt);
     this.flash = Math.max(0, this.flash - dt * 4);
     if (this.pounce) this.pounce.value = Math.max(pounce, this.flash * 0.4);
+    stepPack(this, dt, speed, o);
     const plate = this.mats.plate;
     if (plate && plate.emissive) plate.emissive.setRGB(0.05, 0.08 + pounce * 0.15, 0.16 + pounce * 0.55);
     this.seatOnBack();
