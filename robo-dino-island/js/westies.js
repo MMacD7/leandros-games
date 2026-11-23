@@ -13,8 +13,9 @@ import { voice } from './voice.js';
 import { buildWestie } from './westie.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
-const DOG_S = 1; // mesh shoulder is already the v5.10.4 size (60% of v5.10.3)
-const HOP = 0.096;  // hops scaled with the smaller dogs
+const DOG_S = 1; // mesh shoulder is the v5.10.4 size (60% of v5.10.3). Farm, ocean, city and peak keep this.
+const ISLAND_S = 1 / 0.6; // Dino Island only: back to the pre-v5.10.4 size. v5.10.4's 0.6x left them under a ridden ankle.
+const HOP = 0.096;  // local hop; world height follows whichever root scale that visit uses
 export const POOP_LINE = "Look it's Ricky and Bobby, they are going to POOP!";
 // v5: put the scuba gear on (ocean) or take it off (land). The cape comes off underwater (the tank sits there).
 export function setScuba(w, on) { on = !!on; if (w.scubaOn === on) return; w.scubaOn = on; for (const m of w.scuba) m.visible = on; w.cape.visible = !on; }
@@ -79,7 +80,7 @@ export class Westies {
     for (const d of this.dogs) d.off = !!(P.def.westie && d.name.toLowerCase() === P.def.id);
     this.reason = reason; this.count++; this.introduced = false; this.barkQ = []; this.danced = 0; this.flew = false; this.log.push(reason); this.target = null; this.helped = 0;
     this.sea = !!(g.world && g.world.ocean); // v5 Deep Sea: SCUBA DOGS
-    this.S = g.farm ? 1.15 : DOG_S; // v5.1: farm-dog size next to Leandro (2.5 is dino scale)
+    this.S = g.farm ? 1.15 : g.level === 'jungle' ? ISLAND_S : DOG_S; // farm stays next to Leandro; only Jungle Island uses the restored size
     for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(this.S * (d.mul || 1)); d.bark = 0; d.hop = 0; d.spin = 0; d.poopT = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
     if (reason === 'button') { // v5 HELPER MODE: swoop in beside the player and follow
       this.helper = true; this.stage = null; const f = P.forward(V()), side = V(-f.z, 0, f.x);
@@ -169,8 +170,8 @@ export class Westies {
     this.dogs.forEach((d, i) => {
       if (d.off) { d.root.visible = false; return; }
       d.root.visible = true; setScuba(d, false);
-      const s = i ? 1 : -1, behind = (P.radius || 2) + 1.32;
-      const gx = P.pos.x - f.x * behind + side.x * s * 0.96, gz = P.pos.z - f.z * behind + side.z * s * 0.96;
+      const s = i ? 1 : -1, behind = (P.radius || 2) + 1.05 + 0.34 * ISLAND_S;
+      const gx = P.pos.x - f.x * behind + side.x * s * (0.72 + 0.28 * ISLAND_S), gz = P.pos.z - f.z * behind + side.z * s * (0.72 + 0.28 * ISLAND_S);
       let dx = gx - d.pos.x, dz = gz - d.pos.z, dist = Math.hypot(dx, dz);
       if (!d.placed) { d.pos.set(gx, 0, gz); d.placed = true; dist = 0; }
       if (dist > 32) { d.pos.set(gx, 0, gz); dist = 0; }
@@ -178,11 +179,11 @@ export class Westies {
         const sp = dist > 10 ? 16 : dist > 4 ? 9 : 5, step = Math.min(dist, sp * dt);
         d.pos.x += dx / dist * step; d.pos.z += dz / dist * step; d.yaw = Math.atan2(dx, dz);
       }
-      const pd = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z), minD = (P.radius || 1) + 0.69;
+      const pd = Math.hypot(d.pos.x - P.pos.x, d.pos.z - P.pos.z), minD = (P.radius || 1) + 0.45 + 0.22 * ISLAND_S;
       if (pd < minD && pd > 0.01) { d.pos.x = P.pos.x + (d.pos.x - P.pos.x) / pd * minD; d.pos.z = P.pos.z + (d.pos.z - P.pos.z) / pd * minD; }
-      if (g.world.collide) g.world.collide(d.pos, 0.17, false);
+      if (g.world.collide) g.world.collide(d.pos, 0.17 * ISLAND_S, false);
       d.pos.y = this.ground(d.pos); d.root.position.copy(d.pos); d.root.rotation.y = d.yaw;
-      d.root.scale.setScalar(this.S * (d.mul || 1));
+      d.root.scale.setScalar(ISLAND_S * (d.mul || 1));
       const going = dist > 0.35 || moving;
       d.ph = (d.ph || 0) + dt * (going ? (dist > 6 ? 18 : 12) : 3);
       const sw = Math.sin(d.ph), amp = going ? (dist > 6 ? 0.9 : 0.55) : 0.04;
@@ -195,7 +196,7 @@ export class Westies {
         d.tail.rotation.z = 0.15; d.head.rotation.x = 0.25; d.jaw.rotation.x = 0.1;
         if (!d.pooped && d.poopT < 0.85) {
           d.pooped = true; sfx.fart && sfx.fart('tiny', 0.8);
-          const bx = d.pos.x - Math.sin(d.yaw) * 0.17, bz = d.pos.z - Math.cos(d.yaw) * 0.17;
+          const bx = d.pos.x - Math.sin(d.yaw) * 0.17 * ISLAND_S, bz = d.pos.z - Math.cos(d.yaw) * 0.17 * ISLAND_S;
           for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2;
             g.fx.glow.spawn({ pos: { x: bx + Math.cos(a) * 0.06, y: d.pos.y + 0.04, z: bz + Math.sin(a) * 0.06 }, vel: { x: Math.cos(a) * 0.15, y: 0.18, z: Math.sin(a) * 0.15 }, size: 0.06, life: 0.7, r: 0.45, g: 0.2, b: 0.06, alpha: 0.95, grav: 1.1 }); }
           g.fx.glow.spawn({ pos: { x: bx, y: d.pos.y + 0.08, z: bz }, vel: { x: -Math.sin(d.yaw) * 0.12, y: 0.33, z: -Math.cos(d.yaw) * 0.12 }, size: 0.12, life: 0.5, r: 0.8, g: 0.78, b: 0.55, alpha: 0.5, grav: -0.15 });
