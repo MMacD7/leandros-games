@@ -73,6 +73,8 @@ export class Rider {
       const br = add(head, new THREE.BoxGeometry(0.07, 0.016, 0.02), m.hair, s * 0.078, 0.282, 0.178); br.rotation.z = s * -0.18;
       const ch = add(head, new THREE.SphereGeometry(0.04, 8, 6), m.cheek, s * 0.12, 0.15, 0.16); ch.scale.set(1, 0.6, 0.4); }
     add(head, new THREE.SphereGeometry(0.03, 8, 6), m.skin, 0, 0.18, 0.205);
+    // Fallback cap for the blocky head. The skinned cap is parented to the GLB head in attachSkin.
+    const blockyCap = this.makeCap(); blockyCap.scale.setScalar(0.92); head.add(blockyCap);
     // big smile: dark mouth with a row of teeth
     const mouth = add(head, new THREE.CircleGeometry(0.085, 20, Math.PI, Math.PI), m.mouth, 0, 0.125, 0.198); mouth.rotation.x = -0.25;
     const teeth = add(head, new THREE.PlaneGeometry(0.15, 0.03), m.white, 0, 0.112, 0.205); teeth.rotation.x = -0.25;
@@ -118,8 +120,30 @@ export class Rider {
       this.clips[c.name] = a;
     }
     this.skinned = true;
+    const headBone = this.bone('Head');
+    if (headBone && !this.cap) {
+      this.cap = this.makeCap();
+      headBone.add(this.cap);
+      this.cap.position.set(0, 0, 0);
+    }
     this.alignAvatar();
     return true;
+  }
+  // Solid mid-blue baseball cap sized to the mixamo head bone (metres). No logo, letters, or numbers.
+  // Head bone is at the skull base: hair tops out near y=0.36 and is widest (~0.23) around y=0.16.
+  makeCap() {
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2a6ad8, roughness: 0.62, metalness: 0.02, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    const g = new THREE.Group(); g.name = 'blue-cap';
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(0.2, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat);
+    crown.position.y = 0.19;
+    // Curved visor: front half of a flattened sphere, sitting on the brow so the eyes stay visible.
+    const brim = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 8, 0, Math.PI, 0, Math.PI / 2), mat);
+    brim.scale.set(1.02, 0.18, 0.55); brim.position.set(0, 0.2, 0.16); brim.rotation.x = 0.28;
+    const button = new THREE.Mesh(new THREE.SphereGeometry(0.026, 10, 8), mat);
+    button.position.y = 0.395;
+    g.add(crown, brim, button);
+    g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.renderOrder = 3; } });
+    return g;
   }
   alignAvatar() {
     if (!this.avatar || !this._hipRest) return;

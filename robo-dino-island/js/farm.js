@@ -982,10 +982,7 @@ export class KidMech {
   constructor(def) {
     this.def = def; this.real = true; this.quad = false; this.flyer = false; this.kid = true; this.phase = 0; this.flash = 0; this.ko = 0; this.height = 1.9; this.b = {}; this.sockets = {}; this.t = 0;
     const R = this.R = new Rider(); R.seatGroup.visible = false; R.hips.position.y = 0.7; R.spread = 0.85; R.shinOut = 0.35; this.obj = new THREE.Group(); this.obj.name = 'kid'; this.obj.add(R.obj);
-    const straw = new THREE.MeshStandardMaterial({ color: 0xe8c65a, roughness: 0.9 }), band = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.7 });
-    const hat = this.hat = new THREE.Group(); hat.position.set(0, 0.4, -0.01); hat.rotation.x = -0.14; R.head.add(hat);
-    const add = (g, geo, m, y) => { const o = new THREE.Mesh(geo, m); o.position.y = y; o.castShadow = true; g.add(o); return o; };
-    add(hat, CYL(0.37, 0.39, 0.025, 22), straw, 0); add(hat, CYL(0.2, 0.23, 0.18, 18), straw, 0.1); add(hat, CYL(0.236, 0.236, 0.05, 18), band, 0.04);
+    // Leandro's blue baseball cap lives on the shared Rider, so the farm, the ride, and the garage match.
     // mud splotches (shown as Leandro gets muddier)
     const mm = new THREE.MeshStandardMaterial({ color: 0x5a3818, roughness: 0.4 }); this.splotch = [];
     const spots = [[R.legs[0].knee, 0.04, -0.12, 0.05], [R.legs[1].knee, -0.04, -0.2, 0.05], [R.legs[0].foot, 0, 0.02, 0.12], [R.legs[1].foot, 0, 0.02, 0.12], [R.hips, 0.12, 0.02, 0.14], [R.torso, -0.1, 0.12, 0.13], [R.legs[1].knee, 0.05, -0.05, 0.05], [R.torso, 0.12, 0.3, 0.13], [R.head, 0.12, 0.13, 0.17]];
@@ -1010,8 +1007,6 @@ export class KidMech {
       R.legs.forEach((g, i) => { const ss = i ? -s : s; g.hip.rotation.set(-ss * (0.65 + 0.3 * run) * k, 0, g.s * 0.05); g.knee.rotation.set(0.05 + Math.max(0, ss) * (0.8 + 0.6 * run) * k, 0, 0); g.foot.rotation.set(0, 0, 0); });
       R.arms.forEach((a, i) => { const ss = i ? s : -s; a.sh.rotation.set(-ss * (0.6 + 0.5 * run) * k - 0.05, 0, a.s * (0.1 + 0.04 * Math.sin(t * 1.7))); a.el.rotation.set(-0.25 - 0.7 * run * k, 0, 0); });
     }
-    const headBone = R.bone('Head');
-    if (R.skinned && this.hat && headBone && this.hat.parent !== headBone) { headBone.add(this.hat); this.hat.position.set(0, 0.09, 0.02); this.hat.scale.setScalar(0.55); }
     R.hips.position.y = 0.7 + Math.abs(Math.cos(this.phase)) * 0.05 * k + (k < 0.05 ? Math.sin(t * 2) * 0.006 : 0); R.torso.rotation.set(0.05 * k + 0.15 * run, 0, 0); R.head.rotation.set(-0.08 * run, k < 0.05 ? Math.sin(t * 0.6) * 0.3 : 0, 0); R.root.position.y = 0;
     if (this.tootT > 0) { const u = 1 - this.tootT / 0.8; R.torso.rotation.x = 0.55 * Math.sin(Math.min(1, u * 2) * Math.PI * 0.5); R.hips.position.y -= 0.06; for (const a of R.arms) { a.sh.rotation.set(-0.7, 0, a.s * 0.2); a.el.rotation.set(-0.3, 0, 0); } R.head.rotation.x = -0.3; }
     if (this.squishT > 0) { R.head.rotation.x = 0.5; for (const a of R.arms) { a.sh.rotation.set(-0.3, 0, a.s * (1.2 + Math.sin(t * 25) * 0.3)); a.el.rotation.set(-0.4, 0, 0); } }
