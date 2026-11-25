@@ -177,7 +177,9 @@ vec4 sp = vSplat; sp /= max(1e-3, sp.x+sp.y+sp.z+sp.w);
 vec2 wuv = vWP.xz;
 vec3 cg = texture2D(tG, wuv*0.09).rgb*0.62 + texture2D(tG, wuv*0.023 + 0.37).rgb*0.38;
 float gl = dot(cg, vec3(0.3,0.59,0.11)); cg = mix(cg, gl * vec3(0.55,1.05,0.22) * 1.25, 0.8);
+cg = mix(cg, mix(vec3(0.184,0.604,0.235), vec3(0.243,0.784,0.353), clamp(gl, 0.0, 1.0)), 0.42);
 vec3 cs = texture2D(tS, wuv*0.12).rgb * vec3(1.08,1.0,0.86);
+cs = mix(cs, vec3(0.910,0.863,0.784), 0.35);
 vec3 cr = sp.z > 0.02 ? triR(0.045) * vec3(0.78,0.74,0.72) : vec3(0.0);
 vec3 cd = texture2D(tD, wuv*0.11).rgb * vec3(1.05,0.95,0.8);
 #ifdef PEAK
@@ -434,13 +436,13 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
       const MAX = count, inst = new Float32Array(MAX * 4), tile = 140;
       for (let i = 0; i < MAX; i++) { inst[i * 4] = r() * tile; inst[i * 4 + 1] = r() * tile; inst[i * 4 + 2] = r() * 6.283; inst[i * 4 + 3] = 0.75 + r() * 0.6; }
       ig.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4)); ig.instanceCount = MAX;
-      const u = this.hmUniforms({ uTime: this.windU.uTime, uCenter: { value: new THREE.Vector3() }, uTile: { value: tile }, uRadius: { value: 60 }, uPlayer: { value: new THREE.Vector4(0, 0, 0, 3) } });
+      const u = this.hmUniforms({ uTime: this.windU.uTime, uCenter: { value: new THREE.Vector3() }, uTile: { value: tile }, uRadius: { value: 60 }, uPlayer: { value: new THREE.Vector4(0, 0, 0, 3) }, uHole0: { value: new THREE.Vector3() }, uHole1: { value: new THREE.Vector3() } });
       const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }); const peak = this.peak, ocean = this.ocean, farm = this.farm;
       mat.customProgramCacheKey = () => (peak ? 'grass-peak-' : ocean ? 'grass-ocean-' : farm ? 'grass-farm-' : 'grass-jungle-') + isFlower;
       mat.onBeforeCompile = sh => {
         Object.assign(sh.uniforms, u);
         sh.vertexShader = sh.vertexShader.replace('#include <common>', `#include <common>
-attribute vec4 aInst; uniform sampler2D uHM; uniform float uS, uN, uTime, uTile, uRadius; uniform vec3 uCenter; uniform vec4 uPlayer; varying float vY; varying float vVar;`)
+attribute vec4 aInst; uniform sampler2D uHM; uniform float uS, uN, uTime, uTile, uRadius; uniform vec3 uCenter; uniform vec4 uPlayer; uniform vec3 uHole0; uniform vec3 uHole1; varying float vY; varying float vVar;`)
           .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);')
           .replace('#include <begin_vertex>', `
 vec2 base = aInst.xy;
@@ -451,6 +453,9 @@ float dens = ${isFlower ? 'hm.b' : 'hm.g'};
 float hsh = fract(sin(dot(base, vec2(12.9898, 78.233))) * 43758.5453);
 float dd = length(wp - uCenter.xz);
 float sc = aInst.w * smoothstep(hsh - 0.08, hsh + 0.08, dens) * (1.0 - smoothstep(uRadius * 0.55, uRadius, dd));
+float hA = length(wp - uHole0.xy); float hB = length(wp - uHole1.xy);
+if (uHole0.z > 0.4) sc *= smoothstep(uHole0.z * 0.35, uHole0.z, hA);
+if (uHole1.z > 0.4) sc *= smoothstep(uHole1.z * 0.35, uHole1.z, hB);
 float c = cos(aInst.z), s = sin(aInst.z);
 vec3 p = position * vec3(1.0, (0.6 + 0.45 * dens) * ${this.ocean ? (isFlower ? '1.6' : '2.8') : '1.0'}, 1.0) * sc;
 p = vec3(c * p.x - s * p.z, p.y, s * p.x + c * p.z);
@@ -574,7 +579,12 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
     if (this.farm) updateFarmWorld(this, dt);
     // grass center slightly ahead of camera toward player so the field fills the view
     const cx = lerp(cam.x, player.x, 0.7), cz = lerp(cam.z, player.z, 0.7);
-    for (const g of [this.grass, this.flowers]) { g.u.uCenter.value.set(cx, 0, cz); g.u.uPlayer.value.set(player.x, 0, player.z, 3.2 * (player.scale || 1)); }
+    const holes = this.grassHoles || [];
+    for (const g of [this.grass, this.flowers]) {
+      g.u.uCenter.value.set(cx, 0, cz); g.u.uPlayer.value.set(player.x, 0, player.z, 3.2 * (player.scale || 1));
+      const a = holes[0], b = holes[1];
+      if (g.u.uHole0) { g.u.uHole0.value.set(a ? a.x : 0, a ? a.z : 0, a ? a.r : 0); g.u.uHole1.value.set(b ? b.x : 0, b ? b.z : 0, b ? b.r : 0); }
+    }
     this.lodTimer -= dt; if (this.lodTimer <= 0) { this.lodTimer = 0.4; this.updateLOD(cam, player); }
     this.baseRing.material.color.setHSL(0.52, 1, 0.5 + 0.15 * Math.sin(this.time * 3));
     if (this.beam) { const d = Math.hypot(cam.x - BASE.x, cam.z - BASE.z); this.beam.material.opacity = 0.2 * smooth(40, 120, d); this.beam.visible = d > 40; }

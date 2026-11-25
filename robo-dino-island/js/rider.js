@@ -169,7 +169,20 @@ export class Rider {
       if (on) a.timeScale = n === 'Running' ? 1.15 : 1;
     }
     if (name) this.mixer.update(dt);
-    else for (const n in this.restQ) this.skinBones[n].quaternion.copy(this.restQ[n]);
+    else {
+      for (const n in this.restQ) this.skinBones[n].quaternion.copy(this.restQ[n]);
+      this.idleT = (this.idleT || 0) + dt;
+      const breathe = Math.sin(this.idleT * 1.7) * 0.045;
+      this.bendBone('mixamorig:Spine', 0.08 + breathe, 0, 0);
+      this.bendBone('mixamorig:Spine1', 0.05 + breathe * 0.6, 0, 0);
+      this.bendBone('mixamorig:LeftArm', 0.35, 0.1, 1.25);
+      this.bendBone('mixamorig:RightArm', 0.35, -0.1, -1.25);
+      this.bendBone('mixamorig:LeftForeArm', -0.55, 0, 0);
+      this.bendBone('mixamorig:RightForeArm', -0.55, 0, 0);
+      this.bendBone('mixamorig:LeftUpLeg', -0.08, 0, 0.04);
+      this.bendBone('mixamorig:RightUpLeg', -0.08, 0, -0.04);
+      this.bendBone('mixamorig:Head', -0.04, Math.sin(this.idleT * 0.45) * 0.08, 0);
+    }
     if (this.avatar && this._hipRest) this.avatar.position.set(-this._hipRest.x, 0, -this._hipRest.z);
     if (this.cheerT > 0) this.bendBone('mixamorig:RightArm', 2.4, 0, -0.2);
   }
