@@ -83,14 +83,14 @@ function mats() {
   MAT = { vc: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }),
     vcD: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, side: THREE.DoubleSide }),
     mud: new THREE.MeshStandardMaterial({ color: 0x5a3818, roughness: 0.22, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
-    poop: new THREE.MeshStandardMaterial({ color: 0x7a4a22, roughness: 0.35, metalness: 0 }),
+    poop: new THREE.MeshStandardMaterial({ color: 0x8a5530, roughness: 0.6, metalness: 0, emissive: 0x2a1408, emissiveIntensity: 0.15 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xffc22a, roughness: 0.18, metalness: 0.9, emissive: 0x7a4a00, emissiveIntensity: 0.6 }),
     eyes: new THREE.MeshBasicMaterial({ vertexColors: true }),
     print: new THREE.MeshStandardMaterial({ color: 0x4a2c14, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }),
   };
   return MAT;
 }
-function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
 // a "frame" so props can be built in local coords (x right, y up, z forward) then placed + turned
 class Batch {
   constructor() { this.list = []; this.m = new THREE.Matrix4(); }
@@ -238,10 +238,10 @@ export function buildFarm(W) {
     for (let i = 0; i < 3; i++) { const d = new THREE.Mesh(mergeGeometries([C(SPH(0.32, 10, 8), i ? 0xf6f2e6 : 0x8a6a3a, 0, 0.18, 0, 1, 0.7, 1.35), C(SPH(0.18, 8, 6), i ? 0xf6f2e6 : 0x2a6a3a, 0, 0.48, 0.32), C(CONE(0.07, 0.2, 6), 0xf2a020, 0, 0.45, 0.55, 1, 1, 1, Math.PI / 2, 0, 0), C(SPH(0.03, 4, 3), 0x111111, 0.1, 0.52, 0.42), C(SPH(0.03, 4, 3), 0x111111, -0.1, 0.52, 0.42), C(CONE(0.12, 0.25, 5), i ? 0xf6f2e6 : 0x8a6a3a, 0, 0.32, -0.45, 1, 1, 1, -1.2, 0, 0)]), M.vc);
       d.scale.setScalar(1.3); root.add(d); F.ducks.push({ m: d, a: i * 2.1, r: 5 + i * 2, s: 0.25 + i * 0.07 }); } }
   // --- the welcome sign ---
-  { const s = FARM.sign, y = gy(s.x, s.z); const tex = canvasTex(512, 200, (g, w, h) => { g.fillStyle = '#8b5a2b'; g.fillRect(0, 0, w, h); g.strokeStyle = '#5a3a1a'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
-      for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(60,30,10,0.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(10, 30 + i * 30); g.bezierCurveTo(150, 20 + i * 30, 350, 40 + i * 30, 500, 28 + i * 30); g.stroke(); }
-      g.textAlign = 'center'; g.font = 'bold 64px Arial Black, Arial, sans-serif'; g.lineWidth = 8; g.strokeStyle = '#3a1e08'; g.fillStyle = '#ffd23a'; g.strokeText('FARTY POOP', w / 2, 88); g.fillText('FARTY POOP', w / 2, 88);
-      g.fillStyle = '#ffffff'; g.strokeText('FARM', w / 2, 168); g.fillText('FARM', w / 2, 168); });
+  { const s = FARM.sign, y = gy(s.x, s.z); const tex = canvasTex(1024, 400, (g, w, h) => { g.fillStyle = '#8b5a2b'; g.fillRect(0, 0, w, h); g.strokeStyle = '#5a3a1a'; g.lineWidth = 20; g.strokeRect(10, 10, w - 20, h - 20);
+      for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(60,30,10,0.35)'; g.lineWidth = 4; g.beginPath(); g.moveTo(20, h * (0.16 + i * 0.13)); g.bezierCurveTo(w * 0.3, h * (0.1 + i * 0.13), w * 0.7, h * (0.2 + i * 0.13), w - 20, h * (0.14 + i * 0.13)); g.stroke(); }
+      g.textAlign = 'center'; g.font = 'bold ' + Math.round(h * 0.28) + 'px ui-rounded, Arial Black, sans-serif'; g.lineWidth = 16; g.strokeStyle = '#3a1e08'; g.fillStyle = '#ffd23a'; g.strokeText('FARTY POOP', w / 2, h * 0.42); g.fillText('FARTY POOP', w / 2, h * 0.42);
+      g.fillStyle = '#ffffff'; g.strokeText('FARM', w / 2, h * 0.78); g.fillText('FARM', w / 2, h * 0.78); });
     const sg = new THREE.Group(); sg.position.set(s.x, y, s.z); sg.rotation.y = 0.15;
     const front = new THREE.Mesh(new THREE.PlaneGeometry(4.3, 1.68), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 })); front.position.set(0, 2.4, 0.09); sg.add(front);
     const back = new THREE.Mesh(C(BOX(4.4, 1.75, 0.15), 0x7a4a22, 0, 2.4, 0), M.vc); sg.add(back); for (const x of [-1.8, 1.8]) sg.add(new THREE.Mesh(C(BOX(0.2, 2.6, 0.2), 0x6b4a2a, x, 1.3, -0.1), M.vc));
@@ -645,9 +645,10 @@ export class FarmLife {
   // v5.2: a BIG bouncy cartoon green fart cloud (puffy balls that pop out fast then billow) + little rising bubbles
   cloud(p, dir, n = 8, big = 1) { const fx = this.fx; this.n.clouds = (this.n.clouds || 0) + 1;
     for (let i = 0; i < fx.n(n * 1.3); i++) { const g = Math.random(); fx.smoke.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.4 * big, y: p.y + (Math.random() - 0.5) * 0.4 * big, z: p.z + (Math.random() - 0.5) * 0.4 * big },
-      vel: { x: dir.x * (2 + Math.random() * 3) * big + (Math.random() - 0.5) * 2 * big, y: 0.6 + Math.random() * 1.4, z: dir.z * (2 + Math.random() * 3) * big + (Math.random() - 0.5) * 2 * big }, size: 0.7 * big, size1: 3.4 * big, life: 1.6 + Math.random() * 0.8, r: 0.5 + g * 0.25, g: 0.85 + g * 0.1, b: 0.2 + g * 0.1, alpha: 0.8, drag: 2.4, rv: (Math.random() - 0.5) * 3, fadeIn: 0.03 }); }
-    for (let i = 0; i < fx.n(6 * big); i++) fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.6 * big, y: p.y, z: p.z + (Math.random() - 0.5) * 0.6 * big }, vel: { x: dir.x * 1.5 + (Math.random() - 0.5) * 1.2, y: 1.2 + Math.random() * 1.6, z: dir.z * 1.5 + (Math.random() - 0.5) * 1.2 }, size: 0.12 + Math.random() * 0.12, size1: 0.2, life: 1.2 + Math.random() * 0.6, r: 0.75, g: 1.2, b: 0.4, alpha: 0.75, drag: 1, grav: -0.5 }); // little bubbles
-    fx.ring(p, 1.2 * big, 0x9be04a); }
+      vel: { x: dir.x * (2 + Math.random() * 3) * big + (Math.random() - 0.5) * 2 * big, y: 0.6 + Math.random() * 1.4, z: dir.z * (2 + Math.random() * 3) * big + (Math.random() - 0.5) * 2 * big }, size: 0.7 * big, size1: 3.4 * big, life: 1.6 + Math.random() * 0.8, r: 0.83, g: 0.94, b: 0.24, alpha: 0.85, drag: 2.4, rv: (Math.random() - 0.5) * 3, fadeIn: 0.03 }); }
+    for (let i = 0; i < fx.n(3); i++) fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.3 * big, y: p.y + 0.2, z: p.z + (Math.random() - 0.5) * 0.3 * big }, vel: { x: (Math.random() - 0.5) * 0.4, y: 1.4, z: (Math.random() - 0.5) * 0.4 }, size: 0.05, size1: 0.16, life: 0.7, r: 1.4, g: 1.4, b: 1.35, alpha: 0.9, grav: -0.2 });
+    for (let i = 0; i < fx.n(4 * big); i++) fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.6 * big, y: p.y, z: p.z + (Math.random() - 0.5) * 0.6 * big }, vel: { x: dir.x * 1.5 + (Math.random() - 0.5) * 1.2, y: 1.2 + Math.random() * 1.6, z: dir.z * 1.5 + (Math.random() - 0.5) * 1.2 }, size: 0.1, size1: 0.18, life: 1.1, r: 1.0, g: 0.82, b: 0.23, alpha: 0.8, drag: 1, grav: -0.4 });
+    fx.ring(p, 1.2 * big, 0xa8d83a); }
   fartFrom(a, v = 1, trail = false) {
     this.n.farts++; const near = clamp(1.25 - this.camDist(a.pos) / 50, 0, 1); sfx.fart(pick(a.K.farts), v * near * (a.kind === 'chicken' ? 0.7 : 1));
     const p = a.worldPt(a.rear), back = V(-Math.sin(a.yaw), 0, -Math.cos(a.yaw)); this.cloud(p, back, trail ? 14 : 9, a.kind === 'chicken' ? 0.5 : a.kind === 'cow' || a.kind === 'horse' ? 1.2 : 0.85); this.emote('stink', a, 1, p);

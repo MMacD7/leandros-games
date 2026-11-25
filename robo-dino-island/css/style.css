@@ -1,7 +1,7 @@
 :root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); --cyan: #3de8ff; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1a24; overscroll-behavior: none; touch-action: none; position: fixed; inset: 0;
-  font-family: -apple-system, "SF Pro Rounded", "Segoe UI", Roboto, system-ui, sans-serif; color: #fff; }
+  font-family: ui-rounded, "SF Pro Rounded", "Nunito", -apple-system, system-ui, sans-serif; color: #fff; }
 canvas#c { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; touch-action: none; }
 .hidden { display: none !important; }
 button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; touch-action: manipulation; }
@@ -240,7 +240,7 @@ body.peak .logo i { color: #ffb08a; }
 @media (orientation: portrait) { #ver-row { left: calc(var(--sal) + 10px); justify-content: space-between; } }
 @media (max-height: 430px) { .newcall { font-size: 11px; padding: 3px 8px; } }
 /* v4.1d: 🐶 RICKY & BOBBY summon button: left of the action cluster in landscape, above it in portrait */
-.rb-btn { position: absolute; z-index: 3; right: calc(var(--sar) + 278px); bottom: calc(var(--sab) + 16px); width: 96px; height: 96px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; overflow: hidden; pointer-events: auto; touch-action: none;
+.rb-btn { position: absolute; z-index: 3; right: calc(var(--sar) + 12px); top: calc(var(--sat) + 178px); bottom: auto; width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; overflow: hidden; pointer-events: auto; touch-action: none;
   background: radial-gradient(circle at 35% 30%, #fff6e0, #f0b84a 45%, #9a4a10); border: 3px solid #fff3c0; box-shadow: 0 0 16px rgba(255,200,80,.7), 0 4px 10px rgba(0,0,0,.5); }
 .rb-btn .rb-ic { font-size: 34px; line-height: 1; position: relative; } .rb-btn b { font-size: 10.5px; font-weight: 900; line-height: 1.05; text-align: center; text-shadow: 0 1px 2px #000; position: relative; }
 .rb-btn em { position: absolute; bottom: 6px; font-style: normal; font-size: 11px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px #000; }
@@ -248,8 +248,8 @@ body.peak .logo i { color: #ffb08a; }
 .rb-btn.cool { filter: saturate(.5); } .rb-btn.here { animation: rbHere .5s ease-in-out infinite alternate; }
 @keyframes rbHere { to { box-shadow: 0 0 28px 8px rgba(255,230,120,.95), 0 4px 10px rgba(0,0,0,.5); } }
 .rb-btn:active { transform: scale(.94); }
-@media (orientation: portrait) { .rb-btn { right: calc(var(--sar) + 18px); bottom: calc(var(--sab) + 214px); width: 84px; height: 84px; } .rb-btn .rb-ic { font-size: 30px; } }
-@media (max-height: 430px) { .rb-btn { right: calc(var(--sar) + 236px); width: 84px; height: 84px; } .rb-btn .rb-ic { font-size: 30px; } }
+@media (orientation: portrait) { .rb-btn { right: calc(var(--sar) + 12px); top: calc(var(--sat) + 168px); bottom: auto; width: 72px; height: 72px; } .rb-btn .rb-ic { font-size: 28px; } }
+@media (max-height: 430px) { .rb-btn { right: calc(var(--sar) + 12px); top: calc(var(--sat) + 118px); width: 64px; height: 64px; } .rb-btn .rb-ic { font-size: 26px; } .rb-btn b { font-size: 9px; } }
 @media (min-width: 1000px) and (min-height: 700px) and (orientation: landscape) { .rb-btn { right: calc(var(--sar) + 370px); bottom: calc(var(--sab) + 22px); width: 120px; height: 120px; } .rb-btn .rb-ic { font-size: 44px; } .rb-btn b { font-size: 13px; } }
 @media (min-width: 700px) and (orientation: portrait) { .rb-btn { bottom: calc(var(--sab) + 260px); width: 110px; height: 110px; } }
 @media (max-height: 430px) { .g-tabs { margin-bottom: 6px; } .g-tabs .tab { padding-top: 8px; padding-bottom: 8px; font-size: 14px; } }
@@ -290,7 +290,7 @@ body.ocean .logo i { color: #8ae8ff; }
   .lv.card .txt { align-items: center; } .lv.card .art, #title #lv-farm .art { letter-spacing: -4px; font-size: clamp(24px, 6.5vh, 56px); }
   .lv.card b, #title #lv-farm b { font-size: clamp(13px, 3.1vh, 25px); white-space: normal; line-height: 1; overflow-wrap: anywhere; } .lv.card small { font-size: clamp(10px, 1.7vh, 14px); }
   #title #lv-farm .txt { padding-top: 0; } }
-@media (orientation: landscape) and (max-height: 430px) { .lv.card small { display: none; } .lv.card .art, #title #lv-farm .art { font-size: 28px; } .lv.card b, #title #lv-farm b { font-size: 14px; } }
+@media (orientation: landscape) and (max-height: 430px) { .lv.card small { display: none; } .lv.card .art, #title #lv-farm .art { font-size: 28px; } .lv.card b, #title #lv-farm b { font-size: 14px; } #title .levels { margin-bottom: 8px; } #title .lv.card { height: 15vh; } }
 @media (orientation: portrait) { .levels { gap: clamp(5px, 0.8vh, 12px); } .lv.card { height: clamp(56px, 7.6vh, 120px); } #title #lv-farm { height: clamp(76px, 10vh, 150px); } #levels .lv.card { height: clamp(80px, 13vh, 170px); }
   .lv.card .art { font-size: clamp(28px, 4.6vh, 60px); } .lv.card b { font-size: clamp(18px, 2.9vh, 32px); } }
 @media (orientation: portrait) and (max-height: 900px) { #title .lv.card small { display: none; } #title .lv.card .tag { display: none; } #title .lv.card { height: 50px; } #title #lv-farm { height: 66px; } #title .lv.card .art { font-size: 30px; } }
@@ -318,7 +318,8 @@ body.swimmer #a-boost span, body.swimmer #a-laser span, body.swimmer #a-missile 
 #title #lv-farm { border-color: #ffe27a; animation: farmPulse 1.6s ease-in-out infinite, peakBounce 2.4s ease-in-out infinite; }
 #title #lv-farm b { color: #fff8d8; }
 @keyframes farmPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(150,220,40,.9), 0 0 18px 4px rgba(255,170,60,.7), inset 0 0 18px rgba(255,240,150,.5); border-color: #ffd04a; } 50% { box-shadow: 0 0 0 5px rgba(255,240,120,1), 0 0 42px 12px rgba(120,220,40,.9), inset 0 0 28px rgba(255,250,190,.8); border-color: #fff6c0; } }
-body.farm .logo i { color: #ffe27a; }
+body.farm .logo i { display: none; }
+body.farm .logo em { background: none; color: #ffd23a; -webkit-text-stroke: 3px #5a3818; paint-order: stroke fill; text-shadow: 0 3px 0 #5a3818; }
 body.farm #b-battle { display: none; }
 body.farm #hud .bars { display: none; }
 /* farm progress bar: fed count, stars, poops, golden poops */
@@ -351,6 +352,14 @@ body.farm .david-btn { display: flex; }
 @media (orientation: portrait) { .david-btn { right: calc(var(--sar) + 18px); bottom: calc(var(--sab) + 308px); width: 84px; height: 84px; } .david-btn .dv-ic { font-size: 30px; } }
 @media (min-width: 1000px) and (min-height: 700px) and (orientation: landscape) { .david-btn { right: calc(var(--sar) + 500px); bottom: calc(var(--sab) + 22px); width: 120px; height: 120px; } .david-btn .dv-ic { font-size: 44px; } .david-btn b { font-size: 14px; } }
 @media (min-width: 700px) and (orientation: portrait) { .david-btn { bottom: calc(var(--sab) + 384px); width: 110px; height: 110px; } .david-btn .dv-ic { font-size: 40px; } }
+/* Farm specials stack on the left so they don't cover the field. */
+body.farm .rb-btn, body.farm .david-btn, body.farm .stink-btn { left: calc(var(--sal) + 14px); right: auto; bottom: auto; width: 68px; height: 68px; }
+/* Pause and map sit at sat+10 and are 46px (56px on a large iPad). The stack starts below that row. */
+body.farm .stink-btn { top: calc(var(--sat) + 84px); }
+body.farm .david-btn { top: calc(var(--sat) + 160px); }
+body.farm .rb-btn { top: calc(var(--sat) + 236px); }
+body.farm .rb-btn b, body.farm .david-btn b, body.farm .stink-btn b { font-size: 11px; }
+body.farm .rb-btn .rb-ic, body.farm .david-btn .dv-ic, body.farm .stink-btn .st-ic { font-size: 26px; }
 @media (prefers-reduced-motion: reduce) { .david-btn, #a-missile.glow, #title #lv-farm { animation: none; } }
 /* comic speech bubble that follows David (and the grown-ups shouting at him) */
 #david-say { position: absolute; z-index: 4; transform: translate(-50%, calc(-100% - 14px)); max-width: min(70vw, 340px); padding: 8px 14px; border-radius: 18px; background: #fff; color: #2a1a08; border: 3px solid #2a1a08; font-weight: 900; font-size: clamp(16px, 2.6vh, 24px); text-align: center; pointer-events: none; transition: opacity .15s; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
@@ -374,7 +383,7 @@ body.farm .david-btn { display: flex; }
 @keyframes heroPop { from { transform: scale(.3) rotate(-10deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
 
 /* v5.3 big bouncy shout (Ricky & Bobby on the farm) */
-#shout { position: fixed; z-index: 6; left: 50%; top: calc(var(--sat) + 19%); width: min(92vw, 900px); transform: translate(-50%, -50%) scale(0); text-align: center; pointer-events: none; opacity: 0;
+#shout { position: fixed; z-index: 6; left: 50%; top: calc(var(--sat) + 30%); width: min(80vw, 760px); transform: translate(-50%, -50%) scale(0); text-align: center; pointer-events: none; opacity: 0;
   font-size: clamp(24px, min(6.4vw, 8vh), 64px); line-height: 1.1; font-weight: 900; color: #ffe04a; -webkit-text-stroke: 2px #6a2a00; text-shadow: 0 5px 0 #a24a00, 0 8px 22px rgba(0,0,0,.55); white-space: normal; }
 #shout.show { opacity: 1; animation: shoutIn .55s cubic-bezier(.2,1.6,.4,1) forwards, shoutBounce .7s ease-in-out .55s infinite; }
 @keyframes shoutIn { 0% { transform: translate(-50%, -50%) scale(0) rotate(-8deg); } 100% { transform: translate(-50%, -50%) scale(1) rotate(0); } }
