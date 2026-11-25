@@ -80,7 +80,8 @@ export class Westies {
     for (const d of this.dogs) d.off = !!(P.def.westie && d.name.toLowerCase() === P.def.id);
     this.reason = reason; this.count++; this.introduced = false; this.barkQ = []; this.danced = 0; this.flew = false; this.log.push(reason); this.target = null; this.helped = 0;
     this.sea = !!(g.world && g.world.ocean); // v5 Deep Sea: SCUBA DOGS
-    this.S = g.farm ? 1.15 : g.level === 'jungle' ? ISLAND_S : DOG_S; // farm stays next to Leandro; only Jungle Island uses the restored size
+    this.S = g.farm ? 2.4 : g.level === 'jungle' ? ISLAND_S : DOG_S; // farm intro is a hero moment; island keeps the v5.10.8 size; other levels stay small
+    if (g.farm) this.placeFarmStage();
     for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(this.S * (d.mul || 1)); d.bark = 0; d.hop = 0; d.spin = 0; d.poopT = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
     if (reason === 'button') { // v5 HELPER MODE: swoop in beside the player and follow
       this.helper = true; this.stage = null; const f = P.forward(V()), side = V(-f.z, 0, f.x);
@@ -90,6 +91,19 @@ export class Westies {
     this.helper = false; this.setupStage(reason); this.state = 'enter'; this.t = 0; return true;
   }
   activeDogs() { return this.dogs.filter(d => !d.off); }
+  placeFarmStage() {
+    const g = this.g, cam = g.cam || { yaw: g.player.yaw, pos: g.player.pos, dist: 8 };
+    const yaw = cam.yaw, f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), side = new THREE.Vector3(-f.z, 0, f.x);
+    const origin = cam.pos || g.player.pos;
+    if (!(this.farmIntro > 0)) this.farmIntro = 2.5;
+    this.dogs.forEach((d, i) => {
+      if (d.off) return;
+      const s = i ? 1 : -1;
+      d.goal = new THREE.Vector3(origin.x, 0, origin.z).addScaledVector(f, 4.8).addScaledVector(side, s * 0.95);
+      d.stageY = this.ground(d.goal);
+    });
+    if (g.world) g.world.grassHoles = this.dogs.filter(d => !d.off && d.goal).map(d => ({ x: d.goal.x, z: d.goal.z, r: 2.5 }));
+  }
   // the dance stage (used by the surprise visits, and by helper mode when there's nobody to fight)
   setupStage(reason) {
     const g = this.g, P = g.player;
@@ -103,6 +117,22 @@ export class Westies {
     const aheads = [4, 4]; let D = Math.max(6, (g.cam.dist || 12) * cp), Ls = [0, 0];
     for (let k = 0; k < 40; k++, D += 1.5) { let need = 0; for (const c of corners) if (D + c.fw > 1) need = Math.max(need, (c.lat + 1.5) * 1.15 / (D + c.fw));
       Ls = aheads.map(a => need * (D + a) + dogHalf); if (Ls.every((L, i) => L / (D + aheads[i]) <= tanLim)) break; }
+    if (g.farm && g.cam) {
+      const yaw = g.cam.yaw, f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), side = new THREE.Vector3(-f.z, 0, f.x);
+      const ahead = 5.5;
+      this.stage = { yaw, lat: 1.6, lats: [1.6, 1.6], aheads: [ahead, ahead], need: Math.max(7, (g.cam.dist || 8) * 0.72), half: 1.2 };
+      this.farmIntro = 2.5;
+      this.dogs.forEach((d, i) => {
+        const s = i ? 1 : -1;
+        d.goal = new THREE.Vector3(g.cam.pos.x, 0, g.cam.pos.z).addScaledVector(f, ahead).addScaledVector(side, s * 1.35);
+        d.stageY = this.ground(d.goal);
+        d.start = d.goal.clone().addScaledVector(f, -8).addScaledVector(side, s * 4);
+        if (!this.helper) d.pos.copy(d.start);
+        d.bark = 0; d.hop = 0; d.spin = 0;
+      });
+      this.g.world.grassHoles = this.dogs.map(d => ({ x: d.goal.x, z: d.goal.z, r: 2.5 }));
+      return;
+    }
     const base = V().set(P.pos.x, 0, P.pos.z);
     // they dance on two glowing floating dance floors at about the player's eye height: the middle band of the screen,
     // clear of the HUD corners and of ground clutter (trees/rocks) that hid them before
@@ -156,7 +186,7 @@ export class Westies {
     if (this.sea) { this.floated = (this.floated || 0) + 1; sfx.bubbles && sfx.bubbles(1, 12); }
     this.fartExit = !!this.g.farm; if (this.fartExit) { this.fartExits = (this.fartExits || 0) + 1; sfx.fart && sfx.fart('trumpet', 0.9); this.g.later && this.g.later(0.5, () => sfx.fart && sfx.fart('stutter', 0.7)); this.g.hud.toast('💨🚀 Ricky & Bobby FART-ROCKETED away! 😂'); }
     this.dogs.forEach((d, i) => { d.vy = 2 + i * 0.6; d.alt = d.alt || 0; }); this.stage = null; }
-  end() { this.state = 'off'; this.lastEnd = this.clock; this.helper = false; this.stage = null; this.target = null; for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; d.goalAlt = undefined; } for (const s of this.spots) s.visible = false; }
+  end() { this.state = 'off'; this.lastEnd = this.clock; this.helper = false; this.stage = null; this.target = null; this.farmIntro = 0; if (this.g.world) this.g.world.grassHoles = null; for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; d.goalAlt = undefined; if (d.cape) d.cape.scale.setScalar(1); } for (const s of this.spots) s.visible = false; }
   // Ricky and Bobby live on Jungle Island: they trot beside Leandro (on foot or on a dino) and never get in the way.
   companions(dt) {
     const g = this.g, P = g.player;
@@ -233,6 +263,8 @@ export class Westies {
       return;
     }
     this.t += dt; const T = this.t, DANCE = 5;
+    if (this.g.farm && this.farmIntro > 0) this.placeFarmStage();
+    if (this.farmIntro > 0) this.farmIntro = Math.max(0, this.farmIntro - dt);
     if (!this.helper && (this.state === 'dance' || this.state === 'enter') && T > 0.8 && this.danger()) this.flyAway(); // trouble nearby: up, up and away
     if (this.helper) this.helperLogic(dt, T);
     for (const [i, d] of this.dogs.entries()) {
@@ -265,7 +297,13 @@ export class Westies {
       d.body.position.y = hopY + (speed > 1 ? Math.abs(Math.sin(d.ph * 0.5)) * 0.03 * run : 0); d.body.rotation.x = -rear; d.body.rotation.z = wig;
       d.bark = Math.max(0, d.bark - dt); d.head.rotation.x = d.bark > 0 ? -0.25 * Math.sin(d.bark / 0.3 * Math.PI) : sniff; d.jaw.rotation.x = (this.state === 'dance' ? 0.18 : 0) + (d.bark > 0 ? 0.35 : 0);
       d.tail.rotation.z = Math.sin(this.clock * tailSp + i) * (this.state === 'dance' ? 0.75 : 0.5);
-      if (d.tag && g.player) d.tag.visible = Math.hypot(d.pos.x - g.player.pos.x, d.pos.z - g.player.pos.z) < 14;
+      if (d.cape) d.cape.scale.setScalar(g.farm ? 1.5 : 1);
+      if (d.tag) {
+        const show = g.farm ? this.active : (g.player && Math.hypot(d.pos.x - g.player.pos.x, d.pos.z - g.player.pos.z) < 14);
+        d.tag.visible = !!show;
+        const w = g.farm && this.active ? 0.6 : 0.28;
+        d.tag.scale.set(w / Math.max(0.25, this.S), (w * 0.25) / Math.max(0.25, this.S), 1);
+      }
       d.cape.rotation.x = flap ? 1.0 + Math.sin(this.clock * 30 + i) * 0.45 : 1.3 + run * 0.22 + Math.sin(this.clock * 9 + i) * 0.1;
       this.spots[i].position.set(d.pos.x, d.pos.y, d.pos.z);
     }
@@ -329,6 +367,7 @@ export class Westies {
     const g = this.g, P = g.player, s = i ? 1 : -1, out = { speed: 0, hopY: 0, flap: 0, rear: 0, spin: 0, tailSp: 26 };
     const mv = (gx, gz, vmax) => { const to = V(gx - d.pos.x, 0, gz - d.pos.z), L = to.length(); if (L > 0.3) { const st = Math.min(L, vmax * dt); d.pos.addScaledVector(to.normalize(), st); out.speed = st / dt; d.yaw += Math.atan2(Math.sin(Math.atan2(to.x, to.z) - d.yaw), Math.cos(Math.atan2(to.x, to.z) - d.yaw)) * Math.min(1, dt * 10); }
       if (g.world.collide) g.world.collide(d.pos, 1.2, false); };
+    if (g.farm && this.farmIntro > 0 && d.goal) { mv(d.goal.x, d.goal.z, 24); d.alt = Math.max(0, (d.alt || 0) - dt * 10); out.flap = d.alt > 0.25 ? 1 : 0; return out; }
     if (this.state === 'follow') { const f = P.forward(V()), side = V(-f.z, 0, f.x), r = (P.radius || 3) + 3.2;
       mv(P.pos.x + side.x * s * r - f.x * 2, P.pos.z + side.z * s * r - f.z * 2, 38); out.flap = d.alt > 0.3 ? 1 : 0; if (out.flap && Math.random() < 0.6) this.sparkle(d);
       if (out.speed < 1) { const want = P.yaw; d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 4); out.hopY = Math.max(0, Math.sin(T * 9 + i * 1.6)) * 0.35 * HOP; } }

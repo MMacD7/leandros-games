@@ -4,16 +4,17 @@
 import * as THREE from './vendor/three.bundle.min.js';
 import { cloneWestie } from './models.js';
 
-function nameTag(label) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+function nameTag(label, color) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
   const g = c.getContext('2d');
-  g.clearRect(0, 0, 256, 64);
-  g.fillStyle = 'rgba(0,0,0,0.55)'; g.beginPath(); g.roundRect(8, 8, 240, 48, 16); g.fill();
-  g.fillStyle = '#fff'; g.font = 'bold 36px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(label, 128, 32);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  g.clearRect(0, 0, 512, 128);
+  g.fillStyle = color; g.beginPath(); g.roundRect(12, 16, 488, 96, 28); g.fill();
+  g.lineWidth = 8; g.strokeStyle = '#fff4e0'; g.stroke();
+  g.fillStyle = '#fff'; g.font = 'bold 64px ui-rounded, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(label, 256, 64);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-  sp.scale.set(0.26 * 0.6, 0.065 * 0.6, 1); sp.visible = false; sp.name = 'name-tag'; sp.center.set(0.5, 0);
+  sp.scale.set(0.42, 0.105, 1); sp.visible = false; sp.name = 'name-tag'; sp.center.set(0.5, 0);
   return sp;
 }
 
@@ -37,15 +38,16 @@ export function buildWestie(name, accent) {
   scene.scale.setScalar(sc); scene.position.y = -foot * sc;
   skin.material = Array.isArray(skin.material) ? skin.material.map(m => m.clone()) : skin.material.clone();
   const who = name === 'bobby' ? 'Bobby' : 'Ricky';
-  const collarColor = name === 'bobby' ? 0xf7f7f7 : 0x2fce4a;
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.072 * 0.6, 0.012 * 0.6, 8, 22), new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.25, emissive: collarColor, emissiveIntensity: name === 'bobby' ? 0.25 : 0.7 }));
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.078 * 0.6, 0.02 * 0.6, 8, 22), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 }));
-  collar.rotation.x = band.rotation.x = 1.15; collar.position.set(0, 0.3 * 0.6, 0.12 * 0.6); band.position.copy(collar.position);
-  body.add(band); body.add(collar);
-  const tag = nameTag(who); tag.position.set(0, 0.56 * 0.6, 0); tag.userData.label = who; root.add(tag);
+  const collarColor = name === 'bobby' ? 0x2a6ad8 : 0xd82a2a;
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.025, 8, 22), new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.4, emissive: collarColor, emissiveIntensity: 0.45 }));
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.012, 8, 22), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.55 }));
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8), new THREE.MeshStandardMaterial({ color: name === 'bobby' ? 0xd8e8ff : 0xffd23a, metalness: 0.45, roughness: 0.4 }));
+  collar.rotation.x = band.rotation.x = 1.15; collar.position.set(0, 0.2, 0.08); band.position.copy(collar.position); disc.position.set(0, 0.12, 0.14);
+  body.add(band); body.add(collar); body.add(disc);
+  const tag = nameTag(who, name === 'bobby' ? '#2A6AD8' : '#D82A2A'); tag.position.set(0, 0.42, 0); tag.userData.label = who; root.add(tag);
   const white = skin.material;
   const acc = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.45, emissive: accent, emissiveIntensity: 0.12 });
-  const capeG = new THREE.PlaneGeometry(0.22, 0.28, 2, 3); capeG.translate(0, -0.14, 0);
+  const capeG = new THREE.PlaneGeometry(0.33, 0.42, 2, 3); capeG.translate(0, -0.2, 0);
   const cape = new THREE.Mesh(capeG, new THREE.MeshStandardMaterial({ color: accent, roughness: 0.55, side: THREE.DoubleSide, emissive: accent, emissiveIntensity: 0.08 }));
   cape.position.set(0, 0.12, -0.02); cape.rotation.x = 1.1; (bones.chest || body).add(cape);
   const head = bones.head, jaw = bones.jaw, tail = bones.tail1;

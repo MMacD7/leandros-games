@@ -30,6 +30,8 @@ const TIERS = [
   { tier: 2, name: 'High', pr: 1.7, shadow: 2048, shadowR: 42, grass: 11000, grassR: 48, draw: 580, lodDist: 125, enemies: 10 },
   { tier: 3, name: 'Ultra', pr: 2.0, shadow: 2048, shadowR: 48, grass: 16000, grassR: 56, draw: 720, lodDist: 170, enemies: 12 },
 ];
+// iPhone and iPad never drop below these pixel ratios. Auto-quality still cuts shadows, grass and draw distance first.
+const IOS_PR = [1.5, 1.75, 2.0, 2.0];
 const ua = navigator.userAgent;
 const isIPad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isIPhone = /iPhone|iPod/.test(ua);
@@ -47,18 +49,20 @@ const persist = () => writeSave(save);
 
 // ---------------- renderer ----------------
 const canvas = $('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: (forced ?? startTier) >= 1, powerPreference: 'high-performance', stencil: false });
-renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: isIPhone || isIPad || (forced ?? startTier) >= 1, powerPreference: 'high-performance', stencil: false });
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, 1, 0.3, 1400);
 const sun = new THREE.DirectionalLight(0xfff1dc, 3.6); sun.castShadow = true; scene.add(sun, sun.target);
 const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x4a5a2a, 0.25); scene.add(hemi);
+const fill = new THREE.DirectionalLight(0xd8ecff, 0.8); fill.castShadow = false; scene.add(fill, fill.target);
 const sunDir = new THREE.Vector3(0.45, 0.62, 0.35).normalize();
 
 function applyQuality(q) {
   Q = { ...q };
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));
+  const prCap = (isIPhone || isIPad) ? IOS_PR[Q.tier] : Q.pr;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, prCap));
   sun.shadow.mapSize.set(Q.shadow, Q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   const c = sun.shadow.camera; c.left = c.bottom = -Q.shadowR; c.right = c.top = Q.shadowR; c.near = 1; c.far = 400; c.updateProjectionMatrix();
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
@@ -72,6 +76,8 @@ function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 1 ? 72 : 58; camera.updateProjectionMatrix();
   gCam.aspect = w / h; gCam.updateProjectionMatrix();
+  const radar = $('radar');
+  if (radar) { const css = radar.clientWidth || 104, px = Math.max(160, Math.round(css * Math.min(window.devicePixelRatio || 1, 2))); if (radar.width !== px) { radar.width = px; radar.height = px; } }
   checkRotate();
 }
 window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -112,7 +118,7 @@ function boot() {
   const fogC = new THREE.Color(0xb6cde0);
   try { const im = skyTex.image, cv = document.createElement('canvas'); cv.width = 64; cv.height = 32; const g = cv.getContext('2d'); g.drawImage(im, 0, 0, 64, 32); const px = g.getImageData(0, 15, 64, 2).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < px.length; i += 4) { r += px[i]; gg += px[i + 1]; b += px[i + 2]; } const n = px.length / 4; fogC.setRGB(r / n / 255, gg / n / 255, b / n / 255, THREE.SRGBColorSpace); } catch (e) { }
   scene.fog = new THREE.Fog(fogC, 60, 900);
-  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone(), near: 80, far: 1300, sunDir: sunDir.clone(), sunC: 0xfff6e4, sunI: 3.8, hs: 0xc8e6ff, hg: 0x4a6a32, hi: 0.32, exp: 1.08 };
+  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone(), near: 80, far: 1300, sunDir: sunDir.clone(), sunC: 0xfff6e4, sunI: 3.8, hs: 0xc8e6ff, hg: 0x6a8a4a, hi: 0.6, exp: 1.0 };
   fx = new FX(scene, assets, sfx);
   world = makeWorld(level); applyEnv(level);
   input = new Input(document.body);
@@ -151,7 +157,7 @@ function applyEnv(lv) {
     ENV.ocean = { bg: sky, env, envI: 0.55, fog: new THREE.Color(0x0e5a78), near: 8, far: 240, sunDir: new THREE.Vector3(0.25, 0.92, 0.3).normalize(), sunC: 0xb8f0ff, sunI: 2.6, hs: 0x4ac0e0, hg: 0x1a3040, hi: 0.95, exp: 1.15 };
   }
   if (lv === 'farm' && !ENV.farm) { // v5.1 Farty Poop Farm: the island sky, but a brighter, sunnier, happier day
-    const J = ENV.jungle; ENV.farm = { ...J, envI: 0.5, fog: J.fog.clone().lerp(new THREE.Color(0xd8ecff), 0.3), near: 90, far: 950, sunC: 0xfff4e0, sunI: 3.9, hs: 0xd0ecff, hg: 0x5a7a2a, hi: 0.38, exp: 1.12 }; }
+    const J = ENV.jungle; ENV.farm = { ...J, envI: 0.5, fog: J.fog.clone().lerp(new THREE.Color(0xd8ecff), 0.3), near: 90, far: 950, sunC: 0xfff4e0, sunI: 3.9, hs: 0xd0ecff, hg: 0x5a7a2a, hi: 0.38, exp: 1.05 }; }
   const E = ENV[lv]; if (!E) return;
   scene.background = E.bg; scene.backgroundIntensity = 1; scene.environment = E.env; scene.environmentIntensity = E.envI; scene.fog.color.copy(E.fog); scene.fog.near = E.near; scene.fog.far = E.far;
   sunDir.copy(E.sunDir); sun.color.set(E.sunC); sun.intensity = E.sunI; hemi.color.set(E.hs); hemi.groundColor.set(E.hg); hemi.intensity = E.hi; renderer.toneMappingExposure = E.exp;
@@ -160,7 +166,7 @@ function applyEnv(lv) {
 function levelUI() {
   document.body.classList.toggle('peak', level === 'peak'); document.body.classList.toggle('city', level === 'city'); document.body.classList.toggle('ocean', level === 'ocean'); document.body.classList.toggle('farm', level === 'farm');
   document.querySelectorAll('.lv[data-lv]').forEach(b => { const on = b.dataset.lv === level; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-  const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : level === 'city' ? 'CITY SMASH' : level === 'ocean' ? 'DEEP SEA' : level === 'farm' ? 'POOP FARM' : 'ISLAND';
+  const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : level === 'city' ? 'CITY SMASH' : level === 'ocean' ? 'DEEP SEA' : level === 'farm' ? 'FARTY POOP FARM' : 'ISLAND';
   $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : level === 'city' ? '▶ Smash Mega City' : level === 'ocean' ? '▶ Dive into the Deep Sea' : level === 'farm' ? '▶ Go to the Farm 🚜' : '▶ Explore the Island';
   $('citybar').classList.toggle('hidden', level !== 'city'); $('farmbar').classList.toggle('hidden', level !== 'farm');
 }
@@ -258,16 +264,17 @@ function updateHUD(dt) {
 const rc = $('radar').getContext('2d');
 let eggRadarSnap = { eggs: [], babies: [], n: 0 };
 function drawEggPip(x, y, pulse, edge) {
+  const u = (rc.canvas.width || 220) / 220;
   rc.save(); rc.translate(x, y);
   if (edge) {
     const ang = Math.atan2(y, x);
     rc.save(); rc.rotate(ang);
     rc.fillStyle = '#ffe566';
-    rc.beginPath(); rc.moveTo(12, 0); rc.lineTo(4, 5); rc.lineTo(4, -5); rc.closePath(); rc.fill();
+    rc.beginPath(); rc.moveTo(12 * u, 0); rc.lineTo(4 * u, 5 * u); rc.lineTo(4 * u, -5 * u); rc.closePath(); rc.fill();
     rc.restore();
   }
-  const w = (edge ? 13 : 16) * pulse, h = w * 1.28;
-  rc.shadowColor = '#ffe14a'; rc.shadowBlur = edge ? 0 : 8;
+  const w = (edge ? 13 : 16) * pulse * u, h = w * 1.28;
+  rc.shadowBlur = 0;
   rc.fillStyle = '#fff6df'; rc.strokeStyle = '#3a2410'; rc.lineWidth = 1.6;
   rc.beginPath(); rc.ellipse(0, 0, w * 0.46, h * 0.5, 0, 0, 7); rc.fill(); rc.stroke();
   rc.shadowBlur = 0;
@@ -276,13 +283,13 @@ function drawEggPip(x, y, pulse, edge) {
   rc.restore();
 }
 function drawRadar(p) {
-  const S = 220, R = 105, worldR = game.world && game.world.playR > 400 ? 280 : 120, scale = R / worldR, yaw = game.cam.yaw; rc.clearRect(0, 0, S, S);
+  const S = rc.canvas.width || 220, R = S * 0.477, worldR = game.world && game.world.playR > 400 ? 280 : 120, scale = R / worldR, yaw = game.cam.yaw, u = S / 220; rc.clearRect(0, 0, S, S);
   rc.save(); rc.translate(S / 2, S / 2); rc.beginPath(); rc.arc(0, 0, R, 0, 7); rc.clip();
   const dot = (x, z, col, r) => { const dx = (x - p.pos.x) * scale, dz = (z - p.pos.z) * scale; const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
-    let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 6) { rx *= (R - 6) / L; ry *= (R - 6) / L; } rc.fillStyle = col; rc.beginPath(); rc.arc(-rx, -ry, r, 0, 7); rc.fill(); };
-  rc.strokeStyle = 'rgba(255,255,255,.15)'; rc.lineWidth = 2; rc.beginPath(); rc.arc(0, 0, R * 0.5, 0, 7); rc.stroke();
-  if (game.farm) { dot(BASE.x, BASE.z + 18, '#ff6a5a', 9); for (const d of game.farm.radar()) dot(d.x, d.z, d.c, 4.5); } // v5.1 farm: the farmhouse, hungry (yellow) and fed (green) animals, golden poop
-  else { if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 9); dot(ARENA.x, ARENA.z, '#ffd34a', 7); dot(BASE.x, BASE.z, '#3de8ff', 9); }
+    let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry); if (L > R - 6 * u) { rx *= (R - 6 * u) / L; ry *= (R - 6 * u) / L; } rc.fillStyle = col; rc.beginPath(); rc.arc(-rx, -ry, r * u, 0, 7); rc.fill(); };
+  rc.strokeStyle = 'rgba(255,255,255,.15)'; rc.lineWidth = 2 * u; rc.beginPath(); rc.arc(0, 0, R * 0.5, 0, 7); rc.stroke();
+  if (game.farm) { dot(BASE.x, BASE.z + 18, '#ff6a5a', 12); for (const d of game.farm.radar()) dot(d.x, d.z, d.c, 4.5); } // v5.1 farm: the farmhouse, hungry (yellow) and fed (green) animals, golden poop
+  else { if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 12); dot(ARENA.x, ARENA.z, '#ffd34a', 8); dot(BASE.x, BASE.z, '#3de8ff', 12); }
   for (const k of game.pickups) if (k.alive && k.type === 'core') dot(k.x, k.z, 'rgba(120,240,255,.8)', 3);
   for (const e of game.enemies) if (e.alive) dot(e.pos.x, e.pos.z, '#ff3a2a', 6);
   const eggMarks = [], babyMarks = [];
@@ -294,12 +301,17 @@ function drawRadar(p) {
   if (game.eggs && game.eggs.list) {
     const pulse = 0.9 + 0.1 * Math.sin((game.world && game.world.time || 0) * 4);
     const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
+    const near = [];
     for (const e of game.eggs.list) {
       if (e.hatched) continue;
+      near.push({ e, d: Math.hypot(e.x - p.pos.x, e.z - p.pos.z) });
+    }
+    near.sort((a, b) => a.d - b.d);
+    for (const { e } of near.slice(0, 5)) {
       const dx = (e.x - p.pos.x) * scale, dz = (e.z - p.pos.z) * scale;
       let rx = dx * c - dz * s, ry = dx * s + dz * c; const L = Math.hypot(rx, ry);
-      const edge = L > R - 18;
-      if (edge && L > 0.001) { rx *= (R - 18) / L; ry *= (R - 18) / L; }
+      const edge = L > R - 18 * u;
+      if (edge && L > 0.001) { rx *= (R - 18 * u) / L; ry *= (R - 18 * u) / L; }
       drawEggPip(-rx, -ry, pulse, edge);
       eggMarks.push({ id: e.id, edge });
     }
@@ -731,7 +743,7 @@ function loop(now) {
     const fm = !!game.farm, a = Math.sin(titleT * 0.12) * 0.22, r = (fm ? (asp < 1 ? 13 : asp < 1.5 ? 9.5 : 8.5) : asp < 1 ? 28 : asp < 1.5 ? 17.5 : 15.5) + Math.sin(titleT * 0.2) * 1.0;
     camera.position.set(mid.x + Math.sin(a) * r, 0, mid.z + Math.cos(a) * r);
     camera.position.y = Math.max(mid.y + (fm ? 2.0 : 3.0), world.height(camera.position.x, camera.position.z) + (fm ? 2.0 : 3.0));
-    camera.lookAt(mid.x, mid.y + (fm ? (asp < 1 ? 5.4 : 4.2) : asp < 1 ? 6.0 : 4.4), mid.z - 4);
+    camera.lookAt(mid.x, mid.y + (fm ? (asp < 1 ? 6.6 : 5.6) : (asp < 1 ? 6.0 : 4.4) + 1.5), mid.z - 4);
     if (fx.shake > 0) camera.position.add(new THREE.Vector3((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake, 0));
     game.updatePickups(dt);
   } else if (screen === 'pause' || screen === 'results') { /* frozen world */ }
@@ -744,6 +756,7 @@ function loop(now) {
   if (world.peak && screen !== 'pause') peakAmbience(dt);
   // shadow camera follows the action
   const P = game.player.pos; sun.target.position.set(P.x, P.y, P.z); sun.position.copy(P).addScaledVector(sunDir, 150);
+  fill.position.copy(camera.position); fill.target.position.set(P.x, P.y + 1.5, P.z);
   const c1 = performance.now(); cpuMs += ((c1 - c0) - cpuMs) * 0.05;
   renderer.render(scene, camera);
 }
