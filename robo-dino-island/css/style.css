@@ -353,10 +353,11 @@ body.farm .david-btn { display: flex; }
 @media (min-width: 1000px) and (min-height: 700px) and (orientation: landscape) { .david-btn { right: calc(var(--sar) + 500px); bottom: calc(var(--sab) + 22px); width: 120px; height: 120px; } .david-btn .dv-ic { font-size: 44px; } .david-btn b { font-size: 14px; } }
 @media (min-width: 700px) and (orientation: portrait) { .david-btn { bottom: calc(var(--sab) + 384px); width: 110px; height: 110px; } .david-btn .dv-ic { font-size: 40px; } }
 /* Farm specials stack on the left so they don't cover the field. */
-body.farm .rb-btn, body.farm .david-btn, body.farm .stink-btn { left: calc(var(--sal) + 14px); right: auto; top: auto; width: 68px; height: 68px; }
-body.farm .rb-btn { bottom: calc(var(--sab) + 148px); }
-body.farm .david-btn { bottom: calc(var(--sab) + 222px); }
-body.farm .stink-btn { bottom: calc(var(--sab) + 296px); }
+body.farm .rb-btn, body.farm .david-btn, body.farm .stink-btn { left: calc(var(--sal) + 14px); right: auto; bottom: auto; width: 68px; height: 68px; }
+/* Pause and map sit at sat+10 and are 46px (56px on a large iPad). The stack starts below that row. */
+body.farm .stink-btn { top: calc(var(--sat) + 84px); }
+body.farm .david-btn { top: calc(var(--sat) + 160px); }
+body.farm .rb-btn { top: calc(var(--sat) + 236px); }
 body.farm .rb-btn b, body.farm .david-btn b, body.farm .stink-btn b { font-size: 11px; }
 body.farm .rb-btn .rb-ic, body.farm .david-btn .dv-ic, body.farm .stink-btn .st-ic { font-size: 26px; }
 @media (prefers-reduced-motion: reduce) { .david-btn, #a-missile.glow, #title #lv-farm { animation: none; } }

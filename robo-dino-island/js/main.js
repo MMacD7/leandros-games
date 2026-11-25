@@ -56,7 +56,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, 1, 0.3, 1400);
 const sun = new THREE.DirectionalLight(0xfff1dc, 3.6); sun.castShadow = true; scene.add(sun, sun.target);
 const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x4a5a2a, 0.25); scene.add(hemi);
-const fill = new THREE.DirectionalLight(0xd8ecff, 0.8); fill.castShadow = false; scene.add(fill, fill.target);
+const fill = new THREE.DirectionalLight(0xd8ecff, 1.45); fill.castShadow = false; scene.add(fill, fill.target);
 const sunDir = new THREE.Vector3(0.45, 0.62, 0.35).normalize();
 
 function applyQuality(q) {
