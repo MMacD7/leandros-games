@@ -669,7 +669,7 @@ export class Beast {
   }
   socketPos(name, out) { const s = this.sockets[name] || this.sockets.mouth; return s.getWorldPosition(out); }
   footPos(i, out) { return this.b[this.feet[i % this.feet.length]].getWorldPosition(out); }
-  dispose() { this.meshes.forEach(m => m.geometry.dispose()); [this.mats.plate, this.mats.frame, this.mats.glow, this.haloMat].forEach(m => m.dispose()); }
+  dispose() { this.meshes.forEach(m => m.geometry.dispose()); [this.mats.plate, this.mats.frame, this.mats.glow, this.mats.mem, this.haloMat].forEach(m => { if (m && !(m.userData && m.userData.shared)) m.dispose(); }); }
 
   animate(dt, speed, o = {}) {
     const b = this.b, sc = this.def.scale; this.t += dt; const t = this.t;

@@ -530,17 +530,30 @@ const G_REALS = newFirst(REALS.filter(d => !SUPER_SET.has(d.id))), G_ROBOS = new
 const gListOf = () => gList === 'super' ? G_SUPER : gList === 'real' ? G_REALS : gList === 'dragon' ? G_DRAGONS : gList === 'dogs' ? G_DOGS : gList === 'sea' ? G_SEA : G_ROBOS;
 const NEW_GARAGE_KEY = 'robo-dino-island.seen.newgarage';
 const gMechs = {}, gRider = new Rider();
+function studioEnv() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.42, '#e7eef6'); gr.addColorStop(0.58, '#f7f4ee'); gr.addColorStop(1, '#9aafc4');
+  g.fillStyle = gr; g.fillRect(0, 0, 512, 256);
+  const key = g.createRadialGradient(150, 30, 8, 170, 70, 200);
+  key.addColorStop(0, 'rgba(255,252,245,0.95)'); key.addColorStop(1, 'rgba(255,252,245,0)');
+  g.fillStyle = key; g.fillRect(0, 0, 512, 160);
+  const t = new THREE.CanvasTexture(c); t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
+  const pm = new THREE.PMREMGenerator(renderer); const env = pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose();
+  return env;
+}
 function buildGarage() {
-  gScene.background = new THREE.Color(0x0b1520); gScene.environment = scene.environment; gScene.environmentIntensity = 0.7;
-  gScene.fog = new THREE.Fog(0x0b1520, 20, 60);
-  const floor = new THREE.Mesh(new THREE.CylinderGeometry(7, 7.4, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x14181d, metalness: 0.6, roughness: 0.5, normalMap: assets.metalNor, envMapIntensity: 0.12 }));
+  // Metallic plates (metalness 0.65) take their color from reflections. The old outdoor env at 0.7,
+  // plus fog that started at 20 m, turned those plates black while unlit glow strips stayed bright.
+  gScene.background = new THREE.Color(0x10202c); gScene.environment = studioEnv(); gScene.environmentIntensity = 1.75;
+  gScene.fog = new THREE.Fog(0x10202c, 80, 260);
+  const floor = new THREE.Mesh(new THREE.CylinderGeometry(7, 7.4, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x24303a, metalness: 0.25, roughness: 0.55, envMapIntensity: 0.4 }));
   floor.position.y = -0.25; floor.receiveShadow = true; gScene.add(floor); gScene.userData.floor = floor;
   const ring = new THREE.Mesh(new THREE.TorusGeometry(6.6, 0.07, 6, 64), new THREE.MeshBasicMaterial({ color: 0x3de8ff, toneMapped: false })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; gScene.add(ring); gScene.userData.ring = ring;
   const grid = new THREE.GridHelper(80, 40, 0x1f5a70, 0x15303e); grid.position.y = -0.5; gScene.add(grid);
-  const key = new THREE.SpotLight(0xffffff, 500, 70, 0.7, 0.6, 1.4); key.position.set(10, 16, 14); key.castShadow = true; key.shadow.mapSize.set(1024, 1024); gScene.add(key, key.target);
-  const rim = new THREE.SpotLight(0x3de8ff, 600, 60, 0.7, 0.6, 1.6); rim.position.set(-10, 8, -10); gScene.add(rim, rim.target);
-  const fill = new THREE.HemisphereLight(0xa0c8ff, 0x202020, 0.55); gScene.add(fill);
-  const rim2 = new THREE.SpotLight(0xff5a1a, 700, 60, 0.7, 0.6, 1.6); rim2.position.set(12, 7, -11); gScene.add(rim2, rim2.target);
+  const key = new THREE.DirectionalLight(0xfff6ea, 3.6); key.position.set(7, 12, 8); gScene.add(key);
+  const bounce = new THREE.DirectionalLight(0xd5e4f6, 1.7); bounce.position.set(-8, 4, -5); gScene.add(bounce);
+  const fill = new THREE.HemisphereLight(0xffffff, 0x7f96aa, 1.35); gScene.add(fill);
   syncGarageToSelected();
   buildSuperCards();
   paintSuperThumbs();
@@ -849,12 +862,12 @@ function loop(now) {
       gCam.position.set(dist * (low ? 1.05 : 0.58), (low ? y0 + h * 0.55 : lookY + halfH * 0.02) - lookDrop * 0.2, dist * (low ? 0.28 : 0.86));
       gCam.lookAt(0, (low ? y0 + h * 0.42 : lookY) - lookDrop, 0);
       // The garage fog fades out at 60 m. A tall dino needs a further camera, and would vanish into that fog.
-      if (gScene.fog) { gScene.fog.near = Math.max(18, dist * 0.5); gScene.fog.far = dist * 2.6; }
+      if (gScene.fog) { gScene.fog.near = Math.max(70, dist * 1.8); gScene.fog.far = Math.max(220, dist * 5); }
       gScene.userData.ring.material.color.setHSL(gMech.real ? 0.06 : 0.52, 1, 0.55);
       renderer.render(gScene, gCam); return;
     }
-    if (gScene.fog) { gScene.fog.near = 20; gScene.fog.far = 60; }
     const t = Math.tan(THREE.MathUtils.degToRad(gCam.fov / 2)), dist = (R / (portrait ? t * gCam.aspect * 1.0 : Math.min(t * 0.95, t * gCam.aspect * 0.52)) * (portrait ? 1.0 : 0.8) + 2) * (garageFrame && garageFrame.zoom ? garageFrame.zoom : 1);
+    if (gScene.fog) { gScene.fog.near = Math.max(70, dist * 1.8); gScene.fog.far = Math.max(220, dist * 5); }
     const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio', cy = h * (tall ? 0.85 : 0.5) + (gMech.def.fly ? 1.2 : 0) - ((garageFrame && garageFrame.drop) || 0);
     gCam.position.set(dist * 0.62, cy + dist * (gMech.def.dragon ? 0.3 : gMech.def.fly ? 0.62 : 0.28), dist * 0.78); gCam.lookAt(0, cy, 0);
     const view = garageFrame && garageFrame.view != null ? garageFrame.view : 1;

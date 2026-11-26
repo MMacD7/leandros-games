@@ -83,8 +83,25 @@ export class Westies {
     this.reason = reason; this.count++; this.introduced = false; this.barkQ = []; this.danced = 0; this.flew = false; this.log.push(reason); this.target = null; this.helped = 0;
     this.sea = !!(g.world && g.world.ocean); // v5 Deep Sea: SCUBA DOGS
     this.S = g.farm ? 2.4 : g.level === 'jungle' ? ISLAND_S : DOG_S; // farm intro is a hero moment; island keeps the v5.10.8 size; other levels stay small
+    if (reason === 'button' && this.sea) this.S = 7; // chase cam sits behind a multi-metre shark; land size was a speck
     if (g.farm) this.placeFarmStage();
     for (const d of this.dogs) { d.vy = 0; d.alt = 0; d.root.scale.setScalar(this.S * (d.mul || 1)); d.bark = 0; d.hop = 0; d.spin = 0; d.poopT = 0; d.root.visible = !d.off; setScuba(d, this.sea); }
+    if (reason === 'button' && this.sea) { // in front of the swimmer, at the swimmer's depth, scuba on
+      this.helper = true; this.stage = null;
+      const cam = g.camera;
+      this.dogs.forEach((d, i) => {
+        d.stageY = null;
+        const spot = this.seaSpot(i);
+        d.pos.set(spot.x, 0, spot.z);
+        const swim = Math.max(0.45, P.pos.y - this.ground(d.pos));
+        d.alt = swim; d.goalAlt = swim;
+        const cx = cam ? cam.position.x : P.pos.x, cz = cam ? cam.position.z : P.pos.z;
+        d.yaw = Math.atan2(cx - d.pos.x, cz - d.pos.z);
+        d.poopT = 1.05; d.pooped = false;
+        if (!d.off && g.bubbles) g.bubbles(d.head.getWorldPosition(V()), 12, 0.9, 5);
+      });
+      this.state = 'follow'; this.t = 0.55; this.seaHello(); return true;
+    }
     if (reason === 'button') { // v5 HELPER MODE: swoop in beside the player and follow
       this.helper = true; this.stage = null; const f = P.forward(V()), side = V(-f.z, 0, f.x);
       this.dogs.forEach((d, i) => { const s = i ? 1 : -1; d.stageY = null; d.pos.set(P.pos.x, 0, P.pos.z).addScaledVector(side, s * 26).addScaledVector(f, -12); d.alt = 9; d.yaw = P.yaw; });
@@ -182,6 +199,38 @@ export class Westies {
     const iA = this.dogs[0].off ? 1 : 0, iB = this.dogs[1].off ? 0 : 1;
     this.barkQ = [{ t: this.t + 0.25, i: iA, n: 2 }, { t: this.t + 0.7, i: iB, n: 2 }, { t: this.t + 3.0, i: iA, n: 1 }];
   }
+  // In front of the swimmer, split across the camera so neither dog hides inside the shark.
+  seaSpot(i) {
+    const g = this.g, P = g.player, s = i ? 1 : -1, f = P.forward(V());
+    const look = V();
+    if (g.camera) g.camera.getWorldDirection(look);
+    look.y = 0; if (look.lengthSq() < 1e-4) look.copy(f); else look.normalize();
+    const right = V(look.z, 0, -look.x);
+    const ahead = Math.max(2.8, (P.radius || 2.2) * 0.7);
+    return V(P.pos.x, 0, P.pos.z).addScaledVector(f, ahead).addScaledVector(look, -2.4).addScaledVector(right, s * 3.1);
+  }
+  // Deep Sea button: the same poop line as the farm, once, and a poop that actually falls at this depth.
+  seaHello() {
+    const g = this.g; this.introduced = true;
+    if (g.hud.shout) g.hud.shout(POOP_LINE, 3.6); else g.hud.banner(POOP_LINE, 3.4, true);
+    const el = document.getElementById('banner'); if (el) el.classList.add('rb');
+    sfx.cheer && sfx.cheer(1);
+    stompAudio.poopLine();
+  }
+  dropSeaPoop(d, i) {
+    d.pooped = true; sfx.fart && sfx.fart('tiny', 0.8);
+    if (!this.seaPoops) {
+      const geo = new THREE.SphereGeometry(0.22, 10, 8);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x6b3a16, roughness: 0.9 });
+      this.seaPoops = [0, 1].map(() => { const m = new THREE.Mesh(geo, mat); m.visible = false; m.castShadow = false; this.g.scene.add(m); return m; });
+    }
+    const p = d.root.position, sc = d.root.scale.x || 1, m = this.seaPoops[i];
+    m.visible = !d.off; m.userData.vy = -0.55;
+    m.scale.setScalar(Math.max(0.7, sc * 0.42));
+    const side = (i ? 1 : -1) * 0.42 * sc;
+    m.position.set(p.x - Math.sin(d.yaw) * 0.22 * sc + Math.cos(d.yaw) * side, p.y - 0.05 * sc, p.z - Math.cos(d.yaw) * 0.22 * sc - Math.sin(d.yaw) * side);
+    if (this.g.bubbles) this.g.bubbles(V(m.position.x, m.position.y, m.position.z), 8, 0.5, 3);
+  }
   woof(i, n) { const d = this.dogs[i]; d.bark = 0.3; this.barked = (this.barked || 0) + 1; sfx.bark && sfx.bark(i ? 1.15 : 1, 0.85, n);
     if (this.sea) { this.bubbled = (this.bubbled || 0) + 1; sfx.bubbles && sfx.bubbles(0.8, 3 + n * 2); const p = d.head.getWorldPosition(V()); this.g.bubbles && this.g.bubbles(p, 6 + n * 3, 0.6, 5); } } // underwater: bubbly yips
   confetti(p, n) { const fx = this.g.fx; for (let i = 0; i < fx.n(n); i++) { const h = Math.random(), c = new THREE.Color().setHSL(h, 1, 0.6);
@@ -202,6 +251,7 @@ export class Westies {
     this.rings(true);
     this.stompVisit = false; this.stompRoof = null; this._fit = false;
     this.hideStompBits();
+    if (this.seaPoops) for (const m of this.seaPoops) m.visible = false;
     if (this.g.world) this.g.world.grassHoles = null;
     for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; d.poopT = 0; d.goalAlt = undefined; if (d.cape) d.cape.scale.setScalar(1); }
     for (const s of this.spots) s.visible = false;
@@ -554,8 +604,15 @@ export class Westies {
         d.tag.scale.set(w / Math.max(0.25, this.S), (w * 0.25) / Math.max(0.25, this.S), 1);
       }
       d.cape.rotation.x = flap ? 1.0 + Math.sin(this.clock * 30 + i) * 0.45 : 1.3 + run * 0.22 + Math.sin(this.clock * 9 + i) * 0.1;
+      if (this.sea && d.poopT > 0) {
+        d.poopT -= dt; d.body.rotation.x = 0.45;
+        d.legs[2].rotation.x = -1.05; d.legs[3].rotation.x = -1.05;
+        d.head.rotation.x = 0.2; d.jaw.rotation.x = 0.12;
+        if (!d.pooped && d.poopT < 0.82) this.dropSeaPoop(d, i);
+      }
       this.spots[i].position.set(d.pos.x, d.pos.y, d.pos.z);
     }
+    if (this.seaPoops) for (const m of this.seaPoops) if (m.visible) { m.position.y += (m.userData.vy || -0.4) * dt; m.userData.vy = Math.max(-1.1, (m.userData.vy || -0.4) - dt * 0.35); }
     if (this.helper && (this.state === 'follow' || this.state === 'hunt' || this.state === 'maul' || this.state === 'cheer')) { /* handled in helperLogic */ }
     else if (this.state === 'enter' && (T > 4 || this.activeDogs().every(d => d.pos.distanceTo(d.goal) < 0.6))) { this.state = 'dance'; this.t = 0;
       if (!this.introduced) this.intro(); else { const iA = this.dogs[0].off ? 1 : 0, iB = this.dogs[1].off ? 0 : 1; this.barkQ = [{ t: 0.3, i: iA, n: 2 }, { t: 0.8, i: iB, n: 2 }, { t: 3.0, i: iA, n: 1 }]; } }
@@ -617,9 +674,17 @@ export class Westies {
     const mv = (gx, gz, vmax) => { const to = V(gx - d.pos.x, 0, gz - d.pos.z), L = to.length(); if (L > 0.3) { const st = Math.min(L, vmax * dt); d.pos.addScaledVector(to.normalize(), st); out.speed = st / dt; d.yaw += Math.atan2(Math.sin(Math.atan2(to.x, to.z) - d.yaw), Math.cos(Math.atan2(to.x, to.z) - d.yaw)) * Math.min(1, dt * 10); }
       if (g.world.collide) g.world.collide(d.pos, 1.2, false); };
     if (g.farm && this.farmIntro > 0 && d.goal) { mv(d.goal.x, d.goal.z, 24); d.alt = Math.max(0, (d.alt || 0) - dt * 10); out.flap = d.alt > 0.25 ? 1 : 0; return out; }
-    if (this.state === 'follow') { const f = P.forward(V()), side = V(-f.z, 0, f.x), r = (P.radius || 3) + 3.2;
-      mv(P.pos.x + side.x * s * r - f.x * 2, P.pos.z + side.z * s * r - f.z * 2, 38); out.flap = d.alt > 0.3 ? 1 : 0; if (out.flap && Math.random() < 0.6) this.sparkle(d);
-      if (out.speed < 1) { const want = P.yaw; d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 4); out.hopY = Math.max(0, Math.sin(T * 9 + i * 1.6)) * 0.35 * HOP; } }
+    if (this.state === 'follow') { const f = P.forward(V()), side = V(-f.z, 0, f.x);
+      if (this.sea) { // flank the snout on the camera's left and right, in the swimming band
+        const spot = this.seaSpot(i);
+        mv(spot.x, spot.z, 24);
+        const cam = g.camera, want = cam ? Math.atan2(cam.position.x - d.pos.x, cam.position.z - d.pos.z) : P.yaw + Math.PI;
+        d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 6);
+        out.flap = 1; out.tailSp = 18; if (Math.random() < 0.7) this.sparkle(d);
+      } else {
+        const r = (P.radius || 3) + 3.2;
+        mv(P.pos.x + side.x * s * r - f.x * 2, P.pos.z + side.z * s * r - f.z * 2, 38); out.flap = d.alt > 0.3 ? 1 : 0; if (out.flap && Math.random() < 0.6) this.sparkle(d);
+        if (out.speed < 1) { const want = P.yaw; d.yaw += Math.atan2(Math.sin(want - d.yaw), Math.cos(want - d.yaw)) * Math.min(1, dt * 4); out.hopY = Math.max(0, Math.sin(T * 9 + i * 1.6)) * 0.35 * HOP; } } }
     else if (this.state === 'hunt' || this.state === 'maul') { const e = this.target; if (!e) return out;
       const toE = V(e.pos.x - P.pos.x, 0, e.pos.z - P.pos.z).normalize(), side = V(-toE.z, 0, toE.x), r = (e.radius || 3) + 1.9;
       const gx = e.pos.x + side.x * s * r, gz = e.pos.z + side.z * s * r;
@@ -641,7 +706,8 @@ export class Westies {
     else if (this.state === 'toot') { const k = (this.dogs[1].off ? 0 : 1) === i; out.hopY = T > 0.25 && T < 0.95 ? Math.sin((T - 0.25) / 0.7 * Math.PI) * (k ? 2.2 : 1.6) * HOP : 0; out.spin = T > 0.25 && T < 0.95 ? Math.sin((T - 0.25) / 0.7 * Math.PI) * 0.6 * s : 0; out.rear = T > 0.25 ? 0.3 : 0; out.tailSp = 50; }
     if (this.sea) { // v5 Deep Sea: they SWIM at the action's height (paddling flippers), a regulator bubble now and then
       const gd = this.ground(d.pos), bob = Math.sin(T * 2.4 + i * 2) * 0.5, e = this.target;
-      if (this.state === 'follow' || this.state === 'cheer') d.goalAlt = Math.max(0.3, P.pos.y + P.mech.height * 0.35 - gd + bob + (this.state === 'cheer' ? 1.5 : 0));
+      if (this.state === 'follow') d.goalAlt = Math.max(0.35, P.pos.y - gd + bob * 0.25);
+      else if (this.state === 'cheer') d.goalAlt = Math.max(0.3, P.pos.y + P.mech.height * 0.35 - gd + bob + 1.5);
       else if (e && this.state === 'hunt') d.goalAlt = Math.max(0.3, e.pos.y + e.mech.height * 0.4 - gd + bob);
       else if (e && this.state === 'maul') d.goalAlt = Math.max(0.3, (d.goalAlt || 0) + e.pos.y - gd);
       out.flap = 1; if (Math.random() < dt * 4) this.g.bubbles(d.head.getWorldPosition(V()), 2, 0.3, 4); }

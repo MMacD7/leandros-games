@@ -153,10 +153,20 @@ export function buildOcean(w) {
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
   w.snow = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xe0f8ff, size: 0.16, transparent: true, opacity: 0.45, depthWrite: false, sizeAttenuation: true })); w.snow.frustumCulled = false; root.add(w.snow);
   // ---- fish schools ----
-  const fishG = mergeGeometries([new THREE.SphereGeometry(0.35, 8, 6).scale(0.45, 0.8, 1.4).toNonIndexed(), new THREE.ConeGeometry(0.3, 0.45, 4).rotateX(Math.PI / 2).scale(0.2, 1, 1).translate(0, 0, -0.62).toNonIndexed()]);
-  const NF = 40, NSch = 5; w.fish = new THREE.InstancedMesh(fishG, new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.2 }), NF * NSch); w.fish.frustumCulled = false; root.add(w.fish);
-  const FC = [0xd0e0f0, 0xffd040, 0x40a0ff, 0xff7040, 0xc0f0ff].map(c => new THREE.Color(c)); for (let i = 0; i < NF * NSch; i++) w.fish.setColorAt(i, FC[Math.floor(i / NF)].clone().offsetHSL((r() - 0.5) * 0.04, 0, (r() - 0.5) * 0.1));
-  w.schools = []; for (let s = 0; s < NSch; s++) { const a = s / NSch * 6.28, d = 60 + r() * 150; w.schools.push({ cx: Math.cos(a) * d, cz: Math.sin(a) * d, R: 18 + r() * 20, y: 8 + r() * 18, sp: (0.15 + r() * 0.12) * (r() < 0.5 ? 1 : -1), off: Array.from({ length: NF }, () => [(r() - 0.5) * 9, (r() - 0.5) * 4, (r() - 0.5) * 9, r() * 6]) }); }
+  // The old schools orbited the world origin (the player starts at the base, ~200 m north) and sat at a
+  // fixed world Y, so on the sandy sea floor they were either missing or floating up in the fog. They now
+  // patrol the swimming band a few metres above the sand, around the base, the shallows and the arena.
+  const body = new THREE.SphereGeometry(0.35, 8, 6).scale(0.5, 0.85, 1.55).toNonIndexed();
+  const tail = new THREE.ConeGeometry(0.28, 0.5, 5).rotateX(Math.PI / 2).scale(0.35, 1, 1).translate(0, 0, -0.7).toNonIndexed();
+  const finG = new THREE.ConeGeometry(0.16, 0.38, 4).rotateZ(Math.PI / 2).translate(0, 0.28, 0.05).toNonIndexed();
+  const fishG = mergeGeometries([body, tail, finG]); fishG.scale(2.7, 2.7, 2.7);
+  const NF = 40, NSch = 5;
+  const fishMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.42, metalness: 0.02, emissive: 0x123044, emissiveIntensity: 0.55 });
+  w.fish = new THREE.InstancedMesh(fishG, fishMat, NF * NSch); w.fish.frustumCulled = false; w.fish.count = 0; root.add(w.fish);
+  const FC = [0xfff2c4, 0xffd040, 0x7ec8ff, 0xff7040, 0xd8fff4].map(c => new THREE.Color(c)); for (let i = 0; i < NF * NSch; i++) w.fish.setColorAt(i, FC[Math.floor(i / NF)].clone().offsetHSL((r() - 0.5) * 0.04, 0, (r() - 0.5) * 0.08));
+  if (w.fish.instanceColor) w.fish.instanceColor.needsUpdate = true;
+  const hubs = [null, TITLE, ARENA, { x: (BASE.x + ARENA.x) * 0.5, z: (BASE.z + ARENA.z) * 0.45 }, { x: ARENA.x - 48, z: ARENA.z + 36 }];
+  w.schools = []; for (let s = 0; s < NSch; s++) { const h = hubs[s], withPlayer = s === 0; w.schools.push({ withPlayer, cx: h ? h.x + (r() - 0.5) * 28 : BASE.x, cz: h ? h.z + (r() - 0.5) * 28 : BASE.z, R: withPlayer ? 5.5 : 12 + r() * 14, lift: withPlayer ? 2.6 : 3.5 + r() * 5.5, sp: (0.18 + r() * 0.1) * (r() < 0.5 ? 1 : -1), off: Array.from({ length: NF }, () => [(r() - 0.5) * (withPlayer ? 5 : 8), (r() - 0.5) * 1.8, (r() - 0.5) * (withPlayer ? 5 : 8), r() * 6, withPlayer ? 1.15 + r() * 0.45 : 0.9 + r() * 0.45]) }); }
   w.fishM = new THREE.Matrix4(); w.fishQ = new THREE.Quaternion(); w.fishE = new THREE.Euler();
   // v5.5 friendly sea turtles gliding around (scenery, not enemies)
   const TC = [[0x5a8a3a, 0x3a2a12, 0xd8b060], [0x7a6a3a, 0x2a1a0a, 0xe0c080], [0x4a7a6a, 0x1a2a22, 0xb8d0a0], [0x8a7a4a, 0x3a2410, 0xf0d090]];
@@ -219,8 +229,11 @@ export function updateOcean(w, dt, cam) {
     T.m.obj.visible = near; if (!near) continue; T.m.obj.position.set(x, y, z); T.m.obj.rotation.y = Math.atan2(-Math.sin(T.a) * T.sp, Math.cos(T.a) * T.sp); T.m.animate(dt, 5, { turn: T.sp > 0 ? 0.3 : -0.3 }); }
   // fish schools (only the ones near the camera get updated)
   if (w.fish) { let n = 0; const M = w.fishM, Q = w.fishQ, E = w.fishE, p = _fishP, s = _fishS;
-    for (const S of w.schools) { const a = t * S.sp, cx = S.cx + Math.cos(a) * S.R, cz = S.cz + Math.sin(a) * S.R; if (Math.hypot(cx - cam.x, cz - cam.z) > 170) continue; 
-      const fy = Math.max(w.height(cx, cz) + 3, S.y);
-      for (const o of S.off) { p.set(cx + o[0] + Math.sin(t * 1.3 + o[3]) * 0.8, fy + o[1] + Math.sin(t * 2 + o[3]) * 0.4, cz + o[2] + Math.cos(t * 1.1 + o[3]) * 0.8); E.set(0, Math.atan2(-Math.sin(a) * S.sp, Math.cos(a) * S.sp) + Math.sin(t * 6 + o[3]) * 0.15, 0); Q.setFromEuler(E); M.compose(p, Q, s); w.fish.setMatrixAt(n++, M); } }
+    for (const S of w.schools) { const a = t * S.sp; let ox = S.cx, oz = S.cz;
+      if (S.withPlayer && w.swimX != null) { const dx = cam.x - w.swimX, dz = cam.z - w.swimZ, len = Math.hypot(dx, dz) || 1; ox = w.swimX + dx / len * 5; oz = w.swimZ + dz / len * 5; }
+      const cx = ox + Math.cos(a) * S.R, cz = oz + Math.sin(a) * S.R; if (Math.hypot(cx - cam.x, cz - cam.z) > 170) continue;
+      const sand = w.height(cx, cz), fy = sand + (S.lift || 5);
+      const head = Math.atan2(-Math.sin(a) * S.sp, Math.cos(a) * S.sp);
+      for (const o of S.off) { const sc = o[4] || 1; p.set(cx + o[0] + Math.sin(t * 1.3 + o[3]) * 0.8, Math.min(SURF - 6, Math.max(sand + 1.6, fy + o[1] + Math.sin(t * 2 + o[3]) * 0.35)), cz + o[2] + Math.cos(t * 1.1 + o[3]) * 0.8); s.set(sc, sc, sc); E.set(Math.sin(t * 2.2 + o[3]) * 0.12, head + Math.sin(t * 6 + o[3]) * 0.18, Math.sin(t * 3 + o[3]) * 0.2); Q.setFromEuler(E); M.compose(p, Q, s); w.fish.setMatrixAt(n++, M); } }
     w.fish.count = n; w.fish.instanceMatrix.needsUpdate = true; }
 }

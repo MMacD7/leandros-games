@@ -619,7 +619,7 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
     this.time += dt; this.windU.uTime.value = this.time; this.waterU.uTime.value = this.time; this.terrainU.uTime.value = this.time;
     if (this.peak) updatePeak(this, dt, cam);
     if (this.isCity) updateCity(this, dt);
-    if (this.ocean) updateOcean(this, dt, cam);
+    if (this.ocean) { this.swimX = player.x; this.swimZ = player.z; updateOcean(this, dt, cam); }
     if (this.farm) updateFarmWorld(this, dt);
     // grass center slightly ahead of camera toward player so the field fills the view
     const cx = lerp(cam.x, player.x, 0.7), cz = lerp(cam.z, player.z, 0.7);

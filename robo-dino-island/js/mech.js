@@ -35,6 +35,7 @@ function makeMats(def, assets, wild) {
   if (matCache.has(key)) return matCache.get(key);
   const body = wild ? 0x1d1e22 : def.body, armor = wild ? 0x3a3d44 : def.armor, glow = wild ? 0xff2414 : def.glow;
   const dmg = battleDamageTexture(), pan = panelTextures();
+  dmg.userData.shared = pan.normal.userData.shared = pan.rough.userData.shared = true;
   const robo = def.kind === 'rdragon' || def.robodragon;
   const plate = new THREE.MeshStandardMaterial({ color: new THREE.Color(body).multiplyScalar(1.15), map: dmg, metalness: (robo || wild) ? 0.7 : 0.65, roughness: 0.32, normalMap: pan.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: pan.rough, envMapIntensity: wild ? 1.35 : 1.25 });
   plate.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'reflectedLight.indirectSpecular += vec3(0.847, 0.925, 1.0) * 0.25 * pow(clamp(1.0 - dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);\n#include <opaque_fragment>'); };
@@ -42,6 +43,7 @@ function makeMats(def, assets, wild) {
   const frame = new THREE.MeshStandardMaterial({ color: new THREE.Color(armor).multiplyScalar(1.1), map: dmg, metalness: 0.7, roughness: 0.4, normalMap: pan.normal, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: pan.rough, envMapIntensity: 1.1 });
   const joint = new THREE.MeshStandardMaterial({ color: 0x4a5058, metalness: wild ? 0.85 : 0.8, roughness: 0.35, envMapIntensity: 0.8 });
   const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(glow).multiplyScalar(2.2), toneMapped: false });
+  for (const m of [plate, frame, joint, glowM]) m.userData.shared = true;
   const mats = { plate, frame, joint, glow: glowM, glowColor: new THREE.Color(glow) };
   matCache.set(key, mats); return mats;
 }
