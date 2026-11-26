@@ -211,10 +211,16 @@ cd *= vec3(1.05, 0.9, 0.72);
 #endif
 #ifdef VOLCANO
 float vcdJ = length(vWP.xz - vec2(${VOLC.x.toFixed(1)}, ${VOLC.z.toFixed(1)}));
-float heatJ = smoothstep(150.0, 60.0, vcdJ) * smoothstep(${'0.0'}, 40.0, vWP.y);
-float vnJ = vno(vWP.xz*0.02) * 0.6 + vno(vWP.xz*0.07 + 3.0) * 0.4;
-float veinJ = smoothstep(0.42, 0.58, vnJ);
-vec3 lavaJ = vec3(2.2, 0.42, 0.05) * veinJ * heatJ * 0.7 * (0.85 + 0.15 * sin(uTime * 1.3 + vWP.x * 0.05));
+float onCone = smoothstep(148.0, 55.0, vcdJ);
+vec3 basalt = vec3(0.07, 0.055, 0.05);
+cg = mix(cg, basalt, onCone);
+cs = mix(cs, basalt * 0.85, onCone);
+cr = mix(cr, basalt * 1.25, onCone);
+cd = mix(cd, basalt, onCone);
+float vnJ = vno(vWP.xz * 0.05) * 0.55 + vno(vWP.xz * 0.17 + 3.1) * 0.45;
+float veinJ = smoothstep(0.72, 0.86, vnJ);
+float heatJ = onCone * smoothstep(28.0, 62.0, vWP.y);
+vec3 lavaJ = vec3(2.4, 0.28, 0.03) * veinJ * heatJ * (0.82 + 0.18 * sin(uTime * 1.4 + vWP.x * 0.07));
 #endif
 #ifdef OCEAN
 cg = gl * vec3(0.20, 0.42, 0.28) * 1.15; cs *= vec3(1.02, 0.98, 0.86); cr *= vec3(0.6, 0.68, 0.74); cd = cs * vec3(0.74, 0.7, 0.62);
@@ -271,11 +277,12 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
   // ---------- volcano: lava glow (smoke particles are emitted from main via fx) ----------
   buildVolcano() {
     let lowest = Infinity; for (let a = 0; a < 6.28; a += 0.5) lowest = Math.min(lowest, this.height(VOLC.x + Math.cos(a) * 3, VOLC.z + Math.sin(a) * 3));
-    this.craterY = this.height(VOLC.x, VOLC.z) + 1.5;
+    this.craterY = this.height(VOLC.x, VOLC.z) + 1.2;
+    const lipY = this.height(VOLC.x + 20, VOLC.z) + 1.4;
     const lava = new THREE.Mesh(new THREE.CircleGeometry(16, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a12, toneMapped: false }));
     lava.position.set(VOLC.x, this.craterY, VOLC.z); this.root.add(lava);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(16, 1.2, 6, 40), new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false }));
-    rim.rotation.x = Math.PI / 2; rim.position.set(VOLC.x, this.craterY + 0.4, VOLC.z); this.root.add(rim); this.lavaRim = rim;
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(18, 1.6, 8, 40), new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false }));
+    rim.rotation.x = Math.PI / 2; rim.position.set(VOLC.x, lipY, VOLC.z); this.root.add(rim); this.lavaRim = rim;
     this.lavaGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.assets.glow, color: 0xff6a20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false }));
     this.lavaGlow.scale.set(this.islandR > 400 ? 90 : 60, this.islandR > 400 ? 58 : 40, 1); if (this.peak) this.lavaGlow.material.color.set(0xff4a10); this.lavaGlow.position.set(VOLC.x, this.craterY + 8, VOLC.z); this.root.add(this.lavaGlow);
     this.smokeOrigin = new THREE.Vector3(VOLC.x, this.craterY + 4, VOLC.z);

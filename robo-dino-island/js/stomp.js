@@ -955,6 +955,9 @@ export class StompLife {
     return true;
   }
   showWin() {
+    if (this.g.level && this.g.level !== 'stomp') return;
+    const shout = document.getElementById('shout');
+    if (shout) { shout.classList.remove('show'); shout.textContent = ''; }
     this.won = true; this.step = 4;
     if (this.chevrons) this.chevrons.forEach(c => { c.visible = false; });
     if (this.winEl) this.winEl.classList.remove('hidden');
@@ -1290,7 +1293,8 @@ export class StompLife {
         c.y = c.baseY + Math.sin(t * Math.PI * 2 * 0.7 + i) * 0.08;
       }
       dummy.position.set(c.x, c.y, c.z);
-      dummy.rotation.set(Math.PI / 2, t * 1.2 + i, 0);
+      dummy.rotation.order = 'YXZ';
+      dummy.rotation.set(Math.PI / 2, t * 2.4 + i, 0);
       dummy.scale.set(sc, sc, sc);
       dummy.updateMatrix();
       this.coinFace.setMatrixAt(i, dummy.matrix);

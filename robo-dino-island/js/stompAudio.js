@@ -16,6 +16,8 @@ const mount = () => { if (document.body && !theme.parentNode) document.body.appe
 if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
 
 let wantLevel = '';
+let musicOn = true;
+let musicVol = 0.9;
 const pools = {};
 
 function pool(url) {
@@ -36,10 +38,11 @@ function playUrl(url, vol) {
 
 function applyTheme() {
   const url = THEMES[wantLevel];
-  if (url && !isMuted()) {
+  const audible = !!(url && !isMuted() && musicOn && musicVol > 0.01);
+  if (audible) {
     theme.dataset.level = wantLevel;
     if (!theme.src || !theme.src.endsWith(url)) { theme.src = url; theme.loop = true; }
-    theme.volume = 0.55;
+    theme.volume = 0.55 * musicVol;
     if (theme.paused) { const p = theme.play(); if (p && p.catch) p.catch(() => {}); }
   } else { theme.dataset.level = ''; if (!theme.paused) theme.pause(); }
 }
@@ -51,6 +54,7 @@ for (const ev of ['touchstart', 'pointerdown', 'click']) {
 export const stompAudio = {
   sync(level) { wantLevel = THEMES[level] ? level : ''; applyTheme(); },
   setMuted() { applyTheme(); },
+  setMusic(on, vol) { musicOn = on !== false; if (vol != null) musicVol = Math.max(0, Math.min(1, vol)); applyTheme(); },
   swing() { playUrl(SFX.swing, 0.7); },
   zip() { playUrl(SFX.zip, 0.75); },
   coin() { playUrl(SFX.coin, 0.65); },

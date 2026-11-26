@@ -207,8 +207,14 @@ function levelUI() {
   $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : level === 'city' ? '▶ Smash Mega City' : level === 'ocean' ? '▶ Dive into the Deep Sea' : level === 'farm' ? '▶ Go to the Farm 🚜' : level === 'stomp' ? '▶ Swing Stompolis' : '▶ Explore the Island';
   $('citybar').classList.toggle('hidden', level !== 'city'); $('farmbar').classList.toggle('hidden', level !== 'farm');
 }
+function clearShout() {
+  const el = $('shout'); if (!el) return;
+  el.classList.remove('show'); el.textContent = ''; shoutT = 0;
+}
 function setLevel(lv) {
   if (!['peak', 'city', 'ocean', 'farm', 'stomp'].includes(lv)) lv = 'jungle';
+  if (game && game.timers) game.timers.length = 0;
+  clearShout();
   if (lv !== 'stomp') { const win = $('stompwin'); if (win) win.classList.add('hidden'); }
   if (lv === level && world === worlds[lv]) return;
   level = lv; world = makeWorld(lv); world.applyQuality(Q); applyEnv(lv);
@@ -490,7 +496,7 @@ const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '�
 const toggleSound = () => { save.muted = !save.muted; setMuted(save.muted); stompAudio.setMuted(); persist(); soundLabel(); };
 tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
-const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };
+const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); stompAudio.setMusic(save.music, save.musicVol ?? 0.9); persist(); musicLabel(); };
 const rideLabel = () => { for (const id of ['g-ride', 'p-ride']) { $(id).textContent = '🧒 Leandro rides: ' + (save.ride !== false ? 'ON' : 'OFF'); $(id).classList.toggle('off', save.ride === false); } };
 const toggleRide = () => { save.ride = save.ride === false; persist(); rideLabel(); if (save.ride) voice.say("Let's go, Leandro!", { prio: 2 }); game.mountRider(); if (gMech) { if (save.ride === false || gMech.def.westie || gMech.def.sea) gRider.unmount(); else if (gMech.def.lion && gMech.seat) gRider.mountAt(gMech.seat, { mech: gMech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false }); else { const ro = rideOpts(gMech.def, gMech); if (ro) gRider.mountAt(gMech.seat, ro); else gRider.mount(gMech); } if (save.ride && game.rider.mounted) game.rider.wave(1.5); } };
 tap('g-ride', toggleRide); tap('p-ride', toggleRide); rideLabel();
@@ -498,11 +504,11 @@ const voiceLabel = () => { $('b-voice').classList.toggle('off', !save.voice); $(
 const toggleVoice = () => { save.voice = !save.voice; voice.setEnabled(save.voice); persist(); voiceLabel(); if (save.voice) voice.say('Leandro!', { prio: 2, cd: 0 }); };
 tap('b-voice', toggleVoice); tap('p-voice', toggleVoice); voice.setEnabled(save.voice !== false); voiceLabel();
 function hypeStart() { voice.say('Leandro!', { prio: 2, cd: 8000 }); if (save.ride !== false) voice.say("Let's go, Leandro!", { prio: 2, cd: 8000 }); }
-tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); music.setVolume(save.musicVol ?? 0.9); musicLabel();
+tap('b-music', toggleMusic); tap('p-music', toggleMusic); music.setEnabled(save.music !== false); music.setVolume(save.musicVol ?? 0.9); stompAudio.setMusic(save.music !== false, save.musicVol ?? 0.9); musicLabel();
 const volInput = $('p-music-vol');
 if (volInput) {
   volInput.value = String(Math.round((save.musicVol ?? 0.9) * 100));
-  volInput.addEventListener('input', () => { initAudio(); save.musicVol = (+volInput.value || 0) / 100; music.setVolume(save.musicVol); persist(); });
+  volInput.addEventListener('input', () => { initAudio(); save.musicVol = (+volInput.value || 0) / 100; music.setVolume(save.musicVol); stompAudio.setMusic(save.music !== false, save.musicVol); persist(); });
 }
 tap('p-quality', () => { if (autoQ) { autoQ = false; applyQuality(TIERS[0]); } else if (Q.tier < 3) applyQuality(TIERS[Q.tier + 1]); else { autoQ = true; applyQuality(TIERS[startTier]); } });
 document.addEventListener('gesturestart', e => e.preventDefault()); document.addEventListener('dblclick', e => e.preventDefault());
@@ -874,7 +880,8 @@ function loop(now) {
     const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = stompCam ? new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z) : new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
     const fm = !!game.farm, a = Math.sin(titleT * 0.12) * 0.22, r = (stompCam ? (asp < 1 ? 16 : 14) : fm ? (asp < 1 ? 13 : asp < 1.5 ? 9.5 : 8.5) : asp < 1 ? 28 : asp < 1.5 ? 17.5 : 15.5) + Math.sin(titleT * 0.2) * 1.0;
     camera.position.set(mid.x + Math.sin(a) * r, 0, mid.z + Math.cos(a) * r);
-    camera.position.y = Math.max(mid.y + (fm ? 2.0 : 3.0), world.height(camera.position.x, camera.position.z) + (fm ? 2.0 : 3.0));
+    const camLift = level === 'jungle' ? 16 : (fm ? 2.0 : 3.0);
+    camera.position.y = Math.max(mid.y + camLift, world.height(camera.position.x, camera.position.z) + camLift);
     camera.lookAt(mid.x, mid.y + (stompCam ? 2.2 : fm ? (asp < 1 ? 6.6 : 5.6) : (asp < 1 ? 6.0 : 4.4) + 1.5), mid.z - (stompCam ? 0 : 4));
     if (fx.shake > 0) camera.position.add(new THREE.Vector3((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake, 0));
     game.updatePickups(dt);

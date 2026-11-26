@@ -359,9 +359,10 @@ body.farm .rb-btn, body.farm .david-btn, body.farm .stink-btn { left: calc(var(-
 body.farm .stink-btn { top: calc(var(--sat) + 78px); width: 96px; height: 96px; overflow: visible; padding: 2px 4px; }
 body.farm .stink-btn b { font-size: 9px; line-height: 1; letter-spacing: -0.3px; max-width: 84px; }
 body.farm .stink-btn .dv-ic { font-size: 18px; }
-body.farm .david-btn { top: calc(var(--sat) + 186px); }
+body.farm .david-btn { top: calc(var(--sat) + 188px); }
 body.farm #farmbar { left: 50%; right: auto; transform: translateX(-50%); top: calc(var(--sat) + 12px); max-width: min(520px, calc(100vw - 340px)); }
-body.farm .rb-btn { top: calc(var(--sat) + 236px); }
+body.farm .rb-btn { top: calc(var(--sat) + 270px); }
+body:not(.farm):not(.stomp) .rb-btn { left: calc(var(--sal) + 14px); right: auto; top: calc(var(--sat) + 76px); bottom: auto; width: 84px; height: 84px; }
 body.farm .rb-btn b, body.farm .david-btn b, body.farm .stink-btn b { font-size: 11px; }
 body.farm .rb-btn .rb-ic, body.farm .david-btn .dv-ic, body.farm .stink-btn .st-ic { font-size: 26px; }
 @media (prefers-reduced-motion: reduce) { .david-btn, #a-missile.glow, #title #lv-farm { animation: none; } }
