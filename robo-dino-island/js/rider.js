@@ -1,7 +1,7 @@
 // "Leandro rides": a chunky, cartoony, procedural low-poly kid rider who sits in a saddle (real dinos) or a
 // cockpit seat (robots). The seat is found automatically for every dino by ray-casting the body in its rest pose.
 import * as THREE from './vendor/three.bundle.min.js';
-import { cloneLeandro } from './models.js';
+import { cloneLeandro, cloneSwingBoy } from './models.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 // where along the body the seat goes: t = 0 at the hips, 1 at the chest, >1 toward the neck (in front of sails/plates)
@@ -145,16 +145,70 @@ export class Rider {
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.renderOrder = 3; } });
     return g;
   }
-  // Stompolis only. The real Leandro mesh, recoloured, plus a mask. No emblem, no cape, no backpack.
+  // Stompolis only. The Swing Boy GLB replaces the hooped Leandro mesh. Every other world keeps Leandro.
   setHoopster(on) {
-    if (!this.attachSkin()) return;
-    if (on) this.paintSuit();
-    if (!this._lenses) this._lenses = this.makeLenses();
-    for (const m of this._lenses) m.visible = !!on;
-    if (this.cap) this.cap.visible = !on;
-    this.setBands(!!on);
-    this._hoopster = !!on;
+    if (!on) {
+      this._hoopster = false;
+      if (this.swingAvatar) this.swingAvatar.visible = false;
+      if (this.avatar) this.avatar.visible = true;
+      if (this.cap) this.cap.visible = true;
+      return;
+    }
+    if (!this.attachSwingBoy()) {
+      if (!this.attachSkin()) return;
+      this.paintSuit();
+      if (!this._lenses) this._lenses = this.makeLenses();
+      for (const m of this._lenses) m.visible = true;
+      if (this.cap) this.cap.visible = false;
+      this.setBands(true);
+    }
+    this._hoopster = true;
   }
+  attachSwingBoy() {
+    if (this.swingAvatar) {
+      this.swingAvatar.visible = true;
+      if (this.avatar) this.avatar.visible = false;
+      if (this.cap) this.cap.visible = false;
+      return true;
+    }
+    let cloned;
+    try { cloned = cloneSwingBoy(); } catch (e) { return false; }
+    const { scene, animations } = cloned;
+    this.swingAvatar = scene;
+    this.swingAvatar.name = 'swing-boy';
+    // The sculpt is 1.70 m. 1.20 m puts his feet on the deck and his height in the 17-22% band.
+    this.swingAvatar.scale.setScalar(1.2 / 1.7);
+    this.swingAvatar.position.set(0, 0, 0);
+    this.root.add(scene);
+    const bones = {};
+    scene.traverse(o => {
+      if (o.isBone || o.isObject3D) { if (o.name) bones[o.name] = o; }
+      if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; if (o.isSkinnedMesh && !this.swingMesh) this.swingMesh = o; }
+    });
+    this.skinBones = bones;
+    const byEnd = (suffix) => bones['mixamorig:' + suffix] || Object.values(bones).find(b => b.name === suffix || b.name.endsWith(suffix));
+    const hip = byEnd('Hips');
+    if (!hip) return false;
+    this.hipBone = hip;
+    this._hipRest = hip.position.clone();
+    this.restQ = {};
+    for (const n in bones) if (bones[n].quaternion) this.restQ[n] = bones[n].quaternion.clone();
+    this.root.traverse(o => { if (o.userData.blocky) o.visible = false; });
+    if (this.avatar) this.avatar.visible = false;
+    if (this.cap) this.cap.visible = false;
+    this.swingMixer = new THREE.AnimationMixer(scene);
+    this.swingClips = {};
+    for (const c of animations) {
+      const a = this.swingMixer.clipAction(c);
+      a.play(); a.setEffectiveWeight(0);
+      this.swingClips[c.name] = a;
+    }
+    this._palmSocket = bones.PalmGoo_R || null;
+    this._bands = [this.swingMesh];
+    this.skinned = true;
+    return true;
+  }
+  palmSocket() { return this._palmSocket || null; }
   paintSuit() {
     let mesh = null;
     this.avatar.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
@@ -296,7 +350,63 @@ totalEmissiveRadiance += CHALK * 0.35 * trunkMask;`);
     if (rh || lh) { put(lh, cuff(0xc6ff4a, 0x8dff20)); put(rh, cuff(0x7df4ff, 0x19e4ff)); }
     else if (this.arms && this.arms[0]) { put(this.arms[0].hand, cuff(0xc6ff4a, 0x8dff20)); put(this.arms[1].hand, cuff(0x7df4ff, 0x19e4ff)); }
   }
+  // Swing Boy clips. Hang is held, the fling uses the up part of the jump, landing uses the vault land.
+  heroAct(state, dt, opt = {}) {
+    if (!this._hoopster || !this.swingClips) return;
+    const prev = this._act;
+    this._act = state;
+    if (state === 'roof' && (prev === 'air' || prev === 'swing' || prev === 'wall')) this._landT = 0.55;
+    if (this._landT > 0 && state === 'roof') {
+      this._landT -= dt;
+      this.holdSwing('Vault_and_Land', 2.35);
+      return;
+    }
+    if (state === 'swing' || state === 'wall') {
+      this._airT = 0;
+      this.holdSwing('Jump_and_Hang_on_Bar', 1.02);
+      this.leanSpine(opt.lean || 0);
+      return;
+    }
+    if (state === 'air') {
+      this._airT = (this._airT || 0) + dt;
+      const rising = (opt.vy || 0) >= -0.5;
+      this.holdSwing('Jump_Run_inplace', rising ? Math.min(0.4, 0.16 + this._airT) : 0.85);
+      return;
+    }
+    this._airT = 0;
+  }
+  blendSwing(name, dt, loop) {
+    for (const [n, a] of Object.entries(this.swingClips)) {
+      const on = n === name;
+      a.setEffectiveWeight(on ? 1 : 0);
+      a.paused = false;
+      a.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+      if (on) a.timeScale = n === 'RunFast' ? 1.05 : n === 'Running' ? 1.1 : 1;
+    }
+    this.swingMixer.update(dt);
+  }
+  holdSwing(name, time) {
+    for (const [n, a] of Object.entries(this.swingClips)) {
+      const on = n === name;
+      a.setEffectiveWeight(on ? 1 : 0);
+      a.paused = true;
+      if (on) a.time = Math.min(time, (a.getClip().duration || time) - 0.02);
+    }
+    this.swingMixer.update(0.001);
+    const action = this.swingClips[name];
+    if (action) action.time = Math.min(time, (action.getClip().duration || time) - 0.02);
+  }
+  leanSpine(lean) {
+    const spine = this.bone('Spine');
+    if (!spine || !this.swingMixer) return;
+    spine.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, lean)));
+  }
   pulseCuffs(on, time) {
+    const mesh = this.swingMesh;
+    if (mesh && mesh.material && !Array.isArray(mesh.material)) {
+      mesh.material.emissiveIntensity = on ? 1.2 + 0.45 * Math.sin(time * 8) : 1;
+      return;
+    }
     if (!this._halos) return;
     const o = on ? 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(time * 4 * Math.PI)) : 0.3;
     for (const h of this._halos) { h.visible = true; h.material.opacity = o; }
@@ -341,6 +451,13 @@ totalEmissiveRadiance += CHALK * 0.35 * trunkMask;`);
     this.alignAvatar();
   }
   locomotion(speed, dt) {
+    if (this._hoopster && this.swingClips) {
+      if (this._act && this._act !== 'roof') return;
+      if (this._landT > 0) return;
+      const name = speed > 5.2 ? 'RunFast' : speed > 0.35 ? 'Running' : 'Idle';
+      this.blendSwing(name, dt, true);
+      return;
+    }
     if (!this.attachSkin()) return;
     const name = speed > 5.2 ? 'Running' : speed > 0.35 ? 'Walking' : '';
     for (const [n, a] of Object.entries(this.clips)) {

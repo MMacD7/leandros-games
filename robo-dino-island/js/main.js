@@ -16,7 +16,7 @@ import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave,
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
-import { prepareLoaders, preloadCityMaps, preloadCityMapsLow } from './models.js';
+import { prepareLoaders, preloadCityMaps, preloadCityMapsLow, preloadSwingBoy } from './models.js';
 import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky, preloadStego, preloadAllo, preloadDilo, preloadPachy, preloadPara, preloadWestie } from './models.js';
 import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
@@ -87,7 +87,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
-preloadArt(mgr); prepareLoaders(renderer, mgr); preloadCityMaps(); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr); preloadPachy(mgr); preloadPara(mgr); preloadWestie(mgr);
+preloadArt(mgr); prepareLoaders(renderer, mgr); preloadCityMaps(); preloadSwingBoy(mgr, !isIPhone); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr); preloadPachy(mgr); preloadPara(mgr); preloadWestie(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }

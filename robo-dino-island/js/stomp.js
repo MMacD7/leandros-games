@@ -691,6 +691,8 @@ export class StompLife {
   }
   wrist(p) {
     const R = p.mech && p.mech.R; const out = this._w;
+    const socket = R && R.palmSocket && R.palmSocket();
+    if (socket) return socket.getWorldPosition(out);
     const bone = R && R.bone && R.bone('RightHand');
     if (bone) {
       bone.getWorldPosition(out);
@@ -908,7 +910,20 @@ export class StompLife {
       d.position.y = d.userData.baseY + Math.sin(this.g.world.time * 1.4 + d.userData.bob) * 0.12;
     });
     if (p) {
-      const R = p.mech && p.mech.R; if (R) { if (!R._hoopster) { R.attachSkin(); R.setHoopster(true); } const shooting = this.hooked && this.anchor; R.heroSwing(this.state === 'swing' || this.state === 'air' || this.state === 'wall'); if (shooting) R.aimShoot(this.anchor); if (R.pulseCuffs) R.pulseCuffs(!!shooting, this.g.world.time); }
+      const R = p.mech && p.mech.R; if (R) {
+        if (!R._hoopster) { R.attachSkin(); R.setHoopster(true); }
+        let lean = 0;
+        if (this.anchor && (this.state === 'swing' || this.state === 'wall')) {
+          const ax = this.anchor.x - p.pos.x, az = this.anchor.z - p.pos.z;
+          const side = this.vel.x * az - this.vel.z * ax;
+          const mag = Math.hypot(ax, az) || 1;
+          lean = Math.max(-0.35, Math.min(0.35, side / (mag * 18)));
+        }
+        const shooting = this.hooked && this.anchor;
+        R.heroAct(this.state, this._dt || 0, { speed: p.speedNow, vy: this.vel.y, lean });
+        if (shooting) R.aimShoot(this.anchor);
+        if (R.pulseCuffs) R.pulseCuffs(!!shooting, this.g.world.time);
+      }
       this.poseCable(p);
       this.fadeProps(p);
       this.placeShade(p);

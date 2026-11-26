@@ -66,6 +66,20 @@ export function preloadCityMapsLow() {
   loadCitySet(cityMaps.lo, CITY_LO, false);
 }
 
+const SWING_HI = 'assets/models/swingboy.glb';
+const SWING_LO = 'assets/models/swingboy-1024.glb';
+let swingCache = null;
+
+export function preloadSwingBoy(mgr, hiRes) {
+  const loader = modelLoader(mgr);
+  loader.load(hiRes ? SWING_HI : SWING_LO, gltf => { swingCache = gltf; }, undefined, err => console.error(hiRes ? SWING_HI : SWING_LO, err));
+}
+
+export function cloneSwingBoy() {
+  if (!swingCache) throw new Error('swing boy model not loaded');
+  return { scene: clone(swingCache.scene), animations: swingCache.animations };
+}
+
 const LION_URL = 'assets/models/lion.glb';
 const TREX_URL = 'assets/models/trex.glb';
 const BRACHIO_URL = 'assets/models/brachio.glb';
