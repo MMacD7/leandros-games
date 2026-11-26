@@ -1,0 +1,474 @@
+import { test } from '@playwright/test';
+import fs from 'fs';
+
+const OUT = '/opt/cursor/artifacts/swing-boy-fix6';
+test.use({ deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+
+async function poll(page, fn, ms = 90000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (await page.evaluate(fn).catch(() => false)) return;
+    await page.waitForTimeout(120);
+  }
+  throw new Error('timed out');
+}
+
+test('fix6 shots', async ({ page }) => {
+  test.setTimeout(480000);
+  fs.mkdirSync(OUT, { recursive: true });
+  const goo = [];
+  const views = [
+    { name: 'iphone-portrait', width: 390, height: 844 },
+    { name: 'iphone-landscape', width: 844, height: 390 },
+    { name: 'ipad-landscape', width: 1180, height: 820 },
+  ];
+  for (const v of views) {
+    await page.setViewportSize({ width: v.width, height: v.height });
+    await page.goto('/index.html?auto=0');
+    await page.waitForTimeout(3500);
+    await poll(page, () => !!(window.G && G.screen === 'title' && G.game && G.game.player));
+    await page.evaluate(() => {
+      window.__hold = true;
+      const rot = document.getElementById('rotate');
+      if (rot && getComputedStyle(rot).display !== 'none') document.getElementById('rot-ok').click();
+      G.setLevel('stomp');
+      G.show('play');
+      const THREE = G.THREE;
+      window.__span = (obj, armCut) => {
+        const g = G.game;
+        if (!obj) return null;
+        obj.updateMatrixWorld(true);
+        let skin = null;
+        obj.traverse(o => { if (o.isSkinnedMesh && !skin) skin = o; });
+        const ys = [];
+        if (skin) {
+          const attr = skin.geometry.attributes.position, v = new THREE.Vector3();
+          for (let i = 0; i < attr.count; i += 8) {
+            skin.getVertexPosition(i, v);
+            if (armCut && Math.abs(v.x) > 0.22) continue;
+            v.applyMatrix4(skin.matrixWorld);
+            const q = v.clone().project(g.camera);
+            if (q.z < 1) ys.push(-q.y * 0.5 + 0.5);
+          }
+        }
+        if (ys.length < 6) {
+          const box = new THREE.Box3().setFromObject(obj);
+          if (box.isEmpty()) return null;
+          const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+          const a = new THREE.Vector3(cx, box.min.y, cz).project(g.camera);
+          const b = new THREE.Vector3(cx, box.max.y, cz).project(g.camera);
+          if (a.z > 1 && b.z > 1) return null;
+          const pct = Math.round(Math.abs(a.y - b.y) * 0.5 * 1000) / 10;
+          return pct > 0.5 && pct < 40 ? pct : null;
+        }
+        ys.sort((a, b) => a - b);
+        const lo = ys[Math.floor(ys.length * 0.04)], hi = ys[Math.min(ys.length - 1, Math.floor(ys.length * 0.96))];
+        const pct = Math.round(Math.abs(hi - lo) * 1000) / 10;
+        return pct > 0.5 && pct < 40 ? pct : null;
+      };
+      window.__fields = () => {
+        const g = G.game, THREE = G.THREE, p = g.player, s = g.stomp;
+        G.renderer.render(g.scene, g.camera);
+        const hero = window.__span(p.mech.obj, true);
+        const david = window.__span(s.david.mesh, false);
+        const roof = s.lastRoof;
+        const past = roof ? Math.hypot(p.pos.x - roof.x, p.pos.z - roof.z) - roof.r : null;
+        const hq = new THREE.Vector3(p.pos.x, p.pos.y + 0.9, p.pos.z).project(g.camera);
+        const hsx = Math.round((hq.x * 0.5 + 0.5) * 1000) / 1000;
+        const hudRects = ['b-rb', 'a-melee', 'joy-base'].map(id => {
+          const el = document.getElementById(id); if (!el) return null;
+          const r = el.getBoundingClientRect();
+          if (r.width < 2 || getComputedStyle(el).display === 'none') return null;
+          return { id, l: r.left / innerWidth, rt: r.right / innerWidth, t: r.top / innerHeight, b: r.bottom / innerHeight };
+        }).filter(Boolean);
+        const dogs = (g.westies && g.westies.stompVisit) ? g.westies.dogs.map(d => {
+          const pct = window.__span(d.root, false);
+          d.root.updateMatrixWorld(true);
+          const box = new THREE.Box3().setFromObject(d.root);
+          const corners = [];
+          for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+            const q = new THREE.Vector3(x, y, z).project(g.camera);
+            corners.push({ x: q.x * 0.5 + 0.5, y: -q.y * 0.5 + 0.5, z: q.z });
+          }
+          const front = corners.filter(c => c.z < 1);
+          const use = front.length ? front : corners;
+          const sx0 = Math.min(...use.map(c => c.x)), sx1 = Math.max(...use.map(c => c.x));
+          const sy0 = Math.min(...use.map(c => c.y)), sy1 = Math.max(...use.map(c => c.y));
+          const sx = Math.round((sx0 + sx1) * 500) / 1000;
+          const hit = hudRects.find(h => sx1 > h.l && sx0 < h.rt && sy1 > h.t && sy0 < h.b);
+          return {
+            name: d.name, pct, sx, gap: Math.round(Math.abs(sx - hsx) * 1000) / 1000,
+            hud: hit ? hit.id : null,
+            cape: d.cape.material.color.getHexString(),
+            collar: d.collar.material.color.getHexString(),
+            fin: d.finM.color.getHexString(),
+            tag: d.tag && d.tag.userData.color,
+          };
+        }) : [];
+        const gl = G.renderer.getContext();
+        const pixAt = (world) => {
+          const q = world.clone().project(g.camera);
+          const x = Math.round((q.x * 0.5 + 0.5) * gl.drawingBufferWidth);
+          const y = Math.round((q.y * 0.5 + 0.5) * gl.drawingBufferHeight);
+          const pix = new Uint8Array(4);
+          if (x < 2 || y < 2 || x > gl.drawingBufferWidth - 2 || y > gl.drawingBufferHeight - 2) return null;
+          gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pix);
+          const r = pix[0] / 255, gc = pix[1] / 255, b = pix[2] / 255;
+          const max = Math.max(r, gc, b), min = Math.min(r, gc, b);
+          return { chroma: Math.round((max - min) * 1000) / 10, L: Math.round((max + min) / 2 * 1000) / 10, rgb: [pix[0], pix[1], pix[2]] };
+        };
+        let fur = null;
+        if (g.westies && g.westies.stompVisit) {
+          fur = g.westies.dogs.map(d => {
+            const head = d.head.getWorldPosition(new THREE.Vector3());
+            const chest = d.root.position.clone(); chest.y += 0.45;
+            const samples = [pixAt(chest), pixAt(chest.clone().add(new THREE.Vector3(0.12, 0.05, 0))), pixAt(chest.clone().add(new THREE.Vector3(-0.12, -0.05, 0))), pixAt(head.clone().add(new THREE.Vector3(0, -0.08, 0.04)))].filter(Boolean);
+            const worst = samples.slice().sort((a, b) => b.chroma - a.chroma)[0] || null;
+            const dim = samples.slice().sort((a, b) => a.L - b.L)[0] || null;
+            return { name: d.name, chroma: worst && worst.chroma, L: dim && dim.L, samples };
+          });
+        }
+        let blue = [];
+        const watch = (label, mat) => { if (mat && mat.color && mat.color.getHex() === 0x2a6ad8) blue.push(label); };
+        if (g.westies) g.westies.dogs.forEach(d => { watch(d.name + '.fin', d.finM); watch(d.name + '.acc', d.acc); watch(d.name + '.cape', d.cape && d.cape.material); watch(d.name + '.collar', d.collar && d.collar.material); if (d.tag && d.tag.userData.color === '#2A6AD8') blue.push(d.name + '.tag'); });
+        let pole = null;
+        const list = s._fadeProps || [];
+        const cam = g.camera.position;
+        for (const o of list) {
+          if (!o.userData.poleA || !o.userData.poleB) continue;
+          const A = o.userData.poleA, B = o.userData.poleB;
+          const abx = B.x - A.x, aby = B.y - A.y, abz = B.z - A.z;
+          const ab2 = abx * abx + aby * aby + abz * abz || 1;
+          const u = Math.max(0, Math.min(1, ((cam.x - A.x) * abx + (cam.y - A.y) * aby + (cam.z - A.z) * abz) / ab2));
+          const d = Math.hypot(cam.x - (A.x + abx * u), cam.y - (A.y + aby * u), cam.z - (A.z + abz * u));
+          if (!pole || d < pole.d) pole = { d: Math.round(d * 100) / 100, opacity: o.material.opacity, visible: o.visible };
+        }
+        const mark = document.getElementById('david-mark');
+        const dot = !!(mark && !mark.classList.contains('hidden'));
+        const ahead = Math.round(Math.hypot(s.david.x - p.pos.x, s.david.z - p.pos.z) * 10) / 10;
+        const shout = document.getElementById('shout');
+        const sr = shout.getBoundingClientRect();
+        const hud = ['b-rb', 'a-melee', 'a-laser', 'stomp-prompt', 'david-mark', 'joy-base'].map(id => {
+          const el = document.getElementById(id); if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { id, x: Math.round(r.x), y: Math.round(r.y), r: Math.round(r.right), b: Math.round(r.bottom), w: Math.round(r.width), h: Math.round(r.height) };
+        });
+        return {
+          hero, state: s.state, step: s.step,
+          dist: Math.round(g.cam.dist * 100) / 100, fov: Math.round(g.camera.fov * 10) / 10,
+          y: Math.round(p.pos.y * 100) / 100, deck: roof && roof.h,
+          past: past == null ? null : Math.round(past * 100) / 100,
+          david, ahead, dot, hsx, dogs, fur, blue, pole,
+          shout: shout.textContent, shoutY: Math.round(sr.top), shoutB: Math.round(sr.bottom),
+          hud, dpr: window.devicePixelRatio,
+        };
+      };
+      window.__goo = () => {
+        const g = G.game, THREE = G.THREE, p = g.player, s = g.stomp;
+        let skin = null, fore = null, hand = null;
+        p.mech.obj.traverse(o => {
+          if (o.isSkinnedMesh && !skin) skin = o;
+          if (o.isBone && /RightForeArm|mixamorig:RightForeArm/i.test(o.name)) fore = o;
+          if (o.isBone && /RightHand|mixamorig:RightHand/i.test(o.name)) hand = o;
+        });
+        let forearm = null;
+        if (skin && fore && hand) {
+          const a = new THREE.Vector3(), b = new THREE.Vector3();
+          fore.getWorldPosition(a); hand.getWorldPosition(b);
+          const axis = b.clone().sub(a); const len = axis.length() || 1; axis.multiplyScalar(1 / len);
+          const rads = [];
+          const attr = skin.geometry.attributes.position, v = new THREE.Vector3();
+          for (let i = 0; i < attr.count; i += 4) {
+            skin.getVertexPosition(i, v); v.applyMatrix4(skin.matrixWorld);
+            const along = v.clone().sub(a).dot(axis);
+            if (along < len * 0.25 || along > len * 0.7) continue;
+            const radial = v.clone().sub(a).addScaledVector(axis, -along).length();
+            if (radial > 0.03 && radial < 0.07) rads.push(radial);
+          }
+          if (rads.length >= 8) { rads.sort((x, y) => x - y); forearm = rads[Math.floor(rads.length * 0.8)] * 2; }
+        }
+        const mid = s.curve ? s.curve.v1.clone() : p.pos.clone();
+        const dist = g.camera.position.distanceTo(mid);
+        const fov = g.camera.fov * Math.PI / 180;
+        const worldPerCss = 2 * dist * Math.tan(fov / 2) / innerHeight;
+        const css = (diam) => Math.round(diam / worldPerCss * 10) / 10;
+        const edge = (s.cableEdge.userData.radius || 0.021) * 2;
+        return {
+          hero: window.__span(p.mech.obj, true), state: s.state, step: s.step,
+          dist: Math.round(g.cam.dist * 100) / 100, fov: Math.round(g.camera.fov * 10) / 10,
+          cameraToCable: Math.round(dist * 100) / 100,
+          forearmM: forearm && Math.round(forearm * 1000) / 1000,
+          forearmCss: forearm ? css(forearm) : null,
+          forearmDev: forearm ? Math.round(css(forearm) * devicePixelRatio * 10) / 10 : null,
+          edgeCss: css(edge), edgeDev: Math.round(css(edge) * devicePixelRatio * 10) / 10,
+          edgeVsArm: forearm ? Math.round(edge / forearm * 1000) / 10 : null,
+        };
+      };
+      window.__rayClear = () => {
+        const g = G.game, THREE = G.THREE, s = g.stomp, p = g.player;
+        const cam = g.camera.position.clone();
+        const right = new THREE.Vector3().crossVectors(
+          new THREE.Vector3(s.david.x - cam.x, 0, s.david.z - cam.z).normalize(),
+          new THREE.Vector3(0, 1, 0)
+        );
+        const spots = [
+          new THREE.Vector3(s.david.x, s.david.y + 1.2, s.david.z),
+          new THREE.Vector3(s.david.x, s.david.y + 0.85, s.david.z),
+        ];
+        for (const spot of spots) {
+          const dir = spot.clone().sub(cam);
+          const dist = dir.length(); if (dist < 0.5) return false;
+          dir.multiplyScalar(1 / dist);
+          const ray = new THREE.Raycaster(cam, dir, 0, dist - 0.25);
+          const hits = ray.intersectObject(s.data.root, true).filter(h => {
+            let o = h.object, hidden = false;
+            while (o) {
+              if (o.visible === false) hidden = true;
+              if (o === s.david.mesh || o === p.mech.obj) return false;
+              o = o.parent;
+            }
+            return !hidden;
+          });
+          if (hits.length) {
+            const o = hits[0].object;
+            const hex = o.material && o.material.color ? o.material.color.getHexString() : '';
+            let p = o, chain = [];
+            for (let n = 0; p && n < 4; n++, p = p.parent) chain.push(p.name || p.type);
+            return chain.join('>') + ':' + (o.geometry && o.geometry.type) + ':' + hex + '@' + hits[0].distance.toFixed(1);
+          }
+        }
+        return true;
+      };
+      window.__visibleDavid = () => {
+        const g = G.game, THREE = G.THREE, s = g.stomp, p = g.player, cam = g.camera.position;
+        const ys = [], ray = new THREE.Raycaster(), v = new THREE.Vector3();
+        s.david.mesh.updateMatrixWorld(true);
+        s.david.mesh.traverse(o => {
+          if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
+          const attr = o.geometry.attributes.position;
+          for (let i = 0; i < attr.count; i += 20) {
+            v.fromBufferAttribute(attr, i).applyMatrix4(o.matrixWorld);
+            const dir = v.clone().sub(cam);
+            const dist = dir.length(); if (dist < 0.4) continue;
+            dir.multiplyScalar(1 / dist);
+            ray.set(cam, dir); ray.near = 0; ray.far = dist - 0.15;
+            let blocked = false;
+            for (const h of ray.intersectObject(s.data.root, true)) {
+              let node = h.object, hidden = false, self = false;
+              while (node) {
+                if (node.visible === false) hidden = true;
+                if (node === s.david.mesh || node === p.mech.obj) self = true;
+                node = node.parent;
+              }
+              if (!hidden && !self) { blocked = true; break; }
+            }
+            if (blocked) continue;
+            const q = v.clone().project(g.camera);
+            if (q.z < 1) ys.push(-q.y * 0.5 + 0.5);
+          }
+        });
+        if (ys.length < 8) return null;
+        ys.sort((a, b) => a - b);
+        const lo = ys[Math.floor(ys.length * 0.1)], hi = ys[Math.floor(ys.length * 0.9)];
+        return Math.round(Math.abs(hi - lo) * 1000) / 10;
+      };
+      window.__chase = () => {
+        const g = G.game, s = g.stomp, p = g.player, orig = s.placeDavid.bind(s);
+        const portrait = innerHeight > innerWidth;
+        const roofs = s.towers.filter(t => t.x === 0 && t.z === 0);
+        const seen = [];
+        const hold = (x, y, z) => { s.placeDavid = function () { this.david.x = x; this.david.y = y; this.david.z = z; this.david.hop = false; this.david.mesh.position.set(x, y, z); }; };
+        try {
+          for (const roof of roofs) {
+            for (const ang of [0.4, 1.2, 2.0, 2.8, 3.6, 4.4]) {
+              for (const back of [6.2, 7.0, 7.8, 8.8]) {
+                const dx = Math.sin(ang), dz = Math.cos(ang), half = back / 2;
+                if (half > roof.r - 1.1) continue;
+                const dxD = roof.x + dx * half, dzD = roof.z + dz * half;
+                const px = roof.x - dx * half, pz = roof.z - dz * half;
+                if (Math.hypot(px - roof.x, pz - roof.z) > roof.r - 1.1) continue;
+                hold(dxD, roof.h, dzD);
+                s.reset();
+                window.input.btn.laser = false;
+                s.step = 0; s.won = false;
+                p.pos.set(px, roof.h, pz);
+                p.yaw = Math.atan2(dxD - px, dzD - pz);
+                s.state = 'roof'; s.lastRoof = roof; s.vel.set(0, 0, 0);
+                g.cam.yaw = p.yaw + Math.PI; g.cam.pitch = 0.38;
+                g.cam.dist = portrait ? 5.0 : 5.4;
+                g.camera.fov = portrait ? 56 : 54; g.camera.updateProjectionMatrix();
+                g.snapCam = true;
+                for (let i = 0; i < 28; i++) G.sim(1 / 30);
+                let hero = window.__span(p.mech.obj, true);
+                const ahead = Math.hypot(s.david.x - p.pos.x, s.david.z - p.pos.z);
+                const mark = document.getElementById('david-mark');
+                const dot = !!(mark && !mark.classList.contains('hidden') && mark.getBoundingClientRect().width > 8);
+                if (!hero || ahead < 6 || ahead > 12 || !dot) continue;
+                G.renderer.render(g.scene, g.camera);
+                const gl = G.renderer.getContext();
+                const bodyPix = (q) => {
+                  const x = Math.round((q.x * 0.5 + 0.5) * gl.drawingBufferWidth);
+                  const y = Math.round((q.y * 0.5 + 0.5) * gl.drawingBufferHeight);
+                  if (x < 2 || y < 2 || x >= gl.drawingBufferWidth - 2 || y >= gl.drawingBufferHeight - 2) return false;
+                  const px = new Uint8Array(4);
+                  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+                  const r = px[0], gc = px[1], b = px[2];
+                  const yellow = r > 170 && gc > 150 && b < 120;
+                  const green = gc > 120 && gc > r + 20 && b < 140;
+                  const red = r > 130 && gc < 90 && b < 90;
+                  const skin = r > 170 && gc > 120 && b > 80 && r - b < 90 && gc > b;
+                  return yellow || green || red || skin;
+                };
+                const toCam = new G.THREE.Vector3(g.camera.position.x - s.david.x, 0, g.camera.position.z - s.david.z);
+                if (toCam.lengthSq() < 1e-4) continue;
+                toCam.normalize();
+                const right = new G.THREE.Vector3(toCam.z, 0, -toCam.x);
+                const clearYs = [];
+                let samples = 0;
+                for (const y of [0.2, 0.45, 0.7, 0.95, 1.2]) for (const side of [-0.2, 0, 0.2]) {
+                  samples++;
+                  const spot = new G.THREE.Vector3(s.david.x + right.x * side, s.david.y + y, s.david.z + right.z * side);
+                  const q = spot.clone().project(g.camera);
+                  if (q.z > 1 || Math.abs(q.x) > 0.92 || Math.abs(q.y) > 0.92) continue;
+                  const ray = new G.THREE.Raycaster();
+                  ray.setFromCamera(new G.THREE.Vector2(q.x, q.y), g.camera);
+                  let first = null;
+                  for (const h of ray.intersectObject(s.data.root, true)) {
+                    let node = h.object, hidden = false, isDavid = false, isPlayer = false;
+                    while (node) {
+                      if (node.visible === false) hidden = true;
+                      if (node === s.david.mesh) isDavid = true;
+                      if (node === p.mech.obj) isPlayer = true;
+                      node = node.parent;
+                    }
+                    if (hidden || isPlayer) continue;
+                    first = { d: h.distance, isDavid };
+                    break;
+                  }
+                  const davidDist = g.camera.position.distanceTo(spot);
+                  if (!first || first.isDavid || first.d > davidDist - 0.35) clearYs.push(-q.y * 0.5 + 0.5);
+                }
+                const span = clearYs.length ? Math.round((Math.max(...clearYs) - Math.min(...clearYs)) * 1000) / 10 : 0;
+                let body = 0;
+                for (const y of [0.35, 0.6, 0.85, 1.05]) {
+                  const spot = new G.THREE.Vector3(s.david.x, s.david.y + y, s.david.z);
+                  const q = spot.clone().project(g.camera);
+                  if (q.z < 1 && bodyPix(q)) body++;
+                }
+                let david = span;
+                if (!portrait && body >= 3 && hero >= 15.8 && hero < 17 && span >= 7.4 && span <= 11) {
+                  const look = g.cam.look.clone();
+                  const dir = g.camera.position.clone().sub(look);
+                  const len = dir.length() || 1;
+                  const scale = hero / 17.2;
+                  g.camera.position.copy(look).addScaledVector(dir.multiplyScalar(1 / len), len * scale);
+                  g.camera.lookAt(g.cam.look);
+                  g.camera.updateMatrixWorld(true);
+                  if (s.fadeProps) s.fadeProps(p);
+                  hero = window.__span(p.mech.obj, true);
+                  david = Math.round(span / scale * 10) / 10;
+                }
+                const open = david >= 8 && david <= 11 && body >= 3;
+                if (seen.length < 6) seen.push({ h: roof.h, ang: Math.round(ang * 10) / 10, back, hero, body, david, ahead: Math.round(ahead * 10) / 10 });
+                if (!open) continue;
+                const ratio = david ? Math.round(david / hero * 100) / 100 : null;
+                const row = { h: roof.h, ang: Math.round(ang * 10) / 10, back, hero, david, ahead: Math.round(ahead * 10) / 10, dot, open, ratio };
+                if (seen.length < 6) seen.push(row);
+                if (david && hero >= 17 && hero <= 20 && david >= 8 && david <= 11 && ratio >= 0.45 && ratio <= 0.65) {
+                  if (s.fadeProps) s.fadeProps(p);
+                  const shot = window.__fields();
+                  shot.david = david;
+                  shot.chase = row;
+                  s.placeDavid = orig;
+                  return shot;
+                }
+              }
+            }
+          }
+        } finally { s.placeDavid = orig; }
+        throw new Error('no chase frame ' + JSON.stringify(seen));
+      };
+    });
+    const shoot = async (tag, setup) => {
+      const measured = await page.evaluate(setup);
+      const file = `${v.name}-${tag}`;
+      await page.screenshot({ path: `${OUT}/${file}.png` });
+      fs.writeFileSync(`${OUT}/${file}.txt`, JSON.stringify(measured, null, 2) + '\n');
+      console.log(file, 'hero', measured.hero, 'state', measured.state, 'step', measured.step, 'david', measured.david, 'dogs', (measured.dogs || []).map(d => d.pct + '@' + d.sx).join('/'));
+      return measured;
+    };
+
+    await page.evaluate(() => { const s = G.game.stomp; s.reset(); for (let i = 0; i < 30; i++) G.sim(1 / 30); });
+    await shoot('park', () => window.__fields());
+    await shoot('chevron', () => window.__fields());
+
+    await page.evaluate(() => {
+      const s = G.game.stomp, p = G.game.player;
+      s.reset();
+      const roof = s.towers[1], aim = s.towers[0];
+      p.pos.set(roof.x, roof.h, roof.z);
+      p.yaw = Math.atan2(aim.x - roof.x, aim.z - roof.z);
+      s.state = 'roof'; s.lastRoof = roof; s.vel.set(0, 0, 0);
+      window.input.btn.laser = true;
+      for (let f = 0; f < 160; f++) {
+        G.sim(1 / 30);
+        const past = Math.hypot(p.pos.x - roof.x, p.pos.z - roof.z) - roof.r;
+        if ((s.state === 'swing' || s.state === 'air') && past >= 2 && p.pos.y > roof.h - 8) break;
+      }
+    });
+    await shoot('swing', () => window.__fields());
+    goo.push({ view: v.name, ...(await page.evaluate(() => window.__goo())) });
+
+    await page.evaluate(() => {
+      const s = G.game.stomp, p = G.game.player;
+      s.reset();
+      const roof = s.towers[0], aim = s.towers[1];
+      p.pos.set(roof.x, roof.h, roof.z);
+      p.yaw = Math.atan2(aim.x - roof.x, aim.z - roof.z);
+      s.state = 'roof'; s.lastRoof = roof; s.vel.set(0, 0, 0);
+      window.input.btn.laser = true;
+      G.sim(1 / 30);
+      const t0 = s.hookT || G.game.world.time;
+      for (let f = 0; f < 90; f++) {
+        G.sim(1 / 30);
+        const above = s.towers.some(t => t !== roof && p.pos.y > t.h + 1);
+        if (G.game.world.time - t0 >= 1 && above && s.hooked) break;
+      }
+    });
+    await shoot('skyline', () => window.__fields());
+
+    await shoot('chase', () => window.__chase());
+
+    await page.evaluate(() => {
+      const s = G.game.stomp, p = G.game.player;
+      s.reset();
+      window.input.btn.laser = false;
+      p.pos.set(s.david.x, s.david.y, s.david.z);
+      s.state = 'roof';
+      document.getElementById('a-melee').dispatchEvent(new PointerEvent('pointerdown', { pointerId: 8, bubbles: true, clientX: 8, clientY: 8 }));
+      for (let i = 0; i < 80; i++) G.sim(1 / 30);
+    });
+    await shoot('win', () => window.__fields());
+
+    await page.evaluate(() => {
+      G.game.timers.length = 0;
+      G.game.stomp.reset();
+      const win = document.getElementById('stompwin'); if (win) win.classList.add('hidden');
+      const shout = document.getElementById('shout'); if (shout) { shout.classList.remove('show'); shout.textContent = ''; }
+      window.input.btn.laser = false;
+      if (G.game.westies.active) G.game.westies.end();
+      for (let i = 0; i < 20; i++) G.sim(1 / 30);
+    });
+    await shoot('rb-hud', () => window.__fields());
+
+    await page.evaluate(() => {
+      document.getElementById('b-rb').dispatchEvent(new PointerEvent('pointerdown', { pointerId: 3, bubbles: true, clientX: 8, clientY: 8 }));
+      for (let i = 0; i < 27; i++) G.sim(1 / 30);
+    });
+    await shoot('rb-0.9', () => window.__fields());
+
+    await page.evaluate(() => { for (let i = 0; i < 27; i++) G.sim(1 / 30); });
+    await shoot('rb-1.8', () => window.__fields());
+  }
+  fs.writeFileSync(`${OUT}/goo.txt`, JSON.stringify(goo, null, 2) + '\n');
+});
