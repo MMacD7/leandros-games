@@ -1,5 +1,8 @@
 # Leandro's Robo Dino Island
 
+## v5.17.1
+* Fixed Jungle Island (and every level) vanishing after tapping Ricky & Bobby: when the busy dog show made the game drop to a lower graphics tier, the sun's shadow map was thrown away and never redrawn while you stood still, so the ground, trees, garage and your dino stopped drawing. The shadow map is now redrawn whenever it is missing.
+
 ## v5.17.0
 * Farty Poop Farm now has an optional Farm Fair chore loop: feed four animal kinds, collect eggs, help Ricky and Bobby herd a pig, and bounce on the castle. Each completed chore earns a ribbon and cycles to the next.
 * Farm Fair progress is shown in a compact, responsive HUD and only advances during roam play. Existing feeding goals, touch actions, pause behavior, and the country barnyard soundtrack remain in place.
