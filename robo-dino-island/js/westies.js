@@ -562,6 +562,7 @@ export class Westies {
       return;
     }
     this.t += dt; const T = this.t, DANCE = 5;
+    if (this.farmCheerT > 0) this.farmCheerT = Math.max(0, this.farmCheerT - dt);
     if (this.g.farm && this.farmIntro > 0) this.placeFarmStage();
     if (this.farmIntro > 0) this.farmIntro = Math.max(0, this.farmIntro - dt);
     if (!this.helper && (this.state === 'dance' || this.state === 'enter') && T > 0.8 && this.danger()) this.flyAway(); // trouble nearby: up, up and away
@@ -586,6 +587,7 @@ export class Westies {
         if (this.fartExit && this.g.farm && Math.random() < 0.3) this.g.farm.cloud(V(d.pos.x, this.ground(d.pos) + d.alt, d.pos.z), V(0, -1, 0), 2, 0.7);
         const sc = this.S * (d.mul || 1) * Math.max(0.05, 1 - Math.max(0, d.alt - 30) / 25); d.root.scale.setScalar(sc);
       }
+      if (this.farmCheerT > 0 && g.farm) { const bounce = Math.max(0, Math.sin(this.clock * 16 + i * Math.PI)) * 0.42; hopY = Math.max(hopY, bounce * HOP); rear = Math.max(rear, bounce * 0.55); tailSp = Math.max(tailSp, 42); }
       const side = V(Math.cos(d.yaw), 0, -Math.sin(d.yaw));
       d.ph += dt * (speed > 1 ? 16 : 5); const run = Math.min(1, speed / 8), sw = Math.sin(d.ph);
       const legSw = flap ? 0.6 : 0.9 * run + (this.state === 'dance' ? 0.35 * Math.abs(Math.sin(T * 9 + i)) : 0);
@@ -618,6 +620,11 @@ export class Westies {
       if (!this.introduced) this.intro(); else { const iA = this.dogs[0].off ? 1 : 0, iB = this.dogs[1].off ? 0 : 1; this.barkQ = [{ t: 0.3, i: iA, n: 2 }, { t: 0.8, i: iB, n: 2 }, { t: 3.0, i: iA, n: 1 }]; } }
     else if (this.state === 'dance') { this.danced = T; while (this.barkQ && this.barkQ.length && T >= this.barkQ[0].t) { const b = this.barkQ.shift(); this.woof(b.i, b.n); } if (Math.random() < dt * 7) this.confetti(this.dogs[(Math.random() * 2) | 0].pos, 6); if (T > DANCE) this.flyAway(); }
     else if (this.state === 'fly' && (T > (this.sea ? 4.2 : 3.6) || this.activeDogs().every(d => d.alt > 55))) this.end();
+  }
+  farmRescueCheer() {
+    if (!this.active || !this.g.farm) return;
+    this.farmCheerT = 1.05;
+    this.dogs.forEach((d, i) => { if (!d.off) { this.woof(i, 1); this.sparkle(d); } });
   }
   // ---- v5 helper mode: follow → hunt → pounce + bite flurry → guaranteed KO → bark → fly away
   bark2(n = 2) { let k = 0; this.barkQ = []; this.dogs.forEach((d, i) => { if (!d.off) this.barkQ.push({ t: 0.05 + 0.3 * k++, i, n }); }); } // call right after this.t = 0

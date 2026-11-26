@@ -275,3 +275,16 @@ export function cloneWestie() {
   if (!westieCache) throw new Error('westie model not loaded');
   return { scene: clone(westieCache.scene), animations: westieCache.animations };
 }
+
+const EXPEDITION_BEACON_URL = 'assets/models/jungle-expedition-beacon.glb';
+let expeditionBeaconCache = null;
+export function preloadExpeditionBeacon(mgr) {
+  const loader = modelLoader(mgr);
+  loader.load(EXPEDITION_BEACON_URL, gltf => { expeditionBeaconCache = gltf; }, undefined, err => console.error(EXPEDITION_BEACON_URL, err));
+}
+export function cloneExpeditionBeacon() {
+  if (!expeditionBeaconCache) return null;
+  const scene = clone(expeditionBeaconCache.scene);
+  scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return scene;
+}

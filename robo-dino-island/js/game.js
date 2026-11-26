@@ -34,6 +34,7 @@ import { PachyMech } from './pachy.js';
 import { ParaMech } from './para.js';
 import { Eggs } from './eggs.js';
 import { CostumeRex, COSTUME } from './costume.js';
+import { Expedition } from './expedition.js';
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
 export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
 
@@ -138,7 +139,8 @@ class Dino {
     }
     this.jaw = Math.max(0, this.jaw - dt * 3); this.roar = Math.max(0, this.roar - dt * 1.2); this.biteA = Math.max(0, this.biteA - dt * 4); this.splashA = Math.max(0, (this.splashA || 0) - dt * 0.55); this.slowT -= dt;
     const ro = this.real ? sstep(0, 0.35, this.roar) : (this.roar > 0.2 ? 1 : 0);
-    m.animate(dt, this.alive ? this.speedNow : 0, { jaw: Math.max(this.jaw, this.roar > 0 ? 1 : 0), roar: ro, turn: this.turn || 0, flying: this.fly, boost: this.boosting, climb: this.climb,
+    const act = this.act, windup = act && act.dur > 0 ? 1 - sstep(0, act.dur * 0.2, act.t || 0) : 0;
+    m.animate(dt, this.alive ? this.speedNow : 0, { jaw: Math.max(this.jaw, this.roar > 0 ? 1 : 0), roar: ro, turn: this.turn || 0, flying: this.fly, boost: this.boosting, climb: this.climb, windup,
       bite: Math.sin(this.biteA * Math.PI), charge: this.chargeA, whip: this.whipA, slash: this.slashA || 0, splash: this.splashA || 0, pounce: this.pounceA || 0, smash: this.smashA || 0, rear: this.rearA, air: this.air, pant: this.boosting ? 1 : 0, look: this.look || 0, frill: this.frillT > 0 || this.breathT > 0 });
     if (this.alive && m.seatOnGround) m.seatOnGround((x, z) => w.height(x, z));
     this.status(dt);
@@ -180,6 +182,7 @@ export class Game {
     this.westies = new Westies(this);
     this.bindFarm(); this.bindStomp();
     this.eggs = new Eggs(this);
+    this.expedition = new Expedition(this);
   }
   // v5.1 Farty Poop Farm: the living farm (animals, poop, horse, Bad David) belongs to the farm world
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
@@ -275,19 +278,25 @@ export class Game {
   // switch level (Jungle Island <-> Dragon Peak)
   setWorld(w) {
     if (this.westies) this.westies.reset();
-    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); if (this.eggs) this.eggs.sync();
+    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); if (this.eggs) this.eggs.sync(); if (this.expedition) this.expedition.syncHud();
     if (this.westies && !(w && w.stomp)) this.westies.leaveStomp();
   }
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
 
   // ---------- modes ----------
-  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); if (this.stomp) this.stomp.reset(); this.spawnT = 0.5; this.battle = null; }
+  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); if (this.stomp) this.stomp.reset(); this.spawnT = 0.5; this.battle = null; if (this.expedition) this.expedition.syncHud(); }
   startBattle() {
     if (this.world && this.world.farm) { this.hud.toast('🚜 No battles on the farm! Feed the animals instead 🐮'); return; }
     if (this.world && this.world.stomp) { this.hud.toast('Swing, zip, wrap! No battles in Stompolis.'); return; }
     if (this.westies) { this.westies.reset(); if (this.r() < 0.3) this.later(2.5, () => this.westies.trigger('battle')); }
     this.mode = 'battle'; this.clearEnemies(); this.spawnPlayer(true);
-    this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false, boss: null, bosses: 0 }; this.mh.resetArena(); this.nextWave();
+    this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false, boss: null, bosses: 0, shortRun: true, runComplete: false }; this.mh.resetArena(); this.nextWave();
+  }
+  continueBattle() {
+    const b = this.battle; if (!b) return;
+    b.over = false; b.shortRun = false; b.runComplete = false; b.t = 90; b.boss = null;
+    this.clearEnemies(); this.spawnPlayer(true); this.player.shieldT = 3.5;
+    this.mh.resetArena(); this.nextWave();
   }
   bossWave() {
     if (this.level === 'peak') return this.dragonKing();
@@ -1035,12 +1044,13 @@ export class Game {
     }
     for (let i = this.timers.length - 1; i >= 0; i--) { const T = this.timers[i]; T.t -= dt; if (T.t <= 0) { this.timers.splice(i, 1); T.fn(); } }
     p.updateVisual(dt); this.rider.update(dt, p); if (this.eggs) this.eggs.update(dt);
+    if (this.expedition && this.mode === 'roam' && p.alive) this.expedition.updatePlayer(p.pos.x, p.pos.z);
     if (this.level === 'jungle' && this.mode !== 'battle' && p.alive) {
       let hot = !!(p.act || p.breathT > 0);
       if (!hot) for (const e of this.enemies) if (e.alive && (e.boss || (e.radius || 0) >= 3 || (e.def && e.def.hp >= 180)) && e.pos.distanceTo(p.pos) < 80) hot = true;
       music.play(hot ? 'battle' : 'roam'); if (music.setIntensity) music.setIntensity(hot ? 1 : 0);
     }
-    if (this.farm) this.farm.update(dt);
+    if (this.farm) this.farm.update(dt, false, this.mode === 'roam');
     if (this.stomp) this.stomp.update(dt);
     if (p.shieldT > 0) { p.shieldT -= dt; if (Math.random() < 0.5) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 5, p.pos.y + Math.random() * p.mech.height, p.pos.z + (Math.random() - 0.5) * 5), vel: { x: 0, y: 1.5, z: 0 }, size: 0.5, life: 0.6, r: 0.3, g: 1.8, b: 2.6, alpha: 1 }); }
     if (!p.alive && this.player !== p) return;
@@ -1072,7 +1082,10 @@ export class Game {
       // despawn very far enemies so the island stays lively near the player
       for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; if (e.alive && e.pos.distanceTo(p.pos) > (this.world && this.world.playR > 400 ? 360 : 260)) { e.remove(); this.enemies.splice(i, 1); } } }
     else if (this.battle && !this.battle.over) {
-      this.battle.t -= dt; if (music.setIntensity) music.setIntensity(clamp(this.enemies.filter(e => e.alive).length / 8 + (this.battle.boss ? 0.5 : 0), 0, 1)); if (this.enemies.length === 0) { if (this.battle.wave > 0) this.hud.leandroWins?.('Wave ' + this.battle.wave + ' cleared!'); this.nextWave(); }
+      this.battle.t -= dt; if (music.setIntensity) music.setIntensity(clamp(this.enemies.filter(e => e.alive).length / 8 + (this.battle.boss ? 0.5 : 0), 0, 1)); if (this.enemies.length === 0) {
+        if (this.battle.shortRun && this.battle.wave >= 3) { this.battle.runComplete = true; this.endBattle(); }
+        else { if (this.battle.wave > 0) this.hud.leandroWins?.('Wave ' + this.battle.wave + ' cleared!'); this.nextWave(); }
+      }
       if (this.battle.t <= 0) this.endBattle();
     }
     if (this.hype) this.hype.update(dt);
@@ -1203,7 +1216,7 @@ export class Game {
       if (!k.alive) { k.t -= dt; if (k.t <= 0) k.alive = true; continue; }
       const dx = k.x - p.pos.x, dz = k.z - p.pos.z; if (dx * dx + dz * dz > 160 * 160) continue;
       if (p.alive && reach(k.x, k.y + 1.2, k.z)) { k.alive = false; k.t = 60;
-        if (k.type === 'core') { this.addBolts(10); p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.35); p.boostE = p.st.boost; this.save.cores++; sfx.core(); this.hud.toast('+10 bolts  ⚡ Energy core!'); this.fx.sparks(v.set(k.x, k.y + 1.2, k.z), 20, { r: 0.3, g: 0.9, b: 1 }, 1); }
+        if (k.type === 'core') { this.addBolts(10); p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.35); p.boostE = p.st.boost; this.save.cores++; if (this.expedition) this.expedition.onCoreCollected(); sfx.core(); this.hud.toast('+10 bolts  ⚡ Energy core!'); this.fx.sparks(v.set(k.x, k.y + 1.2, k.z), 20, { r: 0.3, g: 0.9, b: 1 }, 1); }
         else { this.addBolts(3); sfx.pickup(); this.fx.sparks(v.set(k.x, k.y + 1, k.z), 8, { r: 1, g: 0.9, b: 0.6 }, 0.6); }
         continue; }
       const bob = Math.sin(t * 2 + k.ph) * 0.3;

@@ -338,6 +338,7 @@ export class Eggs {
     const ids = this.hatchedIds();
     if (!ids.includes(e.id)) ids.push(e.id);
     if (this.g.persist) this.g.persist();
+    if (this.g.expedition) this.g.expedition.onEggHatched(e.id);
     let baby = this.followers.find(b => b.id === e.id) || this.spawnBaby(e, true);
     if (!baby) baby = this.spawnBaby(e, true);
     if (baby) {

@@ -312,6 +312,12 @@ export const KINDS = {
   goat: { name: 'goat', food: 'carrot', snd: 'maa', farts: ['trumpet', 'squeaky', 'stutter', 'raspberry'], poop: 0.6, speed: 1.7, r: 0.8, emoji: '🐐', pen: 'sheep', n: 2 },
   horse: { name: 'horse', food: 'apple', snd: 'neigh', farts: ['long', 'trumpet', 'trombone', 'encore'], poop: 0.9, speed: 1.5, r: 1.3, emoji: '🐴', pen: 'horse', n: 1 },
 };
+const FARM_FAIR_TASKS = [
+  { key: 'feed', label: 'Feed 4 animal kinds', target: 4 },
+  { key: 'eggs', label: 'Collect 2 chicken eggs', target: 2 },
+  { key: 'herd', label: 'Help herd a pig home', target: 1 },
+  { key: 'bounce', label: 'Bounce 3 times', target: 3 },
+];
 function part(parent, list, x = 0, y = 0, z = 0) { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); if (list && list.length) { const m = new THREE.Mesh(mergeGeometries(list), mats().vc); m.castShadow = true; g.add(m); g.userData.mesh = m; } return g; }
 function eyes(L, x, y, z, r = 0.06, white = true) { for (const s of [-1, 1]) { if (white) L.push(C(SPH(r, 8, 6), 0xffffff, s * x, y, z)); L.push(C(SPH(r * 0.6, 6, 5), 0x111111, s * (x + r * 0.15), y + r * 0.05, z + r * (white ? 0.55 : 0))); L.push(C(SPH(r * 0.18, 4, 3), 0xffffff, s * x + r * 0.2, y + r * 0.35, z + r * (white ? 0.95 : 0.5))); } }
 function leg(parent, x, y, z, col, len, rad, hoof = 0x3a2a20, sock = null) { const L = [C(CYL(rad, rad * 0.85, len, 8), col, 0, -len / 2, 0)]; if (sock) L.push(C(CYL(rad * 0.9, rad * 0.95, len * 0.22, 8), sock, 0, -len * 0.82, 0)); L.push(C(CYL(rad * 0.95, rad * 1.05, 0.12, 8), hoof, 0, -len - 0.02, 0)); return part(parent, L, x, y, z); }
@@ -561,7 +567,7 @@ export class FarmLife {
     this.poops = []; this.prints = []; this.prMesh = new THREE.InstancedMesh(mergeGeometries([C(SPH(1, 10, 4), 0, 0, 0, 0, 0.1, 0.02, 0.16), ...[-0.07, -0.025, 0.02, 0.06].map((x, i) => C(SPH(0.03, 5, 3), 0, x, 0, 0.2 - Math.abs(i - 1.5) * 0.015, 1, 0.5, 1))]), M.print, 140);
     this.prMesh.count = 0; this.prMesh.frustumCulled = false; this.root.add(this.prMesh);
     this.sprites = []; for (let i = 0; i < 36; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: icon('heart'), transparent: true, depthWrite: false })); s.visible = false; s.renderOrder = 6; this.root.add(s); this.sprites.push({ s, life: 0 }); }
-    this.foods = []; this.fed = new Set(); this.goal = 12; this.round = 1; this.n = { feeds: 0, fed: 0, farts: 0, poops: 0, squish: 0, gold: 0, toots: 0, rides: 0, bounces: 0, bigBounces: 0, flipsK: 0, fartBounces: 0, guestBounces: 0, dogBounces: 0, davidBounces: 0, coopVisits: 0, stinks: 0, stinkBlocked: 0, faints: 0, popUps: 0, strangers: 0, ewws: 0, nosesHeld: 0, runAways: 0, stinkFlies: 0, eggsCollected: 0, goldEggs: 0, coopPanics: 0, drives: 0, hopOffs: 0, honks: 0, putts: 0, exhaust: 0, balePush: 0, gallopFarts: 0, herds: 0, wins: 0, mud: 0, butts: 0, eggs: 0, fluffs: 0, bugeyes: 0, feathers: 0, slips: 0, noses: 0, dances: 0, turbos: 0, laughs: 0, flips: 0, boings: 0, starSplats: 0 };
+    this.foods = []; this.fed = new Set(); this.goal = 12; this.round = 1; this.fair = { index: 0, progress: 0, kinds: new Set(), ribbons: 0, cheerT: 0 }; this.n = { feeds: 0, fed: 0, farts: 0, poops: 0, squish: 0, gold: 0, toots: 0, rides: 0, bounces: 0, bigBounces: 0, flipsK: 0, fartBounces: 0, guestBounces: 0, dogBounces: 0, davidBounces: 0, coopVisits: 0, stinks: 0, stinkBlocked: 0, faints: 0, popUps: 0, strangers: 0, ewws: 0, nosesHeld: 0, runAways: 0, stinkFlies: 0, eggsCollected: 0, goldEggs: 0, coopPanics: 0, drives: 0, hopOffs: 0, honks: 0, putts: 0, exhaust: 0, balePush: 0, gallopFarts: 0, herds: 0, wins: 0, mud: 0, butts: 0, eggs: 0, fluffs: 0, bugeyes: 0, feathers: 0, slips: 0, noses: 0, dances: 0, turbos: 0, laughs: 0, flips: 0, boings: 0, starSplats: 0 };
     this.flyMesh = new THREE.InstancedMesh(mergeGeometries([C(SPH(0.045, 6, 4), 0x111111), C(SPH(1, 6, 4), 0xd8eeff, 0.04, 0.03, 0, 0.05, 0.012, 0.03), C(SPH(1, 6, 4), 0xd8eeff, -0.04, 0.03, 0, 0.05, 0.012, 0.03)]), mats().vc, 48); this.flyMesh.count = 0; this.flyMesh.frustumCulled = false; this.root.add(this.flyMesh);
     this.eggs = []; this.eggGeo = SPH(0.12, 10, 8); this.eggGeo.scale(1, 1.3, 1);
     this.riding = false; this.ridingLion = false; this.sinceGold = 0; this.hintT = 0; this.gfT = 3; this.mudT = 0; this.toastT = 0;
@@ -585,8 +591,10 @@ export class FarmLife {
   }
   titlePose(tx, tz) { const H = this.horse; H.free = null; H.place(tx + 3.4, tz - 1, -Math.PI / 2 + 0.35); H.set('title'); }
   // ---------- per frame ----------
-  update(dt, title = false) {
+  update(dt, title = false, fairEnabled = true) {
     this.t += dt; const p = this.kid; this.active = !title && !!p; this.kidPos = p ? p.pos : null;
+    if (this.fair.cheerT > 0) this.fair.cheerT = Math.max(0, this.fair.cheerT - dt);
+    this.fairEnabled = fairEnabled;
     for (const a of this.animals) a.update(dt, title);
     this.ensureFarmLion();
     if (this.riding && p) this.syncHorse(p, dt);
@@ -675,7 +683,7 @@ export class FarmLife {
   crumbs(p, col) { const c = new THREE.Color(col); for (let i = 0; i < this.fx.n(8); i++) this.fx.glow.spawn({ pos: p, vel: { x: (Math.random() - 0.5) * 3, y: 1 + Math.random() * 2, z: (Math.random() - 0.5) * 3 }, size: 0.12, life: 0.6, r: c.r, g: c.g, b: c.b, alpha: 0.9, grav: 9 }); }
   onFed(a) {
     a.say(1.1); this.emote('heart', a, 3); a.fullT = 9;
-    if (!this.fed.has(a)) { this.fed.add(a); this.n.fed++; const k = this.fed.size; this.bar();
+    if (!this.fed.has(a)) { this.fed.add(a); this.n.fed++; this.farmFair('feed', a.kind); const k = this.fed.size; this.bar();
       if (k >= this.goal) this.win(); else { this.toast(`🌟 Yum! The ${a.name} loves it! ${a.K.emoji} ${k}/${this.goal}`); if (k % 4 === 0) { sfx.tada(0.9); voice.say(pick(['Great job, Leandro!', 'Super farmer!', 'Yee-haw!']), { prio: 1, cd: 3000 }); } } }
     else this.toast(`${a.K.emoji} More snacks for the ${a.name}! Yum!`, 1.5);
   }
@@ -690,7 +698,20 @@ export class FarmLife {
     this.g.later(4, () => { this.round++; this.fed.clear(); this.bar(); this.toast(`🚜 Round ${this.round}! Feed them all again!`); });
   }
   bar() { const f = $('fb-fed'); if (f) f.textContent = `${Math.min(this.fed.size, this.goal)}/${this.goal}`; const s = $('fb-stars'); if (s) { const k = this.fed.size; s.textContent = [4, 8, 12].map(x => k >= x ? '★' : '☆').join(''); }
-    const q = $('fb-poop'); if (q) q.textContent = this.n.poops; const g = $('fb-gold'); if (g) g.textContent = this.n.gold; }
+    const q = $('fb-poop'); if (q) q.textContent = this.n.poops; const g = $('fb-gold'); if (g) g.textContent = this.n.gold;
+    const job = $('fb-job'), task = FARM_FAIR_TASKS[this.fair.index]; if (job && task) job.textContent = `🎪 Farm Fair ${this.fair.ribbons} ribbon${this.fair.ribbons === 1 ? '' : 's'} · ${task.label} · ${this.fair.progress}/${task.target}`; }
+  farmFair(key, value) {
+    if (this.fairEnabled === false) return;
+    const task = FARM_FAIR_TASKS[this.fair.index]; if (!task || task.key !== key) return;
+    if (key === 'feed') { this.fair.kinds.add(value); this.fair.progress = this.fair.kinds.size; }
+    else this.fair.progress++;
+    if (this.fair.progress >= task.target) {
+      this.fair.ribbons++; this.fair.index = (this.fair.index + 1) % FARM_FAIR_TASKS.length; this.fair.progress = 0; this.fair.kinds.clear(); this.fair.cheerT = 1.6;
+      const p = this.kid; if (p) { p.mech.danceT = Math.max(p.mech.danceT || 0, 1.2); for (let i = 0; i < this.fx.n(14); i++) this.fx.glow.spawn({ pos: V(p.pos.x + (Math.random() - 0.5) * 3, p.pos.y + 1 + Math.random() * 2, p.pos.z + (Math.random() - 0.5) * 3), vel: { x: (Math.random() - 0.5) * 2, y: 1.5 + Math.random() * 2, z: (Math.random() - 0.5) * 2 }, size: 0.15, size1: 0.06, life: 0.8, r: 1.4, g: 1.05, b: 0.25, alpha: 0.95, grav: 1, drag: 2 }); }
+      this.g.hud.shout && this.g.hud.shout('🎪 FARM FAIR RIBBON!', 1.5); sfx.tada(0.7); this.toast(`🎪 Farm Fair! You earned ribbon ${this.fair.ribbons}!`);
+    }
+    this.bar();
+  }
   // ---------- farts + poop ----------
   // v5.2: a BIG bouncy cartoon green fart cloud (puffy balls that pop out fast then billow) + little rising bubbles
   cloud(p, dir, n = 8, big = 1) { const fx = this.fx; this.n.clouds = (this.n.clouds || 0) + 1;
@@ -844,7 +865,7 @@ export class FarmLife {
   onCastle(x, z, m = 0) { const K = FARM.castle; return Math.abs(x - K.x) < 5.4 - m && Math.abs(z - K.z) < 5.4 - m; }
   castleBoing(v = 1, pitch = 1) { this.castleWob = Math.max(this.castleWob, 0.6 * v); sfx.boing(clamp(v * (1.2 - this.camDist(FARM.castle) / 60), 0.05, 1), pitch); sfx.squeakBounce && sfx.squeakBounce(v, pitch); }
   // v5.6.1 a landing on the castle floor: a springy bounce (JUMP queued = a BIG flip bounce)
-  castleLand(p, big) { const B = this.kidBounce; this.castleJumpQ = false; B.bigUsed = big; const fart = !big && Math.random() < 0.18; B.v = big ? 16.5 : fart ? 13 : 10.5; this.n.bounces++; p.mech.squashT = 0.18;
+  castleLand(p, big) { const B = this.kidBounce; this.castleJumpQ = false; B.bigUsed = big; const fart = !big && Math.random() < 0.18; B.v = big ? 16.5 : fart ? 13 : 10.5; this.n.bounces++; this.farmFair('bounce'); p.mech.squashT = 0.18;
     if (big) { this.n.bigBounces++; p.mech.flipT = 0.75; this.n.flipsK++; }
     if (fart) { this.n.fartBounces++; sfx.fart(pick(['squeakup', 'squeaky', 'tiny']), 0.8); this.cloud(V(p.pos.x, p.pos.y + 0.6, p.pos.z), V(0, -1, 0), 6, 0.7); this.toast('💨 FART-BOUNCE! 😂', 4); }
     this.castleBoing(big ? 1 : 0.7, big ? 0.8 : 1 + Math.random() * 0.2); if (this.n.bounces === 1) this.toast('🏰 BOING! The BOUNCY CASTLE! Tap JUMP for a big flip! Walk out the door to hop off.'); }
@@ -926,7 +947,7 @@ export class FarmLife {
     for (const a of this.animals) if (a.kind === 'chicken' && a.pos.distanceTo(c) < 22 && !a.busy) { this.startle(a, c, 1.6); a.say(1); k++;
       for (let i = 0; i < this.fx.n(8); i++) this.fx.glow.spawn({ pos: V(a.pos.x, a.pos.y + 0.7, a.pos.z), vel: { x: (Math.random() - 0.5) * 5, y: 2 + Math.random() * 3, z: (Math.random() - 0.5) * 5 }, size: 0.14, size1: 0.1, life: 1.6, r: 1.5, g: 1.5, b: 1.45, alpha: 0.95, grav: 1.2, drag: 2, rv: 6 }); }
     for (let i = 0; i < 3; i++) this.g.later(i * 0.25, () => sfx.cluck && sfx.cluck(0.9)); this.toast('🐔 BAWK BAWK! The chickens flap out in a panic! Grab the eggs! 🥚', 0); }
-  collectEgg(n) { const gold = n.gold; this.root.remove(n.egg); n.egg.material.dispose(); n.egg = null; n.t = 6 + Math.random() * 8; this.n.eggsCollected++; this.eggs2++; if (gold) { this.n.goldEggs++; this.goldEggs++; }
+  collectEgg(n) { const gold = n.gold; this.root.remove(n.egg); n.egg.material.dispose(); n.egg = null; n.t = 6 + Math.random() * 8; this.n.eggsCollected++; this.eggs2++; this.farmFair('eggs'); if (gold) { this.n.goldEggs++; this.goldEggs++; }
     const at = V(n.x, n.y + 0.3, n.z); this.emote(gold ? 'star' : 'sparkle', null, gold ? 3 : 1, at); sfx.coin && sfx.coin(); if (gold) { sfx.tada(0.9); sfx.sparkle(1); } else sfx.plop(0.5); this.bar();
     this.toast(gold ? `✨🥚 A GOLDEN EGG! ✨ (${this.eggs2} eggs)` : `🥚 Got an egg! (${this.eggs2})`, gold ? 0 : 0.6); }
   // ---------- v5.3 SUPER STINKY fart: wind-up → huge brown blast → animals faint → strangers walk up, "EEEEWWW!", run away ----------
@@ -1010,7 +1031,7 @@ export class FarmLife {
     this.runaway = pig; return pig; // v5.3: no extra toast here; Ricky & Bobby's single POOP! shout is the only intro line
   }
   herd(pig) { const G = gateOf(pig.pen); pig.path = [V(G.x + G.ox * 4, 0, G.z + G.oz * 4), V(G.x - G.ox * 4, 0, G.z - G.oz * 4), V(pig.pen.x, 0, pig.pen.z)]; pig.set('herded'); }
-  herdDone(pig) { this.n.herds++; this.runaway = null; pig.free = null; pig.set('happy'); this.toast('🐷 Back in the pen! Good dogs! 🐶🐶'); voice.say('Good dogs!', { prio: 2, cd: 3000, pitch: 1.1 }); sfx.tada(0.7); }
+  herdDone(pig) { this.n.herds++; this.farmFair('herd'); this.runaway = null; pig.free = null; pig.set('happy'); this.toast('🐷 Back in the pen! Good dogs! 🐶🐶'); voice.say('Good dogs!', { prio: 2, cd: 3000, pitch: 1.1 }); sfx.tada(0.7); if (this.g.westies && this.g.westies.farmRescueCheer) this.g.westies.farmRescueCheer(); }
   dogDist(p) { const W = this.g.westies; if (!W || !W.active) return 99; let d = 99; for (const dg of W.dogs) if (!dg.off) d = Math.min(d, Math.hypot(dg.pos.x - p.x, dg.pos.z - p.z)); return d; }
   nearestPoopOrMud(p) { let best = null, bd = 60; for (const q of this.poops) { if (q.gold) continue; const d = Math.hypot(q.x - p.x, q.z - p.z); if (d < bd) { bd = d; best = { x: q.x, z: q.z, poop: true }; } }
     for (const m of this.W.farmData.mud) { const d = Math.hypot(m.x - p.x, m.z - p.z) - 4; if (d < bd) { bd = d; best = { x: m.x, z: m.z, poop: false }; } } return best; }

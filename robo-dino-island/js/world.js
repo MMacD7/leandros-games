@@ -450,6 +450,18 @@ totalEmissiveRadiance += diffuseColor.rgb * 0.22 * max(0.0, dot(-normalize(norma
     door.rotation.y = 0; door.position.z = 10.99 - 0.0;
     const frame = new THREE.Mesh(new THREE.BoxGeometry(10.8, 0.3, 0.3), glow); frame.position.set(0, 7.2, 10.9); g.add(frame);
     for (const s of [-1, 1]) { const f2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 7.2, 0.3), glow); f2.position.set(s * 5.4, 3.6, 10.9); g.add(f2); }
+    if (this.level === 'jungle' && this.assets.expeditionBeacon) {
+      const beacon = this.assets.expeditionBeacon;
+      beacon.name = 'jungle-expedition-beacon';
+      beacon.scale.setScalar(5.25); // ~2.5× the previous 2.1 scale, about 5m tall
+      beacon.position.set(-14, 0, -1.5);
+      g.add(beacon);
+      g.updateMatrixWorld(true);
+      const beaconBox = new THREE.Box3().setFromObject(beacon);
+      const wx = g.position.x - 14, wz = g.position.z - 1.5;
+      beacon.position.y += this.height(wx, wz) - beaconBox.min.y;
+      this.expeditionBeacon = beacon;
+    }
     // beacon so kids can always find home
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 1.6, 120, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0x3de8ff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
     beam.position.y = 60; g.add(beam); this.beam = beam;

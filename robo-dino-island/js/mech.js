@@ -469,7 +469,7 @@ export class Mech {
     this.t += dt;
     const stride = (this.quad ? 2.2 : 2.6) * sc * (this.flyer ? 1 : 1);
     this.phase += speed * dt / stride * Math.PI;
-    const ph = this.phase, k = Math.min(1, speed / (4 * sc)), breath = Math.sin(this.t * 2) * 0.03;
+    const ph = this.phase, k = Math.min(1, speed / (4 * sc)), breath = Math.sin(this.t * 2) * 0.03, windup = Math.max(0, Math.min(1, opts.windup || 0));
     const R = (n, x = 0, y = 0, z = 0) => { const bo = b[n]; if (!bo) return; const rr = r[n]; bo.rotation.set(rr.x + x, rr.y + y, rr.z + z); };
     if (this.flyer) {
       const fl = opts.flying ? 1 : 0, flap = Math.sin(this.t * (opts.boost ? 9 : 5)) * (0.35 + 0.2 * k);
@@ -496,7 +496,7 @@ export class Mech {
     // tail sway & head
     for (let i = 0; i < 10; i++) { const n = 'tail' + i; if (!b[n]) break; R(n, Math.sin(this.t * 1.3 + i * 0.5) * 0.03 + (i === 0 ? 0.05 : 0.02), Math.sin(ph * 0.5 + i * 0.6 + this.t * 0.8) * (0.06 + 0.06 * k) - (opts.turn || 0) * 0.08 * i * 0.3, 0); }
     R('neck', -Math.sin(ph * 2) * 0.03 * k + (opts.roar || 0) * -0.3, (opts.look || 0) * 0.3);
-    R('head', Math.sin(ph * 2) * 0.04 * k + breath + (opts.roar || 0) * -0.35 + (opts.aim || 0), (opts.look || 0) * 0.3);
+    R('head', Math.sin(ph * 2) * 0.04 * k + breath + (opts.roar || 0) * -0.35 - windup * 0.12 + (opts.aim || 0), (opts.look || 0) * 0.3);
     this.jaw += ((opts.jaw || 0) - this.jaw) * Math.min(1, dt * 18);
     R('jaw', this.jaw * 0.75 + Math.max(0, Math.sin(this.t * 0.7)) * 0.04);
     // hit flash / KO dim

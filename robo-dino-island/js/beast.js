@@ -676,13 +676,13 @@ export class Beast {
     const stride = (this.quad ? 2.5 : 3.0) * sc * (this.def.kind === 'velo' ? 0.85 : 1);
     this.phase += speed * dt / stride * Math.PI;
     const ph = this.phase, k = Math.min(1, speed / (2.5 * sc)), run = sstep(7 * sc, 15 * sc, speed), ko = this.ko;
-    const idle = (1 - k) * (1 - ko), roar = (o.roar || 0) * (1 - ko), bite = o.bite || 0, charge = o.charge || 0, rear = o.rear || 0, air = o.air || 0;
+    const idle = (1 - k) * (1 - ko), roar = (o.roar || 0) * (1 - ko), bite = o.bite || 0, charge = o.charge || 0, rear = o.rear || 0, air = o.air || 0, windup = Math.max(0, Math.min(1, o.windup || 0));
     const snarl = Math.pow(Math.max(0, Math.sin(t * 0.8 + this.seed)), 10) * idle;
     const R = (n, x = 0, y = 0, z = 0) => { const bo = b[n]; if (bo) bo.rotation.set(x, y, z); };
     const fly = this.flyer && o.flying && ko < 0.5 ? 1 : 0;
-    const crouch = (0.6 * idle + 0.4 * charge + 0.5 * ko) * (1 - fly);
+    const crouch = (0.6 * idle + 0.4 * charge + 0.5 * ko + 0.28 * windup) * (1 - fly);
     // ---- body lean / sway
-    const lean = (this.quad ? 0.02 : 0.1) * run + 0.12 * charge + 0.05 * crouch - 0.16 * roar - 0.55 * rear + (this.quad ? 0 : 0.04 * idle);
+    const lean = (this.quad ? 0.02 : 0.1) * run + 0.12 * charge + 0.05 * crouch + 0.08 * windup - 0.16 * roar - 0.55 * rear + (this.quad ? 0 : 0.04 * idle);
     const sway = Math.sin(ph) * 0.05 * k;
     R('pelvis', lean + Math.cos(ph * 2) * 0.02 * k, sway, Math.sin(ph) * 0.035 * k + ko * 0.1);
     R('spine', -0.02 * run, -sway * 0.5, 0); R('chest', (this.quad ? 0 : -0.03) - 0.05 * roar, -sway * 0.7, -Math.sin(ph) * 0.02 * k);
@@ -727,7 +727,7 @@ export class Beast {
       R(n, (i === 0 ? 0.04 : 0.012) + 0.025 * run + 0.03 * roar + 0.03 * rear - 0.02 * ko - (this.quad ? 0.01 : 0), w - (o.turn || 0) * 0.07 + (o.whip || 0) * 0.28, 0); }
     // ---- neck / head: stabilised, low and aggressive when idle, raised and shaking when roaring, lunging when biting
     const nk = Object.keys(b).filter(n => /^neck\d$/.test(n)).length || 1, lookY = (o.look || 0) * 0.35 / nk;
-    const headLow = this.quad ? 0.06 * idle + 0.25 * charge : 0.1 * idle + 0.1 * charge;
+    const headLow = this.quad ? 0.06 * idle + 0.25 * charge + 0.12 * windup : 0.1 * idle + 0.1 * charge + 0.12 * windup;
     const nf = fly ? 0.11 : 0;
     for (let i = 0; i < nk; i++) R('neck' + i, nf + (headLow + Math.cos(ph * 2) * 0.025 * k - (0.45 * roar + 0.12 * rear) / nk * (i ? 0.7 : 1.3) + 0.3 * bite / nk + 0.25 * ko) * (this.def.kind === 'brachio' ? 0.4 : 1), lookY + snarl * 0.2 * Math.sin(t * 9), 0);
     R('head', -nf * nk * 0.8 - lean * 0.8 - 0.12 * roar + 0.22 * bite + Math.sin(t * 26) * 0.045 * roar + snarl * 0.08, lookY + snarl * 0.12 * Math.sin(t * 11), Math.sin(t * 19) * 0.06 * roar + Math.sin(t * 13) * 0.05 * snarl);

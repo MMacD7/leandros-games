@@ -16,7 +16,7 @@ import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave,
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
-import { prepareLoaders, preloadCityMaps, preloadCityMapsLow, preloadSwingBoy } from './models.js';
+import { prepareLoaders, preloadCityMaps, preloadCityMapsLow, preloadSwingBoy, preloadExpeditionBeacon, cloneExpeditionBeacon } from './models.js';
 import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky, preloadStego, preloadAllo, preloadDilo, preloadPachy, preloadPara, preloadWestie } from './models.js';
 import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart, setRoarHook } from './audio.js';
 import { stompAudio } from './stompAudio.js';
@@ -89,7 +89,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
-preloadArt(mgr); prepareLoaders(renderer, mgr); preloadCityMaps(); preloadSwingBoy(mgr, !isIPhone); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr); preloadPachy(mgr); preloadPara(mgr); preloadWestie(mgr);
+preloadArt(mgr); prepareLoaders(renderer, mgr); preloadCityMaps(); preloadSwingBoy(mgr, !isIPhone); preloadExpeditionBeacon(mgr); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr); preloadPachy(mgr); preloadPara(mgr); preloadWestie(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -107,6 +107,7 @@ mgr.onLoad = () => { if (!ready) boot(); };
 
 function boot() {
   ready = true; $('load-t').textContent = 'Waking up the robots…';
+  assets.expeditionBeacon = cloneExpeditionBeacon();
   // environment lighting from the CC0 HDRI, background from the matching sky photo
   const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(hdr).texture; pm.dispose();
   scene.environmentIntensity = 0.42;
@@ -206,6 +207,7 @@ function levelUI() {
   const rbLab = document.querySelector('#b-rb b'); if (rbLab) rbLab.innerHTML = level === 'stomp' ? 'R&amp;B' : 'RICKY &amp;<br>BOBBY';
   $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : level === 'city' ? '▶ Smash Mega City' : level === 'ocean' ? '▶ Dive into the Deep Sea' : level === 'farm' ? '▶ Go to the Farm 🚜' : level === 'stomp' ? '▶ Swing Stompolis' : '▶ Explore the Island';
   $('citybar').classList.toggle('hidden', level !== 'city'); $('farmbar').classList.toggle('hidden', level !== 'farm');
+  if (level === 'farm' && game && game.farm) game.farm.bar();
 }
 function clearShout() {
   const el = $('shout'); if (!el) return;
@@ -251,8 +253,9 @@ let titleRoarT = 1, titleWho = 0;
 let toastT = 0, bannerT = 0, shoutT = 0;
 const hud = {
   toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); toastT = 1.8; },
-  // v5.3: a BIG bouncy wrapped shout across the middle-top of the screen (fits iPhone portrait too)
-  shout(t, dur = 4) { const el = $('shout'); el.textContent = t; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); shoutT = dur; hud.shoutLog = (hud.shoutLog || []).concat(t).slice(-20); },
+  // Keep Ricky & Bobby's exact line, but let the underwater play view stay visible.
+  shout(t, dur = 4) { const el = $('shout'); el.textContent = t; el.classList.toggle('rb-line', t === "Look it's Ricky and Bobby, they are going to POOP!"); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); shoutT = dur; hud.shoutLog = (hud.shoutLog || []).concat(t).slice(-20); },
+  expedition(title, progress, goal, stamps) { $('expedition-text').textContent = title; $('expedition-progress').textContent = `${progress}/${goal}  ·  🧭 ${stamps}`; },
   hurt() { const el = $('hurt'); el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 120); },
   bolts() { $('bolts').textContent = save.bolts; $('g-bolts').textContent = save.bolts; },
   knockedOut(real) { $('ko-sub').textContent = real ? 'Catching your breath at the base…' : 'Rebooting at the base…'; $('ko-msg').classList.remove('hidden'); },
@@ -276,11 +279,13 @@ const hud = {
   combo(n) { const el = $('combo'); if (n >= 3) { el.innerHTML = `<b>${n}</b> HIT COMBO`; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('show', 'pop'); } else el.classList.remove('show'); },
   victory() { music.victory(); },
   logoBoom() { const el = document.querySelector('#title .logo'); el.classList.remove('boom'); void el.offsetWidth; el.classList.add('boom'); },
-  results(b, bonus) { $('r-text').innerHTML = `Wave reached: <b>${b.wave}</b><br>Robots knocked out: <b>${b.kos}</b><br>Bolts earned: <b>${b.bolts}</b> (incl. ${bonus} bonus)${b.smashed ? `<br>Buildings smashed: <b>${b.smashed}</b>` : ''}<br>Best ever: <b>${save.bestBattle}</b> KOs`; show('results'); $('ko-msg').classList.add('hidden'); },
+  results(b, bonus) { const complete = !!b.runComplete; $('r-title').textContent = complete ? '🏆 ARENA CHAMPION!' : 'Battle over!'; $('r-text').innerHTML = `${complete ? 'Three waves cleared!<br>' : ''}Wave reached: <b>${b.wave}</b><br>Robots knocked out: <b>${b.kos}</b><br>Bolts earned: <b>${b.bolts}</b> (incl. ${bonus} bonus)${b.smashed ? `<br>Buildings smashed: <b>${b.smashed}</b>` : ''}<br>Best ever: <b>${save.bestBattle}</b> KOs`; $('r-continue').textContent = complete ? '▶ Keep battling' : '▶ Try again'; show('results'); $('ko-msg').classList.add('hidden'); },
 };
 const ebarEls = [];
 function updateHUD(dt) {
   const p = game.player; if (!p) return;
+  $('eggs-box').classList.toggle('hidden', !world || world.level !== 'jungle');
+  $('expedition-box').classList.toggle('hidden', !world || world.level !== 'jungle' || game.mode !== 'roam');
   { rbCd = Math.max(0, rbCd - dt); const b = $('b-rb'), W = game.westies, stompShow = !!(W && W.stompVisit);
     const here = W && W.active && W.state !== 'fly' && !stompShow;
     $('rb-cd').style.setProperty('--p', (rbCd / RB_CD * 100).toFixed(1) + '%'); $('rb-t').textContent = here ? '' : rbCd > 0 ? Math.ceil(rbCd) + 's' : '';
@@ -344,7 +349,7 @@ function drawRadar(p) {
     dot(b.obj.position.x, b.obj.position.z, '#3dff7a', 3.4);
     babyMarks.push(b.id);
   }
-  if (game.eggs && game.eggs.list) {
+  if (world.level === 'jungle' && game.eggs && game.eggs.list) {
     const pulse = 0.9 + 0.1 * Math.sin((game.world && game.world.time || 0) * 4);
     const c = Math.cos(-yaw + Math.PI), s = Math.sin(-yaw + Math.PI);
     const near = [];
@@ -491,6 +496,7 @@ tap('egg-reset-yes', () => {
   paintBabies();
 });
 tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.collapseCam = null; game.swoop = null; game.koCam = null; game.startRoam(); titleEnemies(); show('title'); });
+tap('r-continue', () => { if (game.battle && game.battle.runComplete) game.continueBattle(); else game.startBattle(); show('play'); });
 tap('r-ok', () => { game.startRoam(); show('play'); });
 const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '🔊'; $('p-sound').textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on'; };
 const toggleSound = () => { save.muted = !save.muted; setMuted(save.muted); stompAudio.setMuted(); persist(); soundLabel(); };
