@@ -157,6 +157,8 @@ export const SEA = [
     back: 0xc8401a, belly: 0xf0b070, accent: 0xffb03a },
 ];
 SEA.forEach(d => { d.real = true; d.sea = true; d.melee = d.bite; if (!d.walker) { d.fly = true; d.swim = true; } });
+// v5.16 friendly giant. Not in the garage and not an enemy: ocean.js patrols one around the reef.
+export const GOLDFISH = { id: 'goldfish', name: 'Giant Goldfish', kind: 'goldfish', real: true, sea: true, scale: 1.25, back: 0xff7a18, belly: 0xfff7e8, accent: 0xffd23a, fin: 0xffb84d, finTip: 0xfff0c2, eye: 0xffb02a };
 // the Deep Sea bosses (not in the garage): the KRAKEN and a monster mega-shark
 export const KRAKEN = { id: 'kraken', name: 'THE KRAKEN', price: 0, kind: 'kraken', real: true, sea: true, fly: true, swim: true, boss: true, hp: 900, speed: 11, bite: 30, biteRate: 0.8, special: 'kraken', specialName: 'KRAKEN', specialCD: 5, roar: 2.6,
   scale: 3.0, radius: 7, back: 0x6a1a44, belly: 0xe07a9a, accent: 0xff2a6a };

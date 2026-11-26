@@ -166,6 +166,7 @@ class Dino {
 export class Game {
   constructor(ctx) {
     Object.assign(this, ctx); // renderer, scene, camera, world, fx, assets, save, input, hud, persist
+    if (this.world) this.world.game = this;
     this.enemies = []; this.bolts = []; this.pickups = []; this.player = null; this.mode = 'roam';
     this.cam = { yaw: Math.PI, pitch: 0.2, dist: 14, pos: new THREE.Vector3(), look: new THREE.Vector3() };
     this.respawnT = 0; this.spawnT = 1; this.lock = null; this.r = rng(99);
@@ -275,7 +276,7 @@ export class Game {
   // switch level (Jungle Island <-> Dragon Peak)
   setWorld(w) {
     if (this.westies) this.westies.reset();
-    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); if (this.eggs) this.eggs.sync();
+    this.world = w; w.game = this; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); if (this.eggs) this.eggs.sync();
     if (this.westies && !(w && w.stomp)) this.westies.leaveStomp();
   }
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
