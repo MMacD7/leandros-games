@@ -268,6 +268,7 @@ export function buildAllTowers(root, towers, onPark) {
     const repY = Math.max(1, t.h / 25);
     const parts = wallParts(t).map(geo => prepWall(geo, t.col, repX, repY, shift, jitter));
     const body = new THREE.Mesh(mergeGeometries(parts), matFor(variants[ti]));
+    body.userData.towerBody = true;
     body.castShadow = false;
     body.receiveShadow = true;
     g.add(body);
@@ -282,6 +283,7 @@ export function buildAllTowers(root, towers, onPark) {
     if (t.kind === 'dome') {
       const cap = new THREE.SphereGeometry(t.r * 0.9, SEG, 14, 0, Math.PI * 2, 0, Math.PI / 2);
       const mesh = new THREE.Mesh(cap, roofMat);
+      mesh.userData.roofProp = true;
       mesh.position.y = t.h * 0.62;
       mesh.castShadow = false;
       mesh.receiveShadow = true;
@@ -289,18 +291,21 @@ export function buildAllTowers(root, towers, onPark) {
     }
     if (t.kind === 'neck') {
       const box = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.5, 2.0), new THREE.MeshStandardMaterial({ color: 0xb8c4d2, roughness: 0.5, metalness: 0.16 }));
+      box.userData.roofProp = true;
       box.position.y = t.h * 0.9;
       box.castShadow = false;
       box.receiveShadow = true;
       g.add(box);
       for (const sx of [0.45, -0.45]) {
         const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshStandardMaterial({ color: 0x0a141e, roughness: 0.4 }));
+        eye.userData.roofProp = true;
         eye.position.set(sx, t.h * 0.98, 0.7);
         g.add(eye);
       }
     }
     if (t.kind === 'crane') {
       const jib = new THREE.Mesh(new THREE.BoxGeometry(t.r * 3.2, 0.7, 0.7), trimMat);
+      jib.userData.roofProp = true;
       jib.position.set(t.r * 1.05, t.h + 2.1, 0);
       jib.castShadow = false;
       g.add(jib);

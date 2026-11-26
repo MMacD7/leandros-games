@@ -412,6 +412,7 @@ function announceNewLevel() {
 }
 for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { initAudio(); voice.prime(); announceNewLevel(); }, { once: true, capture: true });
 tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : level === 'stomp' ? 'Hold SWING, let go to FLING, tap ZIP and WRAP!' : 'Find energy cores ⚡ and wild dinos!'); });
+tap('st-keep', () => { const w = $('stompwin'); if (w) w.classList.add('hidden'); if (game.stomp && game.stomp.keepSwinging) game.stomp.keepSwinging(); });
 tap('st-ok', () => { const w = $('stompwin'); if (w) w.classList.add('hidden'); show('levels'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });

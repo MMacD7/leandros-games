@@ -359,6 +359,8 @@ export class StompLife {
       const R = p.mech && p.mech.R; if (R) { R.attachSkin(); R.setHoopster(true); }
     }
     this.camHeading = p ? p.yaw : 0; this.camY = start.h; this.routeHeading = this.camHeading;
+    this.freezeDavid = false; this._davidBack = 0;
+    if (this.david && this.david.mesh) this.david.mesh.visible = true;
     this.trackHeading = this.camHeading; this._inAirCam = false; this.takeoff = null;
     this._camLen = null; this.quietShake = 0; this.zipT = 0; this.coinChain = 0; this.coinChainT = 0;
     this.resetCoins();
@@ -505,7 +507,7 @@ export class StompLife {
   drive(p, dt, dir, mag, inp) {
     if (!p || !Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.y) || !Number.isFinite(p.pos.z) || !Number.isFinite(this.vel.x)) { this.recover(p); return; }
     if (this.quietShake > 0) this.quietShake -= dt;
-    if (this.won) { p.speedNow = 0; return; }
+    if (this.winOpen()) { p.speedNow = 0; return; }
     if (this.state === 'wall' && !this.wall) { this.state = 'air'; this.vel.y = Math.max(this.vel.y, 4); }
     if (!['roof', 'air', 'swing', 'wall', 'bubble'].includes(this.state)) this.recover(p);
     const hold = !!(inp && inp.btn && inp.btn.laser);
@@ -528,7 +530,7 @@ export class StompLife {
     else this.stepAir(p, dt, wish, mag);
   }
   onZip() {
-    if (this.won) return;
+    if (this.winOpen()) return;
     if (!this.anchor) { const a = this.bestAnchor(true); if (!a) return; this.hook(a); }
     this.zipping = true; this.sawZip = true; if (this.step === 2) { this.step = 3; this.sayStep(); }
     sfx.whoosh && sfx.whoosh(0.85);
@@ -591,9 +593,67 @@ export class StompLife {
       }
     }
   }
+  winOpen() {
+    return !!(this.winEl && !this.winEl.classList.contains('hidden'));
+  }
+  roofBlockRadius(roof) {
+    if (!roof) return 0;
+    const r = roof.r, h = roof.h;
+    if (roof.kind === 'egg') {
+      const cy = h * 0.46, sy = h / (r * 1.65), ly = (h - cy) / sy;
+      const rr = r * r - ly * ly;
+      return rr > 0.25 ? Math.sqrt(rr) : r * 0.55;
+    }
+    if (roof.kind === 'dome') {
+      const capR = r * 0.9, ly = h - h * 0.62;
+      if (ly >= capR) return 0;
+      return Math.sqrt(Math.max(0, capR * capR - ly * ly));
+    }
+    if (roof.kind === 'neck') {
+      if (h * 0.9 + 0.75 < h + 0.15) return 0;
+      return 1.5;
+    }
+    if (roof.kind === 'crane') return 0.9;
+    return 0;
+  }
+  safeLandingPos(roof, fromPos) {
+    const block = this.roofBlockRadius(roof);
+    const maxR = Math.max(0.6, roof.r - 0.9);
+    let rad = block > 0.15 ? Math.min(Math.max(block + 1.0, roof.r * 0.72), maxR) : 0;
+    const fx = fromPos ? fromPos.x - roof.x : 0, fz = fromPos ? fromPos.z - roof.z : 0, fd = Math.hypot(fx, fz);
+    let ang = fd > 0.4 ? Math.atan2(fx, fz) : 0;
+    if (fd <= 0.4) {
+      let next = null, nd = 1e9;
+      for (const t of this.towers) {
+        if (t === roof) continue;
+        const d = Math.hypot(t.x - roof.x, t.z - roof.z);
+        if (d < nd) { nd = d; next = t; }
+      }
+      if (next) ang = Math.atan2(next.x - roof.x, next.z - roof.z);
+    }
+    if (roof.kind === 'crane') {
+      rad = Math.min(Math.max(rad, 1.4), maxR);
+      const zOff = Math.abs(Math.cos(ang) * rad);
+      if (zOff < 0.9) ang += Math.PI / 2;
+    }
+    return { x: roof.x + Math.sin(ang) * rad, y: roof.h, z: roof.z + Math.cos(ang) * rad, yaw: ang };
+  }
+  keepOffDome(p, roof) {
+    if (!p || !roof) return;
+    const block = this.roofBlockRadius(roof);
+    if (block < 0.15) return;
+    let dx = p.pos.x - roof.x, dz = p.pos.z - roof.z, d = Math.hypot(dx, dz);
+    const min = Math.min(block + 0.85, Math.max(0.6, roof.r - 0.9));
+    if (d >= min) return;
+    if (d < 0.05) { dx = Math.sin(p.yaw || 0); dz = Math.cos(p.yaw || 0); d = 1; }
+    p.pos.x = roof.x + dx / d * min;
+    p.pos.z = roof.z + dz / d * min;
+  }
   landAt(p, a) {
     const roof = a.roof || this.towers.reduce((b, t) => !b || Math.hypot(t.x - a.x, t.z - a.z) < Math.hypot(b.x - a.x, b.z - a.z) ? t : b, null);
-    p.pos.set(roof.x, roof.h, roof.z); this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false;
+    const spot = this.safeLandingPos(roof, p.pos);
+    p.pos.set(spot.x, spot.y, spot.z); p.yaw = spot.yaw;
+    this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false;
     this.lastRoof = roof; p.speedNow = 0; this.quietShake = 0.45; this.zipT = 0; sfx.boing && sfx.boing(0.6, 0.8);
   }
   stepRoof(p, dt, wish, mag) {
@@ -606,6 +666,7 @@ export class StompLife {
       } else { p.pos.x = nx; p.pos.z = nz; p.yaw = Math.atan2(wish.x, wish.z); }
     }
     p.pos.y = roof.h; this.lastRoof = roof; p.speedNow = spd;
+    this.keepOffDome(p, roof);
     const stuck = Math.hypot(p.pos.x - roof.x, p.pos.z - roof.z);
     if (stuck > roof.r - 0.05 && mag < 0.08) {
       const k = (roof.r - 0.45) / stuck;
@@ -629,7 +690,7 @@ export class StompLife {
       if (d < t.r + 0.85 && p.pos.y >= t.h - 0.15 && p.pos.y <= t.h + 3.4 && this.vel.y <= 0.4) caught = !caught || t.h > caught.h ? t : caught;
     }
     if (caught) {
-      p.pos.y = caught.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; this.quietShake = 0.45; return;
+      p.pos.y = caught.h; this.keepOffDome(p, caught); this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; this.quietShake = 0.45; return;
     }
     const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y);
     if (roof && this.vel.y <= 0 && p.pos.y <= roof.h + 0.35) {
@@ -665,7 +726,8 @@ export class StompLife {
     this.state = 'bubble'; this.bubbleT = 0; this.hooked = false; this.anchor = null; this.zipping = false;
     this.bubbleFrom = p.pos.clone();
     const roof = this.lastRoof || this.towers[0];
-    this.bubbleTo = new THREE.Vector3(roof.x, roof.h, roof.z);
+    const spot = this.safeLandingPos(roof, p.pos);
+    this.bubbleTo = new THREE.Vector3(spot.x, spot.y, spot.z);
     this.bubble.visible = true; sfx.boing && sfx.boing(0.8, 1.1);
     if (this.g.hud) this.g.hud.toast('Whoops! A soft puff pops you back up.');
   }
@@ -694,7 +756,9 @@ export class StompLife {
       if (this.g.fx) this.g.fx.ring(best.who.pos, 3.2, 0xc6ff4a);
       return true;
     }
-    this.david.wrapped = true; this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false;
+    this.david.wrapped = true; this.hooked = false; this.anchor = null; this.zipping = false;
+    if (this.state === 'roof') this.vel.set(0, 0, 0);
+    else { this.state = 'air'; if (this.vel.y < 3) this.vel.y = 3; }
     if (!this.david.bundle) { this.david.bundle = yarnBall(); this.david.mesh.add(this.david.bundle); }
     this.david.bundle.visible = true;
     if (this.david.mesh.userData.pie) this.david.mesh.userData.pie.visible = true;
@@ -714,6 +778,37 @@ export class StompLife {
     if (this.winEl) this.winEl.classList.remove('hidden');
     if (this.promptEl) this.promptEl.textContent = 'Pie returned!';
     sfx.tada && sfx.tada(0.9);
+  }
+  keepSwinging() {
+    this.won = false;
+    if (this.winEl) this.winEl.classList.add('hidden');
+    this.david.wrapped = false;
+    if (this.david.bundle) this.david.bundle.visible = false;
+    if (this.david.mesh.userData.pie) this.david.mesh.userData.pie.visible = false;
+    if (this.david.mesh.userData.handPie) this.david.mesh.userData.handPie.visible = true;
+    this.david.mesh.visible = false;
+    this.freezeDavid = true;
+    this._davidBack = 4;
+  }
+  bringDavidBack() {
+    this._davidBack = 0;
+    this.freezeDavid = false;
+    this.david.wrapped = false;
+    const p = this.g.player;
+    let far = this.towers[0], fd = -1;
+    for (const t of this.towers) {
+      const d = p ? Math.hypot(t.x - p.pos.x, t.z - p.pos.z) : 0;
+      if (d > fd) { fd = d; far = t; }
+    }
+    const spot = this.safeLandingPos(far, p && p.pos);
+    this.david.x = spot.x; this.david.y = far.h; this.david.z = spot.z;
+    this.david.yaw = spot.yaw;
+    this.david.mesh.visible = true;
+    this.david.mesh.position.set(spot.x, far.h, spot.z);
+    this.david.mesh.rotation.y = spot.yaw;
+    if (this.david.bundle) this.david.bundle.visible = false;
+    if (this.david.mesh.userData.pie) this.david.mesh.userData.pie.visible = false;
+    if (this.david.mesh.userData.handPie) this.david.mesh.userData.handPie.visible = true;
   }
   wrist(p) {
     const R = p.mech && p.mech.R; const out = this._w;
@@ -891,7 +986,7 @@ export class StompLife {
     const roof = (p && this.roofAt(p.pos.x, p.pos.z, (p.pos.y || 0) + 2)) || this.lastRoof || this.towers[0];
     this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false; this.zipT = 0; this.wall = null;
     this.lastRoof = roof;
-    if (p) { p.pos.set(roof.x, roof.h, roof.z); p.alive = true; p.speedNow = 0; if (!Number.isFinite(p.yaw)) p.yaw = 0; }
+    if (p) { const spot = this.safeLandingPos(roof, p.pos); p.pos.set(spot.x, spot.y, spot.z); if (Number.isFinite(spot.yaw)) p.yaw = spot.yaw; p.alive = true; p.speedNow = 0; }
   }
   coinClear(x, y, z) {
     for (const t of this.towers) {
@@ -1004,7 +1099,7 @@ export class StompLife {
         c.y = c.baseY + Math.sin(t * Math.PI * 2 * 0.7 + i) * 0.08;
       }
       dummy.position.set(c.x, c.y, c.z);
-      dummy.rotation.set(0, t * 1.2 + i, 0);
+      dummy.rotation.set(Math.PI / 2, t * 1.2 + i, 0);
       dummy.scale.set(sc, sc, sc);
       dummy.updateMatrix();
       this.coinFace.setMatrixAt(i, dummy.matrix);
@@ -1036,6 +1131,7 @@ export class StompLife {
       } else { this.rbQueued -= dt; if (this.rbQueued <= 0) this.rbQueued = 0; }
     }
     const p = this.g.player;
+    if (this._davidBack > 0) { this._davidBack -= dt; if (this._davidBack <= 0) this.bringDavidBack(); }
     if (!this.david.wrapped && !this.freezeDavid) {
       let dist = 99;
       if (p) dist = Math.hypot(this.david.x - p.pos.x, this.david.z - p.pos.z);
