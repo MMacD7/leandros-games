@@ -182,9 +182,11 @@ export class Rider {
     this.root.add(scene);
     const bones = {};
     scene.traverse(o => {
+      o.frustumCulled = false;
       if (o.isBone || o.isObject3D) { if (o.name) bones[o.name] = o; }
-      if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false; if (o.isSkinnedMesh && !this.swingMesh) this.swingMesh = o; }
+      if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; if (o.isSkinnedMesh && !this.swingMesh) this.swingMesh = o; }
     });
+    this.pinSwingCull();
     this.skinBones = bones;
     const byEnd = (suffix) => bones['mixamorig:' + suffix] || Object.values(bones).find(b => b.name === suffix || b.name.endsWith(suffix));
     const hip = byEnd('Hips');
@@ -207,6 +209,10 @@ export class Rider {
     this._bands = [this.swingMesh];
     this.skinned = true;
     return true;
+  }
+  pinSwingCull() {
+    const groups = [this.swingAvatar, this.root, this.avatar];
+    for (const g of groups) if (g && g.traverse) g.traverse(o => { o.frustumCulled = false; });
   }
   palmSocket() { return this._palmSocket || null; }
   paintSuit() {

@@ -77,7 +77,9 @@ export function preloadSwingBoy(mgr, hiRes) {
 
 export function cloneSwingBoy() {
   if (!swingCache) throw new Error('swing boy model not loaded');
-  return { scene: clone(swingCache.scene), animations: swingCache.animations };
+  const scene = clone(swingCache.scene);
+  scene.traverse(o => { o.frustumCulled = false; });
+  return { scene, animations: swingCache.animations };
 }
 
 const LION_URL = 'assets/models/lion.glb';

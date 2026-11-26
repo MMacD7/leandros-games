@@ -379,6 +379,39 @@ export class StompLife {
     }
     return null;
   }
+  moveToward(p, x, y, z, maxStep) {
+    const dx = x - p.pos.x, dy = y - p.pos.y, dz = z - p.pos.z;
+    const d = Math.hypot(dx, dy, dz);
+    if (!(d > 1e-5)) return 0;
+    const s = Math.min(d, maxStep);
+    p.pos.x += dx / d * s; p.pos.y += dy / d * s; p.pos.z += dz / d * s;
+    return s;
+  }
+  finishOutside(p, x0, y0, z0) {
+    for (const t of this.towers) {
+      const dx = p.pos.x - t.x, dz = p.pos.z - t.z, d = Math.hypot(dx, dz);
+      if (!(p.pos.y < t.h - 0.15 && d < t.r - 0.05)) continue;
+      const need = t.r + 0.08 - d;
+      if (!(need > 0) || d < 0.05) continue;
+      const nx = dx / d, nz = dz / d;
+      const nx1 = p.pos.x + nx * need, nz1 = p.pos.z + nz * need;
+      const jump = Math.hypot(nx1 - x0, p.pos.y - y0, nz1 - z0);
+      if (jump < 1.98) { p.pos.x = nx1; p.pos.z = nz1; }
+    }
+  }
+  limitStep(p, x, y, z, maxStep) {
+    const dx = p.pos.x - x, dy = p.pos.y - y, dz = p.pos.z - z;
+    const d = Math.hypot(dx, dy, dz);
+    if (d > maxStep && d > 0) { const s = maxStep / d; p.pos.set(x + dx * s, y + dy * s, z + dz * s); }
+  }
+  solidTop(t) {
+    if (!t) return 0;
+    if (t.kind === 'egg') return t.h * 1.08;
+    if (t.kind === 'crane') return t.h + 2.8;
+    if (t.kind === 'dome') return Math.max(t.h, t.h * 0.62 + t.r * 0.9);
+    if (t.kind === 'neck') return Math.max(t.h, t.h * 0.98 + 0.5);
+    return t.h + 0.5;
+  }
   keepCameraOut(cp, look, dt) {
     if (!cp || !look || !cp.isVector3) return;
     const dir = this._camDir || (this._camDir = new THREE.Vector3());
@@ -396,17 +429,47 @@ export class StompLife {
       const hit = (-b - Math.sqrt(disc)) / (2 * a);
       if (hit < 0.3 || hit > len) continue;
       const yHit = look.y + dir.y * hit;
-      if (yHit > t.h + 1.2) continue;
-      if (t.h - look.y < 8) lift = Math.max(lift, (t.h + 1.5) - (look.y + dir.y * Math.max(4, hit - 0.4)));
-      else blocked = Math.min(blocked, Math.max(4.0, hit - 0.4));
+      const top = this.solidTop(t);
+      if (yHit > top + 0.4) continue;
+      blocked = Math.min(blocked, Math.max(1.8, hit - 0.45));
+    }
+    const hero = this.g.player;
+    if (hero && Number.isFinite(hero.pos.x)) {
+      const cx = hero.pos.x, cy = hero.pos.y + 0.7, cz = hero.pos.z;
+      const camx = look.x + dir.x * len, camy = look.y + dir.y * len, camz = look.z + dir.z * len;
+      const vx = camx - cx, vy = camy - cy, vz = camz - cz, vlen = Math.hypot(vx, vy, vz) || 1;
+      const ux = vx / vlen, uy = vy / vlen, uz = vz / vlen;
+      for (const t of this.towers) {
+        const ox = cx - t.x, oz = cz - t.z;
+        const a2 = ux * ux + uz * uz; if (a2 < 1e-6) continue;
+        const b2 = 2 * (ox * ux + oz * uz);
+        const rad = t.r + 0.55;
+        const c2 = ox * ox + oz * oz - rad * rad;
+        const disc = b2 * b2 - 4 * a2 * c2; if (disc < 0) continue;
+        const hit = (-b2 - Math.sqrt(disc)) / (2 * a2);
+        if (hit < 0.15 || hit > vlen - 0.2) continue;
+        const yHit = cy + uy * hit;
+        if (yHit > this.solidTop(t) + 0.35) continue;
+        blocked = Math.min(blocked, Math.max(1.6, hit * (len / vlen) - 0.35));
+      }
     }
     const step = typeof dt === 'number' ? dt : 1 / 60;
     const dampTo = (cur, goal, lambda) => cur + (goal - cur) * (1 - Math.exp(-lambda * step));
     if (this._camLen == null || !Number.isFinite(this._camLen)) this._camLen = len;
     this._camLen = dampTo(this._camLen, blocked, blocked < this._camLen - 0.05 ? 12 : 2.5);
     this._camLift = dampTo(this._camLift || 0, lift, 6);
-    cp.copy(look).addScaledVector(dir, this._camLen);
-    cp.y += this._camLift;
+    const fullY = look.y + dir.y * len;
+    cp.set(look.x + dir.x * this._camLen, fullY + (this._camLift || 0), look.z + dir.z * this._camLen);
+    for (let n = 0; n < 4; n++) {
+      let inside = false;
+      for (const t of this.towers) {
+        if (cp.y > this.solidTop(t) + 0.4) continue;
+        const dx = cp.x - t.x, dz = cp.z - t.z, d = Math.hypot(dx, dz);
+        if (d < t.r + 0.45) { inside = true; break; }
+      }
+      if (!inside) break;
+      cp.lerp(look, 0.35);
+    }
   }
   titlePose() {
     this.reset();
@@ -483,14 +546,14 @@ export class StompLife {
     this.routeHeading = Math.atan2(a.x - from.x, a.z - from.z);
     this.takeoff = { x: p.pos.x, z: p.pos.z, h: this.lastRoof ? this.lastRoof.h : p.pos.y };
     if (!this._inAirCam) { this.camHeading = this.routeHeading; this.trackHeading = this.routeHeading; this._inAirCam = true; }
-    this.anchor = a; this.hooked = true; this.state = 'swing'; this.zipping = false; this.zipT = 0; this.hookT = this.g.world.time;
+    this.anchor = a; this.hooked = true; this.state = 'swing'; this.zipping = false; this.zipTarget = null; this.zipT = 0; this.hookT = this.g.world.time;
     this.len = Math.max(6, Math.hypot(a.x - p.pos.x, a.y - p.pos.y, a.z - p.pos.z));
     this.sawSwing = true; if (this.step === 0) { this.step = 1; this.sayStep(); }
     sfx.whoosh && sfx.whoosh(0.7);
   }
   fling() {
     const a = this.anchor, p = this.g.player;
-    this.hooked = false; this.anchor = null; this.state = 'air'; this.zipping = false;
+    this.hooked = false; this.anchor = null; this.state = 'air'; this.zipping = false; this.zipTarget = null;
     if (a && a.roof && p) {
       const R = a.roof, y = p.pos.y;
       const apex = Math.max(y, R.h) + 2.6;
@@ -506,6 +569,13 @@ export class StompLife {
   }
   drive(p, dt, dir, mag, inp) {
     if (!p || !Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.y) || !Number.isFinite(p.pos.z) || !Number.isFinite(this.vel.x)) { this.recover(p); return; }
+    const x0 = p.pos.x, y0 = p.pos.y, z0 = p.pos.z;
+    this.driveMotion(p, dt, dir, mag, inp);
+    if (Number.isFinite(p.pos.x)) this.limitStep(p, x0, y0, z0, 1.95);
+    this.finishOutside(p, x0, y0, z0);
+  }
+  driveMotion(p, dt, dir, mag, inp) {
+    if (!p || !Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.y) || !Number.isFinite(p.pos.z) || !Number.isFinite(this.vel.x)) { this.recover(p); return; }
     if (this.quietShake > 0) this.quietShake -= dt;
     if (this.winOpen()) { p.speedNow = 0; return; }
     if (this.state === 'wall' && !this.wall) { this.state = 'air'; this.vel.y = Math.max(this.vel.y, 4); }
@@ -519,7 +589,13 @@ export class StompLife {
     if (wrap) this.tryWrap();
     if (zip) this.onZip();
     const wish = mag > 0.08 ? dir : this._v.set(0, 0, 0);
-    if (this.state === 'bubble') { this.stepBubble(p, dt); return; }
+    if (this.state === 'bubble') {
+      if (hold) {
+        const a = this.bestAnchor(true);
+        if (a) { if (this.bubble) this.bubble.visible = false; this.hook(a); this.stepSwing(p, dt, wish, mag); return; }
+      }
+      this.stepBubble(p, dt); return;
+    }
     if (this.state === 'swing') {
       if (!hold && !this.zipping) { this.fling(); this.stepAir(p, dt, wish, mag); return; }
       this.stepSwing(p, dt, wish, mag); return;
@@ -532,20 +608,35 @@ export class StompLife {
   onZip() {
     if (this.winOpen()) return;
     if (!this.anchor) { const a = this.bestAnchor(true); if (!a) return; this.hook(a); }
+    if (!this.anchor) return;
+    const roof = this.anchor.roof || this.lastRoof || this.towers[0];
+    if (!this.zipping || !this.zipTarget) {
+      this.zipRoof = roof;
+      this.zipTarget = this.safeLandingPos(roof, this.g.player && this.g.player.pos);
+    }
     this.zipping = true; this.sawZip = true; if (this.step === 2) { this.step = 3; this.sayStep(); }
     sfx.whoosh && sfx.whoosh(0.85);
   }
   stepSwing(p, dt, wish, mag) {
     const a = this.anchor; if (!a) { this.state = 'air'; return; }
     if (this.zipping) {
-      const dx = a.x - p.pos.x, dy = (a.y - 1.1) - p.pos.y, dz = a.z - p.pos.z, d = Math.hypot(dx, dy, dz) || 1;
-      this.vel.set(dx / d * 26, dy / d * 26, dz / d * 26);
-      if (d < 2.4 || this.zipT > 1.3) { this.landAt(p, a); return; }
+      const roof = this.zipRoof || (a && a.roof) || this.lastRoof || this.towers[0];
+      if (!this.zipTarget) this.zipTarget = this.safeLandingPos(roof, p.pos);
+      const g = this.zipTarget;
+      const flat = Math.hypot(g.x - p.pos.x, g.z - p.pos.z);
+      const deck = roof.h;
+      const wantY = flat > 1.6 ? deck + 1.25 + Math.sin(Math.min(1, flat / 10) * Math.PI) * 2.4 : g.y;
+      this.moveToward(p, g.x, wantY, g.z, Math.min(1.15, 22 * dt));
+      const left = Math.hypot(g.x - p.pos.x, g.y - p.pos.y, g.z - p.pos.z);
+      if (Math.hypot(g.x - p.pos.x, g.z - p.pos.z) > 0.2) p.yaw = Math.atan2(g.x - p.pos.x, g.z - p.pos.z);
+      if (left < 1.0) {
+        this.state = 'roof'; this.vel.set(0, 0, 0); this.hooked = false; this.anchor = null; this.zipping = false; this.zipTarget = null;
+        this.lastRoof = roof; p.speedNow = 0; this.quietShake = 0.45; this.zipT = 0;
+        if (Number.isFinite(g.yaw)) p.yaw = g.yaw;
+        return;
+      }
       this.zipT += dt;
-      p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
       p.speedNow = 16;
-      if (this.vel.lengthSq() > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
-      this.keepOutside(p);
       return;
     }
     this.vel.y -= 18 * dt;
@@ -558,7 +649,16 @@ export class StompLife {
     this.len += (reel - this.len) * (1 - Math.exp(-3.2 * dt));
     let dx = p.pos.x - a.x, dy = p.pos.y - a.y, dz = p.pos.z - a.z;
     const dist = Math.hypot(dx, dy, dz) || 1; dx /= dist; dy /= dist; dz /= dist;
-    p.pos.set(a.x + dx * this.len, a.y + dy * this.len, a.z + dz * this.len);
+    const home = (this.takeoff && Number.isFinite(this.takeoff.h)) ? this.takeoff.h : deck;
+    let tx = a.x + dx * this.len, ty = a.y + dy * this.len, tz = a.z + dz * this.len;
+    const hi = home + 1.65;
+    if (ty > hi) {
+      ty = hi;
+      const drop = Math.max(0.8, a.y - ty);
+      const horiz = Math.max(0.8, Math.hypot(p.pos.x - a.x, p.pos.z - a.z));
+      this.len = Math.max(this.len, Math.hypot(horiz, drop));
+    }
+    this.moveToward(p, tx, ty, tz, 1.45);
     const vr = this.vel.x * dx + this.vel.y * dy + this.vel.z * dz;
     if (vr > 0) { this.vel.x -= vr * dx; this.vel.y -= vr * dy; this.vel.z -= vr * dz; }
     const age = (this.g.world.time || 0) - (this.hookT || 0);
@@ -579,15 +679,27 @@ export class StompLife {
     if (sp > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
     p.speedNow = Math.min(10, sp);
     this.keepOutside(p);
+    this.holdDeck(p);
+    const band = (this.takeoff && Number.isFinite(this.takeoff.h)) ? this.takeoff.h : (a.roof ? a.roof.h : p.pos.y);
+    if (p.pos.y < band + 1.05) this.moveToward(p, p.pos.x, band + 1.2, p.pos.z, 0.5);
+    else if (p.pos.y > band + 1.75) this.moveToward(p, p.pos.x, band + 1.6, p.pos.z, 0.55);
+  }
+  holdDeck(p) {
+    for (const t of this.towers) {
+      if (Math.hypot(p.pos.x - t.x, p.pos.z - t.z) >= t.r - 0.02) continue;
+      if (p.pos.y < t.h - 0.08 && p.pos.y > t.h - 8) {
+        p.pos.y = t.h - 0.08;
+        if (this.vel.y < 0) this.vel.y = 0;
+      }
+    }
   }
   keepOutside(p) {
     for (const t of this.towers) {
       let dx = p.pos.x - t.x, dz = p.pos.z - t.z, d = Math.hypot(dx, dz);
       if (d < t.r + 0.15 && p.pos.y < t.h - 0.05) {
-        if (this.state === 'swing' && this.anchor && this.anchor.roof === t && p.pos.y < t.h) { this.zipping = true; this.easyPull = (this.easyPull || 0) + 1; }
-        if (d < 0.05) { dx = 1; dz = 0; d = 1; }
-        const k = (t.r + 0.65) / d, nx = dx / d, nz = dz / d;
-        p.pos.x = t.x + dx * k; p.pos.z = t.z + dz * k;
+        if (d < 0.05) { const yaw = p.yaw || 0; dx = Math.sin(yaw) || 1; dz = Math.cos(yaw); d = Math.hypot(dx, dz) || 1; }
+        const nx = dx / d, nz = dz / d;
+        this.moveToward(p, t.x + nx * (t.r + 0.7), p.pos.y, t.z + nz * (t.r + 0.7), 1.95);
         const vn = this.vel.x * nx + this.vel.z * nz;
         if (vn < 0) { this.vel.x -= vn * nx; this.vel.z -= vn * nz; }
       }
@@ -650,10 +762,16 @@ export class StompLife {
     p.pos.z = roof.z + dz / d * min;
   }
   landAt(p, a) {
-    const roof = a.roof || this.towers.reduce((b, t) => !b || Math.hypot(t.x - a.x, t.z - a.z) < Math.hypot(b.x - a.x, b.z - a.z) ? t : b, null);
+    const roof = (a && a.roof) || this.zipRoof || this.lastRoof || this.towers[0];
     const spot = this.safeLandingPos(roof, p.pos);
-    p.pos.set(spot.x, spot.y, spot.z); p.yaw = spot.yaw;
-    this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false;
+    const left = Math.hypot(spot.x - p.pos.x, spot.y - p.pos.y, spot.z - p.pos.z);
+    if (left > 1.0) {
+      this.zipRoof = roof; this.zipTarget = spot; this.zipping = true; this.anchor = a || this.anchor; this.state = 'swing'; this.hooked = true;
+      return;
+    }
+    this.moveToward(p, spot.x, spot.y, spot.z, 1.0);
+    if (Number.isFinite(spot.yaw)) p.yaw = spot.yaw;
+    this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false; this.zipTarget = null;
     this.lastRoof = roof; p.speedNow = 0; this.quietShake = 0.45; this.zipT = 0; sfx.boing && sfx.boing(0.6, 0.8);
   }
   stepRoof(p, dt, wish, mag) {
@@ -690,7 +808,11 @@ export class StompLife {
       if (d < t.r + 0.85 && p.pos.y >= t.h - 0.15 && p.pos.y <= t.h + 3.4 && this.vel.y <= 0.4) caught = !caught || t.h > caught.h ? t : caught;
     }
     if (caught) {
-      p.pos.y = caught.h; this.keepOffDome(p, caught); this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; this.quietShake = 0.45; return;
+      const gap = caught.h - p.pos.y;
+      if (Math.abs(gap) > 1.2) this.moveToward(p, p.pos.x, caught.h, p.pos.z, 1.2);
+      else {
+        p.pos.y = caught.h; this.keepOffDome(p, caught); this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; this.quietShake = 0.45; return;
+      }
     }
     const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y);
     if (roof && this.vel.y <= 0 && p.pos.y <= roof.h + 0.35) {
@@ -723,19 +845,54 @@ export class StompLife {
     if (this.wallT <= 0) { this.state = 'air'; this.vel.set(tx * 8, 5, tz * 8); }
   }
   startBubble(p) {
-    this.state = 'bubble'; this.bubbleT = 0; this.hooked = false; this.anchor = null; this.zipping = false;
+    this.state = 'bubble'; this.bubbleT = 0; this.bubbleU = 0; this.hooked = false; this.anchor = null; this.zipping = false; this.zipTarget = null;
     this.bubbleFrom = p.pos.clone();
     const roof = this.lastRoof || this.towers[0];
+    this.bubbleRoof = roof;
     const spot = this.safeLandingPos(roof, p.pos);
     this.bubbleTo = new THREE.Vector3(spot.x, spot.y, spot.z);
+    let high = Math.max(this.bubbleFrom.y, this.bubbleTo.y);
+    const ax = this.bubbleTo.x - this.bubbleFrom.x, az = this.bubbleTo.z - this.bubbleFrom.z, al2 = ax * ax + az * az || 1;
+    for (const t of this.towers) {
+      const u = Math.max(0, Math.min(1, ((t.x - this.bubbleFrom.x) * ax + (t.z - this.bubbleFrom.z) * az) / al2));
+      const cx = this.bubbleFrom.x + ax * u, cz = this.bubbleFrom.z + az * u;
+      if (Math.hypot(t.x - cx, t.z - cz) < t.r + 3) high = Math.max(high, this.solidTop(t));
+    }
+    const mid = (this.bubbleFrom.y + this.bubbleTo.y) * 0.5;
+    this.bubbleLift = Math.max(Math.max(this.bubbleFrom.y, this.bubbleTo.y) + 8, high + 8 - mid);
     this.bubble.visible = true; sfx.boing && sfx.boing(0.8, 1.1);
     if (this.g.hud) this.g.hud.toast('Whoops! A soft puff pops you back up.');
   }
+  bubblePoint(u, out) {
+    const e = u * u * (3 - 2 * u);
+    out.lerpVectors(this.bubbleFrom, this.bubbleTo, e);
+    out.y += Math.sin(Math.PI * u) * (this.bubbleLift || 8);
+    return out;
+  }
   stepBubble(p, dt) {
-    this.bubbleT += dt; const u = Math.min(1, this.bubbleT / 0.9), e = u * u * (3 - 2 * u);
-    p.pos.lerpVectors(this.bubbleFrom, this.bubbleTo, e); p.speedNow = 0; this.vel.set(0, 0, 0);
+    if (!this.bubbleFrom || !this.bubbleTo) { this.state = 'roof'; return; }
+    const speed = Math.min(1.4, 20 * dt);
+    let u = this.bubbleU || 0;
+    const cur = this._bA || (this._bA = new THREE.Vector3());
+    const nxt = this._bB || (this._bB = new THREE.Vector3());
+    this.bubblePoint(u, cur);
+    let lo = 0, hi = 1 - u;
+    for (let i = 0; i < 8; i++) {
+      const mid = (lo + hi) * 0.5;
+      this.bubblePoint(u + mid, nxt);
+      if (cur.distanceTo(nxt) > speed) hi = mid; else lo = mid;
+    }
+    u = Math.min(1, u + lo);
+    this.bubbleU = u;
+    this.bubblePoint(u, nxt);
+    p.pos.copy(nxt);
+    p.speedNow = 0; this.vel.set(0, 0, 0);
     this.bubble.position.copy(p.pos); this.bubble.position.y += 1;
-    if (u >= 1) { this.state = 'roof'; this.bubble.visible = false; this.lastRoof = this.towers.find(t => t.x === this.bubbleTo.x && t.z === this.bubbleTo.z) || this.lastRoof; p.pos.copy(this.bubbleTo); }
+    if (u >= 1) {
+      this.state = 'roof'; this.bubble.visible = false;
+      this.lastRoof = this.bubbleRoof || this.lastRoof;
+      this.bubbleU = 0;
+    }
   }
   tryWrap() {
     const hint = (t) => { if (this.g.hud) this.g.hud.toast(t); };
@@ -983,10 +1140,17 @@ export class StompLife {
     this.shade.position.set(p.pos.x, roof.h + 0.07, p.pos.z);
   }
   recover(p) {
-    const roof = (p && this.roofAt(p.pos.x, p.pos.z, (p.pos.y || 0) + 2)) || this.lastRoof || this.towers[0];
-    this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false; this.zipT = 0; this.wall = null;
+    this.vel.set(0, 0, 0); this.hooked = false; this.anchor = null; this.zipping = false; this.zipTarget = null; this.zipT = 0; this.wall = null;
+    const roof = (p && Number.isFinite(p.pos.x) && this.roofAt(p.pos.x, p.pos.z, (p.pos.y || 0) + 2)) || this.lastRoof || this.towers[0];
     this.lastRoof = roof;
-    if (p) { const spot = this.safeLandingPos(roof, p.pos); p.pos.set(spot.x, spot.y, spot.z); if (Number.isFinite(spot.yaw)) p.yaw = spot.yaw; p.alive = true; p.speedNow = 0; }
+    if (!p) return;
+    p.alive = true; p.speedNow = 0;
+    if (!Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.y) || !Number.isFinite(p.pos.z)) {
+      const spot = this.safeLandingPos(roof, null);
+      p.pos.set(spot.x, spot.y, spot.z); p.yaw = spot.yaw; this.state = 'roof';
+      return;
+    }
+    if (this.state !== 'bubble') this.startBubble(p);
   }
   coinClear(x, y, z) {
     for (const t of this.towers) {
@@ -1173,6 +1337,7 @@ export class StompLife {
       const R = p.mech && p.mech.R;       if (R) {
         try {
         if (!R._hoopster) { R.attachSkin(); R.setHoopster(true); }
+        if (R.pinSwingCull) R.pinSwingCull();
         let lean = 0;
         if (this.anchor && (this.state === 'swing' || this.state === 'wall')) {
           const ax = this.anchor.x - p.pos.x, az = this.anchor.z - p.pos.z;

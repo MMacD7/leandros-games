@@ -18,7 +18,7 @@ open(os.path.join(root, 'sw.js'), 'w').write(f"""/* Offline cache for Leandro's 
    Pages and code (html/js/css/manifest) are network-first with a cache fallback, so new versions show up right away when online
    and the game still works offline. Big assets (textures, sky, icons, vendored three.js) are cache-first; they are re-downloaded
    whenever this file's cache name changes. */
-const CACHE = 'rdi-v5-13-4';
+const CACHE = 'rdi-v5-13-5';
 const FILES = ['./',
   {lst}];
 const fresh = u => new Request(u, {{ cache: 'reload' }}); // bypass the HTTP cache when (re)installing
