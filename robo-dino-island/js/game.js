@@ -1270,10 +1270,10 @@ export class Game {
     else if (p.def.farmKid && !inp.looking) { c.pitch += (0.16 - c.pitch) * Math.min(1, dt * 2); if (p.speedNow < 0.35) c.yaw += angDiff(c.yaw, p.yaw + Math.PI + 0.44) * Math.min(1, dt * 1.4); }
     if (p.def.hoopster) {
       const portrait = window.innerHeight > window.innerWidth;
-      const w = this.stomp && this.stomp.davidW || 0;
-      const want = portrait ? 62 - 6 * w : 54;
-      const next = damp(this.camera.fov, want, 1.5, dt);
-      if (Math.abs(next - this.camera.fov) > 0.5) { this.camera.fov = next; this.camera.updateProjectionMatrix(); }
+      const want = portrait ? 62 : 56;
+      const prevFov = this.camera.fov;
+      this.camera.fov += (want - this.camera.fov) * (1 - Math.exp(-1.5 * dt));
+      if (Math.abs(this.camera.fov - prevFov) > 0.02) this.camera.updateProjectionMatrix();
     }
     else if (p.def.farmKid) { const want = window.innerWidth > window.innerHeight ? 42 : 56; if (Math.abs(this.camera.fov - want) > 0.4) { this.camera.fov = want; this.camera.updateProjectionMatrix(); } }
     if (p.def.id === 'brachio' && !inp.looking) c.pitch += (0.32 - c.pitch) * Math.min(1, dt * 2);
@@ -1343,20 +1343,33 @@ export class Game {
     const pitch = (!p.def.hoopster && CC && ck > 0 && CC.pitch !== undefined) ? lerp(c.pitch, CC.pitch, ck) : c.pitch;
     const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(pitch) * c.dist, tgt.y + Math.sin(pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(pitch) * c.dist);
     const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
-    if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
-    if (p.def.hoopster) {
-      const kx = 1 - Math.exp(-5 * dt), ky = 1 - Math.exp(-3 * dt);
-      let dx = (tgt.x - c.look.x) * kx, dy = (tgt.y - c.look.y) * ky, dz = (tgt.z - c.look.z) * kx;
-      const mag = Math.hypot(dx, dy, dz);
-      if (mag > 0.1) { const s = 0.1 / mag; dx *= s; dy *= s; dz *= s; }
-      c.look.x += dx; c.look.y += dy; c.look.z += dz;
-      cp.set(
-        c.look.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist,
-        c.look.y + Math.sin(c.pitch) * c.dist,
-        c.look.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist
-      );
-      this.stomp.keepCameraOut(cp, c.look, dt);
-      c.pos.copy(cp);
+    if (this.snapCam && !(p.def.hoopster && this.stomp)) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
+    if (p.def.hoopster && this.stomp) {
+      const s = this.stomp;
+      const lookK = 1 - Math.exp(-10 * dt);
+      c.look.x += (p.pos.x - c.look.x) * lookK;
+      c.look.y += (p.pos.y + 1.1 - c.look.y) * lookK;
+      c.look.z += (p.pos.z - c.look.z) * lookK;
+      const pitchNow = c.pitch || 0.36;
+      const dirx = Math.sin(c.yaw) * Math.cos(pitchNow);
+      const diry = Math.sin(pitchNow);
+      const dirz = Math.cos(c.yaw) * Math.cos(pitchNow);
+      const full = Math.max(2.4, c.dist || 5);
+      cp.set(c.look.x + dirx * full, c.look.y + diry * full, c.look.z + dirz * full);
+      const safe = s.armClear(c.look, cp, full);
+      const prevArm = Number.isFinite(s.armDist) ? s.armDist : full;
+      const armK = 1 - Math.exp(-(safe < prevArm - 0.02 ? 14 : 4) * dt);
+      s.armDist = prevArm + (safe - prevArm) * armK;
+      let wx = c.look.x + dirx * s.armDist, wy = c.look.y + diry * s.armDist, wz = c.look.z + dirz * s.armDist;
+      const floorY = Math.max(this.world.height(wx, wz), 0) + 1.2;
+      if (wy < floorY) wy = floorY;
+      if (this.snapCam) { c.pos.set(wx, wy, wz); c.look.set(p.pos.x, p.pos.y + 1.1, p.pos.z); this.snapCam = false; }
+      else {
+        const posK = 1 - Math.exp(-8 * dt);
+        c.pos.x += (wx - c.pos.x) * posK;
+        c.pos.y += (wy - c.pos.y) * posK;
+        c.pos.z += (wz - c.pos.z) * posK;
+      }
     } else {
       const spring = Math.min(1, dt * 8), lookSpring = Math.min(1, dt * 12);
       c.pos.lerp(cp, spring); c.look.lerp(tgt, lookSpring);
@@ -1374,95 +1387,7 @@ export class Game {
     } else if (sh > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
     if (p.def.hoopster) this.camera.up.set(0, 1, 0);
     this.camera.lookAt(c.look);
-    if (p.def.hoopster && this.stomp) this.frameSwingBoy(p);
     if (this.camHook) this.camHook(this.camera); // test/screenshot framing hook
     if (p.def.hoopster && this.stomp) this.stomp.placeChevrons();
-  }
-  frameSwingBoy(p) {
-    const cam = this.camera, s = this.stomp, c = this.cam;
-    if (!s || !Number.isFinite(p.pos.x)) return;
-    cam.updateMatrixWorld(true);
-    const chest = (this._chest || (this._chest = new THREE.Vector3())).set(p.pos.x, p.pos.y + 0.7, p.pos.z);
-    const keepFov = cam.fov;
-    this.uncoverSwingBoy(cam, c, chest, s);
-    cam.up.set(0, 1, 0);
-    cam.lookAt(c.look);
-    cam.updateMatrixWorld(true);
-    const projectChest = () => {
-      const q = chest.clone().project(cam);
-      return { q, hx: q.x * 0.5 + 0.5, hy: -q.y * 0.5 + 0.5 };
-    };
-    let view = projectChest();
-    const lost = () => view.q.z >= 1 || Math.abs(view.q.x) > 0.96 || Math.abs(view.q.y) > 0.96;
-    if (lost()) {
-      c.look.copy(chest);
-      let tx = chest.x, tz = chest.z, bestD = 1e9;
-      for (const t of s.towers) {
-        const d = Math.hypot(chest.x - t.x, chest.z - t.z);
-        if (d < bestD) { bestD = d; tx = t.x; tz = t.z; }
-      }
-      let sx = chest.x - tx, sz = chest.z - tz, sl = Math.hypot(sx, sz) || 1;
-      sx /= sl; sz /= sl;
-      const pitch = c.pitch || 0.38;
-      cam.position.set(chest.x + sx * 3.6, chest.y + Math.sin(pitch) * 3.2, chest.z + sz * 3.6);
-      this.uncoverSwingBoy(cam, c, chest, s);
-      c.pos.copy(cam.position);
-      cam.up.set(0, 1, 0);
-      cam.lookAt(c.look);
-      cam.updateMatrixWorld(true);
-      view = projectChest();
-    }
-    if (!lost() && cam.fov !== keepFov) {
-      cam.fov = keepFov;
-      cam.updateProjectionMatrix();
-      view = projectChest();
-    }
-    if (lost() && view.q.z < 1) {
-      const ndc = Math.max(Math.abs(view.q.x), Math.abs(view.q.y), 1.05);
-      cam.fov = Math.min(110, 2 * Math.atan(Math.tan(Math.max(cam.fov, keepFov) * Math.PI / 360) * (ndc / 0.72)) * 180 / Math.PI);
-      cam.updateProjectionMatrix();
-    }
-  }
-  uncoverSwingBoy(cam, c, chest, s) {
-    if (!s || (s.state !== 'swing' && s.state !== 'air' && s.state !== 'bubble' && !s.zipping)) return;
-    const solids = this._swingSolids || (this._swingSolids = []);
-    solids.length = 0;
-    const root = s.data && s.data.root;
-    if (root) root.traverse(o => { if (o.matrixWorld && (o.userData.towerBody || o.userData.roofProp)) solids.push(o); });
-    if (!solids.length) return;
-    const ray = this._swingRay || (this._swingRay = new THREE.Raycaster());
-    const dir = this._swingDir || (this._swingDir = new THREE.Vector3());
-    dir.copy(chest).sub(cam.position);
-    const dist = dir.length(); if (!(dist > 0.4)) return;
-    dir.multiplyScalar(1 / dist);
-    ray.set(cam.position, dir);
-    ray.near = 0; ray.far = Math.max(0.2, dist - 0.35);
-    const hits = ray.intersectObjects(solids, false);
-    if (!hits.length) return;
-    let awayX = chest.x - cam.position.x, awayZ = chest.z - cam.position.z;
-    let bestD = 1e9, tx = chest.x, tz = chest.z;
-    for (const t of s.towers) {
-      const d = Math.hypot(chest.x - t.x, chest.z - t.z);
-      if (d < bestD) { bestD = d; tx = t.x; tz = t.z; }
-    }
-    let sx = chest.x - tx, sz = chest.z - tz, sl = Math.hypot(sx, sz);
-    if (sl < 0.2) { sx = awayX; sz = awayZ; sl = Math.hypot(sx, sz) || 1; }
-    sx /= sl; sz /= sl;
-    const goal = this._swingGoal || (this._swingGoal = new THREE.Vector3());
-    goal.set(chest.x + sx * 3.1, chest.y + 0.45, chest.z + sz * 3.1);
-    let top = 0;
-    for (const t of s.towers) top = Math.max(top, Math.hypot(chest.x - t.x, chest.z - t.z) < t.r + 4 ? s.solidTop(t) : 0);
-    if (goal.y < top + 0.8 && chest.y < top + 0.4) goal.y = top + 1.3;
-    cam.position.copy(goal);
-    dir.copy(chest).sub(cam.position);
-    const dist2 = dir.length() || 1;
-    dir.multiplyScalar(1 / dist2);
-    ray.set(cam.position, dir);
-    ray.far = Math.max(0.2, dist2 - 0.35);
-    if (ray.intersectObjects(solids, false).length) {
-      cam.position.y = Math.max(cam.position.y, top + 1.6);
-    }
-    s.keepCameraOut(cam.position, chest, 1 / 60);
-    c.pos.copy(cam.position);
   }
 }

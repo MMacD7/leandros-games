@@ -19,6 +19,7 @@ import { preloadArt, setArtCamera } from './art.js';
 import { prepareLoaders, preloadCityMaps, preloadCityMapsLow, preloadSwingBoy } from './models.js';
 import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky, preloadStego, preloadAllo, preloadDilo, preloadPachy, preloadPara, preloadWestie } from './models.js';
 import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
+import { stompAudio } from './stompAudio.js';
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
 
@@ -392,7 +393,13 @@ function syncMusic() {
   const b = game && game.battle;
   const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
   if (level === 'farm') { music.play(screen === 'play' || screen === 'pause' || screen === 'levels' || screen === 'results' ? 'farm' : 'farmtitle'); if (screen === 'play' && music.setIntensity) music.setIntensity(0); return; } // v5.1 hoedown!
-  if (level === 'stomp') { music.play('stomp'); if (music.setIntensity) music.setIntensity(game && game.stomp && game.stomp.combo > 2 ? 1 : 0.15); return; }
+  if (level === 'stomp') {
+    music.setEnabled(false);
+    stompAudio.sync(screen === 'play' || screen === 'title');
+    return;
+  }
+  music.setEnabled(true);
+  stompAudio.sync(false);
   let t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
   const hot = !b && level === 'jungle' && screen === 'play' && jungleHot();
   if (hot) t = 'battle';
@@ -480,7 +487,7 @@ tap('egg-reset-yes', () => {
 tap('p-home', () => { if (game.battle && !game.battle.over) game.battle = null; game.collapseCam = null; game.swoop = null; game.koCam = null; game.startRoam(); titleEnemies(); show('title'); });
 tap('r-ok', () => { game.startRoam(); show('play'); });
 const soundLabel = () => { $('b-sound').textContent = save.muted ? '🔇' : '🔊'; $('p-sound').textContent = save.muted ? '🔇 Sound off' : '🔊 Sound on'; };
-const toggleSound = () => { save.muted = !save.muted; setMuted(save.muted); persist(); soundLabel(); };
+const toggleSound = () => { save.muted = !save.muted; setMuted(save.muted); stompAudio.setMuted(); persist(); soundLabel(); };
 tap('b-sound', toggleSound); tap('p-sound', toggleSound); soundLabel();
 const musicLabel = () => { $('b-music').classList.toggle('off', !save.music); $('b-music').setAttribute('aria-label', save.music ? 'Music on' : 'Music off'); $('p-music').textContent = save.music ? '🎵 Music on' : '🎵 Music off'; };
 const toggleMusic = () => { save.music = !save.music; music.setEnabled(save.music); persist(); musicLabel(); };

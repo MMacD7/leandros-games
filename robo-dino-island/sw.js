@@ -2,7 +2,7 @@
    Pages and code (html/js/css/manifest) are network-first with a cache fallback, so new versions show up right away when online
    and the game still works offline. Big assets (textures, sky, icons, vendored three.js) are cache-first; they are re-downloaded
    whenever this file's cache name changes. */
-const CACHE = 'rdi-v5-13-5';
+const CACHE = 'rdi-v5-13-6';
 const FILES = ['./',
   './CREDITS.md',
   './assets/art/lion-rider.webp',
@@ -45,6 +45,12 @@ const FILES = ['./',
   './assets/textures/stomp/facade-atlas-tintmask.ktx2',
   './assets/textures/stomp/roof-cap-albedo.ktx2',
   './assets/textures/stomp/roof-cap-normal.ktx2',
+  './audio/sfx-coin.mp3',
+  './audio/sfx-swing.mp3',
+  './audio/sfx-win.mp3',
+  './audio/sfx-wrap.mp3',
+  './audio/sfx-zip.mp3',
+  './audio/swing-theme.mp3',
   './css/style.css',
   './icons/icon-180.png',
   './icons/icon-192.png',
@@ -88,6 +94,7 @@ const FILES = ['./',
   './js/spino.js',
   './js/stego.js',
   './js/stomp.js',
+  './js/stompAudio.js',
   './js/stompCity.js',
   './js/trex.js',
   './js/trike.js',

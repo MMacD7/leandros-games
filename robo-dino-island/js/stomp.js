@@ -3,6 +3,7 @@
 import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { sfx } from './audio.js';
+import { stompAudio } from './stompAudio.js';
 import { voice } from './voice.js';
 import { davidModel } from './farm.js';
 import { buildAllTowers, fadeCityProps, castCityShadows } from './stompCity.js';
@@ -471,6 +472,27 @@ export class StompLife {
       cp.lerp(look, 0.35);
     }
   }
+  armClear(look, cp, full) {
+    if (!look || !cp) return full;
+    const dx = cp.x - look.x, dy = cp.y - look.y, dz = cp.z - look.z;
+    const len = Math.hypot(dx, dy, dz);
+    if (!(len > 0.4) || !Number.isFinite(len)) return full || 5;
+    const inv = 1 / len, dirx = dx * inv, diry = dy * inv, dirz = dz * inv;
+    let blocked = len;
+    for (const t of this.towers) {
+      const ox = look.x - t.x, oz = look.z - t.z;
+      const a = dirx * dirx + dirz * dirz; if (a < 1e-6) continue;
+      const b = 2 * (ox * dirx + oz * dirz);
+      const rad = t.r + 0.8;
+      const c = ox * ox + oz * oz - rad * rad;
+      const disc = b * b - 4 * a * c; if (disc < 0) continue;
+      const hit = (-b - Math.sqrt(disc)) / (2 * a);
+      if (hit < 0.3 || hit > len) continue;
+      if (look.y + diry * hit > this.solidTop(t) + 0.4) continue;
+      blocked = Math.min(blocked, Math.max(1.7, hit - 0.4));
+    }
+    return blocked;
+  }
   titlePose() {
     this.reset();
     const p = this.g.player; if (!p) return;
@@ -550,6 +572,7 @@ export class StompLife {
     this.len = Math.max(6, Math.hypot(a.x - p.pos.x, a.y - p.pos.y, a.z - p.pos.z));
     this.sawSwing = true; if (this.step === 0) { this.step = 1; this.sayStep(); }
     sfx.whoosh && sfx.whoosh(0.7);
+    stompAudio.swing();
   }
   fling() {
     const a = this.anchor, p = this.g.player;
@@ -616,6 +639,7 @@ export class StompLife {
     }
     this.zipping = true; this.sawZip = true; if (this.step === 2) { this.step = 3; this.sayStep(); }
     sfx.whoosh && sfx.whoosh(0.85);
+    stompAudio.zip();
   }
   stepSwing(p, dt, wish, mag) {
     const a = this.anchor; if (!a) { this.state = 'air'; return; }
@@ -921,6 +945,7 @@ export class StompLife {
     if (this.david.mesh.userData.pie) this.david.mesh.userData.pie.visible = true;
     if (this.david.mesh.userData.handPie) this.david.mesh.userData.handPie.visible = false;
     sfx.pie && sfx.pie(1);
+    stompAudio.wrap();
     if (this.g.hud) {
       this.g.hud.shout('NOOO DAVIDD!', 2.0);
       this.g.later(2.0, () => { if (this.david.wrapped) this.g.hud.shout('THATS NOT FUNNY DAVID!!', 2.4); });
@@ -935,6 +960,7 @@ export class StompLife {
     if (this.winEl) this.winEl.classList.remove('hidden');
     if (this.promptEl) this.promptEl.textContent = 'Pie returned!';
     sfx.tada && sfx.tada(0.9);
+    stompAudio.win();
   }
   keepSwinging() {
     this.won = false;
@@ -1256,6 +1282,7 @@ export class StompLife {
           if (this.g.addBolts) this.g.addBolts(1);
           const box = document.getElementById('bolts-box'); if (box) { box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
           sfx.coinChime && sfx.coinChime(this.coinChain);
+          stompAudio.coin();
           if (this.g.fx && this.g.fx.sparks) this.g.fx.sparks(new THREE.Vector3(c.x, c.y, c.z), 8, { r: 1, g: 0.89, b: 0.48 }, 0.7);
           this.coinPop();
         }
