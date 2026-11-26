@@ -53,7 +53,7 @@ function shade(geo, top, bot, lo = -0.3, hi = 0.3, spots = 0, spotC = 0xffffff) 
     if (spots && y > 0) { const x = p.getX(i), z = p.getZ(i), f = Math.sin(x * spots) * Math.sin(z * spots * 1.3) * Math.sin((x + z) * spots * 0.7); if (f > 0.55) c.lerp(S, 0.7); }
     col.set([c.r, c.g, c.b], i * 3); }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); return geo; }
-const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.05, ...o });
+const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.38, metalness: 0.05, envMapIntensity: 1.2, ...o });
 
 // ---------- the creature ----------
 export class SeaBeast {
@@ -63,7 +63,7 @@ export class SeaBeast {
     this.pivot = new THREE.Group(); this.root.add(this.pivot);
     this.b = {}; this.sockets = {}; this.meshes = []; this.parts = []; this.phase = Math.random() * 6; this.t = 0; this.flash = 0; this.ko = 0; this.climbS = 0; this.turnS = 0; this.zapK = 0;
     const glowColor = new THREE.Color(def.accent || 0x40e0ff).multiplyScalar(1.6);
-    this.skin = std({ vertexColors: true, roughness: def.kind === 'jelly' ? 0.2 : 0.45, emissive: 0x000000 });
+    this.skin = std({ vertexColors: true, roughness: def.kind === 'jelly' ? 0.2 : 0.35, emissive: 0x000000 });
     this.glowM = new THREE.MeshStandardMaterial({ color: def.accent, emissive: def.accent, emissiveIntensity: 2.2, roughness: 0.3, toneMapped: false });
     this.dark = std({ color: 0x120a0a, roughness: 0.3 }); this.white = std({ color: 0xf4f0e2, roughness: 0.35 }); this.gum = std({ color: 0x6a1418, roughness: 0.6 });
     this.mats = { plate: this.skin, frame: this.dark, glow: this.glowM, glowColor };

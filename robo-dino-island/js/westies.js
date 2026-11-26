@@ -10,6 +10,7 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { sfx } from './audio.js';
 import { voice } from './voice.js';
+import { stompAudio } from './stompAudio.js';
 import { buildWestie, setAccent, STOMP_BOBBY_ACCENT } from './westie.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -164,7 +165,7 @@ export class Westies {
       const line = POOP_LINE; this.farmShouts = (this.farmShouts || 0) + 1;
       const dur = g.world && g.world.stomp && !g.farm ? 3.4 : 4.2;
       if (g.hud.shout) g.hud.shout(line, dur); else g.hud.banner(line, 4, true); sfx.cheer && sfx.cheer(1);
-      voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true }); return; }
+      stompAudio.poopLine(); return; }
     const solo = this.activeDogs().length === 1 ? this.activeDogs()[0].name : null;
     g.hud.banner(solo ? '🐶 ' + solo + '! 🐶' : '🐶 RICKY & BOBBY! 🐶', 4, true); document.getElementById('banner').classList.add('rb'); // banner sits high so it doesn't cover the dogs
     sfx.cheer && sfx.cheer(1);
@@ -269,7 +270,7 @@ export class Westies {
       const live = this.dogs.filter(d => !d.off), d = live[(Math.random() * live.length) | 0];
       if (d) { d.poopT = 1.4; d.pooped = false;
         if (g.hud.shout) g.hud.shout(POOP_LINE, 3.4); else g.hud.banner(POOP_LINE, 3.2, true);
-        voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 2, cd: 8000, pitch: 1.1, rate: 1.0 }); }
+        stompAudio.poopLine(); }
     }
     return true;
   }

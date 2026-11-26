@@ -56,7 +56,7 @@ const persist = () => writeSave(save);
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: isIPhone || isIPad || (forced ?? startTier) >= 1, powerPreference: 'high-performance', stencil: false });
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = false;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, 1, 0.3, 1400);
 const sun = new THREE.DirectionalLight(0xfff1dc, 3.6); sun.castShadow = true; scene.add(sun, sun.target);
@@ -169,7 +169,7 @@ function applyEnv(lv) {
   }
   if (lv === 'ocean' && !ENV.ocean) { // v5 Deep Sea: blue water fog, light from the surface above
     const sky = oceanSky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
-    ENV.ocean = { bg: sky, env, envI: 0.55, fog: new THREE.Color(0x0e5a78), near: 8, far: 240, sunDir: new THREE.Vector3(0.25, 0.92, 0.3).normalize(), sunC: 0xb8f0ff, sunI: 2.6, hs: 0x4ac0e0, hg: 0x1a3040, hi: 0.95, exp: 1.15 };
+    ENV.ocean = { bg: sky, env, envI: 0.6, fog: new THREE.Color(0x1a8db0), near: 22, far: 260, sunDir: new THREE.Vector3(0.25, 0.92, 0.3).normalize(), sunC: 0xfff1d6, sunI: 3.0, hs: 0x7fe6ff, hg: 0x1f7a8c, hi: 1.1, exp: 1.1 };
   }
   if (lv === 'farm' && !ENV.farm) { // v5.1 Farty Poop Farm: the island sky, but a brighter, sunnier, happier day
     const J = ENV.jungle; ENV.farm = { ...J, envI: 0.5, fog: J.fog.clone().lerp(new THREE.Color(0xd8ecff), 0.3), near: 110, far: 900, sunDir: new THREE.Vector3(0.82, 0.64, 0.32).normalize(), sunC: 0xfff4e0, sunI: 3.6, hs: 0xd8ecff, hg: 0x6a7a3a, hi: 0.7, exp: 1.05 }; }
@@ -399,7 +399,7 @@ function jungleHot() {
 function syncMusic() {
   const b = game && game.battle;
   const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
-  if (level === 'stomp' || level === 'farm' || level === 'jungle') {
+  if (level === 'stomp' || level === 'farm' || level === 'jungle' || level === 'ocean') {
     music.setEnabled(false);
     stompAudio.sync(screen === 'play' || screen === 'title' ? level : false);
     return;
@@ -742,10 +742,9 @@ let stompDprDrop = false, stompTexLow = false, dprAcc = 0, dprN = 0, dprHigh = 0
 function pixelCap() {
   const dpr = window.devicePixelRatio || 1;
   if (lockDpr) return lockDpr;
-  let cap = Math.min(dpr, 2);
-  if (stompDprDrop) cap = Math.min(cap, 1.5);
-  if (isIPad) cap = Math.max(1.5, cap);
-  return cap;
+  const touch = isIPad || isIPhone || isMobile || (navigator.maxTouchPoints || 0) > 0;
+  if (touch || stompDprDrop) return Math.min(dpr, 1.5);
+  return Math.min(dpr, 2);
 }
 function fpsReset() { fpsAcc = 0; fpsN = 0; fpsWarm = 1.5; dprAcc = 0; dprN = 0; }
 function stompAdapt(dt) {
@@ -781,7 +780,7 @@ function fpsTick(dt, now) {
   else goodWindows = 0;
 }
 
-let blobMesh = null, blobDummy = null;
+let blobMesh = null, blobDummy = null; const blobSpots = [];
 function placeBlobs() {
   if (!blobMesh) {
     const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -795,20 +794,21 @@ function placeBlobs() {
     blobMesh = new THREE.InstancedMesh(geo, mat, 24); blobMesh.frustumCulled = false; blobMesh.count = 0; scene.add(blobMesh);
     blobDummy = new THREE.Object3D();
   }
-  const spots = [];
-  const add = (x, y, z, r) => { if (spots.length < 24 && Number.isFinite(x)) spots.push([x, y, z, r]); };
+  blobSpots.length = 0;
+  const add = (x, y, z, r) => { if (blobSpots.length < 24 && Number.isFinite(x)) blobSpots.push([x, y, z, r]); };
   const p = game.player;
   if (p && p.pos) add(p.pos.x, world.height(p.pos.x, p.pos.z) + 0.04, p.pos.z, 0.55 * (p.def.radius || 0.8) * 2);
   if (game.westies && game.westies.dogs) for (const d of game.westies.dogs) if (d && d.pos) add(d.pos.x, world.height(d.pos.x, d.pos.z) + 0.03, d.pos.z, 0.7);
   if (game.farm && game.farm.animals) for (const a of game.farm.animals) if (a && a.pos) add(a.pos.x, world.height(a.pos.x, a.pos.z) + 0.03, a.pos.z, 0.55 * (a.K && a.K.r || 0.8) * 2);
   if (game.stomp && game.stomp.david) add(game.stomp.david.x, game.stomp.david.y + 0.02, game.stomp.david.z, 0.7);
   for (const e of game.enemies || []) if (e.alive && e.pos) add(e.pos.x, world.height(e.pos.x, e.pos.z) + 0.04, e.pos.z, 0.55 * (e.radius || 1.2) * 2);
-  blobMesh.count = spots.length;
-  spots.forEach(([x, y, z, r], i) => { blobDummy.position.set(x, y, z); blobDummy.scale.set(r, 1, r); blobDummy.updateMatrix(); blobMesh.setMatrixAt(i, blobDummy.matrix); });
-  if (spots.length) blobMesh.instanceMatrix.needsUpdate = true;
+  blobMesh.count = blobSpots.length;
+  blobSpots.forEach(([x, y, z, r], i) => { blobDummy.position.set(x, y, z); blobDummy.scale.set(r, 1, r); blobDummy.updateMatrix(); blobMesh.setMatrixAt(i, blobDummy.matrix); });
+  if (blobSpots.length) blobMesh.instanceMatrix.needsUpdate = true;
 }
 // ---------------- loop ----------------
-let last = performance.now(), smokeT = 0, titleT = 0, frames = 0, cpuMs = 0, garageFrame = null;
+let last = performance.now(), smokeT = 0, titleT = 0, frames = 0, cpuMs = 0, garageFrame = null, shadowKey = '';
+const _titleMid = new THREE.Vector3(), _titleShake = new THREE.Vector3();
 function loop(now) {
   requestAnimationFrame(loop);
   if (window.__hold) return;
@@ -877,13 +877,13 @@ function loop(now) {
     game.mh.updateTitle(dt); if (game.farm) { game.farm.update(dt, true); if (p.def.farmKid && !p.def.hoopster && p.mech.R.cheerT <= 0 && Math.random() < dt * 0.2) p.mech.R.cheerT = 1.4; }
     if (game.stomp && level === 'stomp') game.stomp.update(dt);
     const stompCam = level === 'stomp' && p.def && p.def.hoopster;
-    const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = stompCam ? new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z) : new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
+    const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = stompCam ? _titleMid.set(p.pos.x, p.pos.y, p.pos.z) : _titleMid.set(TITLE.x, p.pos.y, TITLE.z);
     const fm = !!game.farm, a = Math.sin(titleT * 0.12) * 0.22, r = (stompCam ? (asp < 1 ? 16 : 14) : fm ? (asp < 1 ? 13 : asp < 1.5 ? 9.5 : 8.5) : asp < 1 ? 28 : asp < 1.5 ? 17.5 : 15.5) + Math.sin(titleT * 0.2) * 1.0;
     camera.position.set(mid.x + Math.sin(a) * r, 0, mid.z + Math.cos(a) * r);
     const camLift = level === 'jungle' ? 16 : (fm ? 2.0 : 3.0);
     camera.position.y = Math.max(mid.y + camLift, world.height(camera.position.x, camera.position.z) + camLift);
     camera.lookAt(mid.x, mid.y + (stompCam ? 2.2 : fm ? (asp < 1 ? 6.6 : 5.6) : (asp < 1 ? 6.0 : 4.4) + 1.5), mid.z - (stompCam ? 0 : 4));
-    if (fx.shake > 0) camera.position.add(new THREE.Vector3((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake, 0));
+    if (fx.shake > 0) camera.position.add(_titleShake.set((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake, 0));
     game.updatePickups(dt);
   } else if (screen === 'pause' || screen === 'results') { /* frozen world */ }
   // volcano smoke plume
@@ -895,8 +895,8 @@ function loop(now) {
   if (world.peak && screen !== 'pause') peakAmbience(dt);
   // shadow camera follows the action, snapped to texels so the edges do not crawl.
   const P = game.player.pos;
-  const mobile = isIPhone || isIPad;
-  const map = isIPad || (!mobile && Q.tier >= 2) ? 2048 : (mobile ? 1024 : Q.shadow);
+  const mobile = isIPhone || isIPad || isMobile;
+  const map = mobile ? 1024 : Q.shadow;
   const radius = mobile || level === 'stomp' ? 28 : Q.shadowR;
   if (sun.shadow.mapSize.x !== map) {
     sun.shadow.mapSize.set(map, map);
@@ -911,6 +911,8 @@ function loop(now) {
   sc.updateProjectionMatrix();
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
   sun.castShadow = true;
+  const sk = map + '|' + sx + '|' + sy + '|' + sz + '|' + radius;
+  if (sk !== shadowKey) { shadowKey = sk; renderer.shadowMap.needsUpdate = true; }
   placeBlobs();
   fill.position.copy(camera.position); fill.target.position.set(P.x, P.y + 1.5, P.z);
   const c1 = performance.now(); cpuMs += ((c1 - c0) - cpuMs) * 0.05;
@@ -930,7 +932,7 @@ function oceanAmbience(dt) {
   bubT -= dt; const cp = camera.position;
   while (bubT < 0) { bubT += 0.05;
     for (const v of world.vents) { if ((v.x - cp.x) ** 2 + (v.z - cp.z) ** 2 > 200 * 200 || Math.random() > 0.5) continue;
-      fx.glow.spawn({ pos: { x: v.x + (Math.random() - 0.5) * 1.5, y: v.y, z: v.z + (Math.random() - 0.5) * 1.5 }, vel: { x: (Math.random() - 0.5) * 1.2, y: 6 + Math.random() * 5, z: (Math.random() - 0.5) * 1.2 }, size: 0.35 + Math.random() * 0.5, size1: 0.7, life: 3 + Math.random() * 3, r: 1.0, g: 1.4, b: 1.7, alpha: 0.7, grav: -1.5, drag: 0.2 }); }
+      (fx.bubble || fx.glow).spawn({ pos: { x: v.x + (Math.random() - 0.5) * 1.5, y: v.y, z: v.z + (Math.random() - 0.5) * 1.5 }, vel: { x: (Math.random() - 0.5) * 0.5, y: 2 + Math.random() * 2, z: (Math.random() - 0.5) * 0.5 }, size: 0.15, size1: 0.4, life: 2.4 + Math.random() * 1.6, r: 0.85, g: 0.95, b: 1, alpha: 0.9, grav: 0, drag: 0.1, wobble: Math.random() * 6.28 }); }
     if (Math.random() < 0.4) { const o = world.smokeOrigin; fx.smoke.spawn({ pos: new THREE.Vector3(o.x + (Math.random() - 0.5) * 6, o.y, o.z + (Math.random() - 0.5) * 6), vel: { x: 0.5, y: 5 + Math.random() * 3, z: 0 }, size: 6, size1: 30, life: 8, r: 0.12, g: 0.2, b: 0.24, alpha: 0.6, alpha1: 0, drag: 0.05, rv: 0.1, fadeIn: 0.05 }); }
   }
 }

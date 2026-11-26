@@ -174,8 +174,6 @@ export class World {
 uniform sampler2D tG, tS, tR, tD, nS, nR, nD; uniform float uTime; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
 float vno(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h21(i), h21(i+vec2(1.0,0.0)), f.x), mix(h21(i+vec2(0.0,1.0)), h21(i+vec2(1.0,1.0)), f.x), f.y); }
-vec3 triR(float s){ vec3 b = pow(abs(vWN), vec3(4.0)); b /= (b.x+b.y+b.z);
-  return texture2D(tR, vWP.zy*s).rgb*b.x + texture2D(tR, vWP.xz*s).rgb*b.y + texture2D(tR, vWP.xy*s).rgb*b.z; }
 ${cityGLSL}`)
         .replace('#include <map_fragment>', `
 vec4 sp = vSplat; sp /= max(1e-3, sp.x+sp.y+sp.z+sp.w);
@@ -185,12 +183,11 @@ float gl = dot(cg, vec3(0.3,0.59,0.11)); cg = mix(cg, gl * vec3(0.55,1.05,0.22) 
 cg = mix(cg, mix(vec3(0.184,0.604,0.235), vec3(0.243,0.784,0.353), clamp(gl, 0.0, 1.0)), 0.42);
 vec3 cs = texture2D(tS, wuv*0.12).rgb * vec3(1.08,1.0,0.86);
 cs = mix(cs, vec3(0.910,0.863,0.784), 0.35);
-vec3 cr = sp.z > 0.02 ? triR(0.045) * vec3(0.78,0.74,0.72) : vec3(0.0);
+vec3 cr = sp.z > 0.02 ? texture2D(tR, wuv*0.045).rgb * vec3(0.78,0.74,0.72) : vec3(0.0);
 vec3 cd = texture2D(tD, wuv*0.11).rgb * vec3(1.05,0.95,0.8);
 float nearD = 1.0 - smoothstep(8.0, 30.0, distance(vWP, cameraPosition));
-cg *= mix(1.0, texture2D(tG, wuv*0.55).r*1.6+0.2, nearD);
-cs *= mix(1.0, texture2D(tS, wuv*0.55).r*1.6+0.2, nearD);
-cd *= mix(1.0, texture2D(tD, wuv*0.55).r*1.6+0.2, nearD);
+float crisp = mix(1.0, texture2D(tD, wuv*0.55).r*1.55+0.25, nearD);
+cg *= crisp; cs *= crisp; cd *= crisp;
 #ifdef PEAK
 cg = gl * vec3(0.55,0.32,0.22) * 1.1; cs *= vec3(0.34,0.31,0.32); cr *= vec3(0.62,0.56,0.6); cd *= vec3(0.7,0.44,0.32);
 float vn = vno(vWP.xz*0.018) * 0.62 + vno(vWP.xz*0.047 + 7.0) * 0.28 + vno(vWP.xz*0.16) * 0.1;
@@ -223,7 +220,7 @@ float heatJ = onCone * smoothstep(28.0, 62.0, vWP.y);
 vec3 lavaJ = vec3(2.4, 0.28, 0.03) * veinJ * heatJ * (0.82 + 0.18 * sin(uTime * 1.4 + vWP.x * 0.07));
 #endif
 #ifdef OCEAN
-cg = gl * vec3(0.20, 0.42, 0.28) * 1.15; cs *= vec3(1.02, 0.98, 0.86); cr *= vec3(0.6, 0.68, 0.74); cd = cs * vec3(0.74, 0.7, 0.62);
+cg = gl * vec3(0.30, 0.62, 0.38) * 1.2; cs *= vec3(1.08, 1.02, 0.9); cr *= vec3(0.78, 0.84, 0.86); cd = cs * vec3(0.74, 0.7, 0.62);
 #endif
 diffuseColor.rgb *= cg*sp.x + cs*sp.y + cr*sp.z + cd*sp.w;
 #ifdef CITY
@@ -243,7 +240,7 @@ float cau = caus(vWP.xz * 0.055, uTime * 0.55) * 0.75 + caus(vWP.xz * 0.11 + 0.3
 totalEmissiveRadiance += vec3(0.5, 0.85, 0.95) * cau * 0.5 * smoothstep(-0.1, 0.7, vWN.y) * diffuseColor.rgb * 2.2;
 #endif`)
         .replace('vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
-          'vec3 mapN = (texture2D(normalMap, vWP.xz*0.09).xyz*sp.x + texture2D(nS, vWP.xz*0.12).xyz*sp.y + texture2D(nR, vWP.xz*0.045).xyz*sp.z + texture2D(nD, vWP.xz*0.11).xyz*sp.w)*2.0-1.0; float nearN = 1.0 - smoothstep(8.0, 30.0, distance(vWP, cameraPosition)); vec3 mapC = (texture2D(normalMap, vWP.xz*0.55).xyz*sp.x + texture2D(nS, vWP.xz*0.55).xyz*sp.y + texture2D(nR, vWP.xz*0.18).xyz*sp.z + texture2D(nD, vWP.xz*0.55).xyz*sp.w)*2.0-1.0; mapN = mix(mapN, mapC, nearN);');
+          'vec3 mapN = (texture2D(normalMap, vWP.xz*0.09).xyz*sp.x + texture2D(nS, vWP.xz*0.12).xyz*sp.y + texture2D(nR, vWP.xz*0.045).xyz*sp.z + texture2D(nD, vWP.xz*0.11).xyz*sp.w)*2.0-1.0;');
     };
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; this.root.add(m); this.terrain = m;
   }
@@ -387,6 +384,16 @@ totalEmissiveRadiance += diffuseColor.rgb * 0.22 * max(0.0, dot(-normalize(norma
       let nh = 0, nl = 0;
       for (const it of set.items) {
         const d2 = (it.x - cam.x) ** 2 + (it.z - cam.z) ** 2; if (d2 > far2) continue;
+        if (set.kelp) {
+          if (d2 < 25) continue;
+          if (player) {
+            const ax = player.x - cam.x, az = player.z - cam.z, seg2 = ax * ax + az * az;
+            if (seg2 > 4) {
+              const t = ((it.x - cam.x) * ax + (it.z - cam.z) * az) / seg2;
+              if (t > 0.02 && t < 0.98) { const sx = cam.x + ax * t - it.x, sz = cam.z + az * t - it.z; if (sx * sx + sz * sz < 9) continue; }
+            }
+          }
+        }
         if (seg2 > 4) {
           const t = ((it.x - cam.x) * ax + (it.z - cam.z) * az) / seg2;
           if (t > 0.04 && t < 0.82) {

@@ -55,7 +55,7 @@ export class Particles {
     let slot = -1; if (this.p.length >= this.cap) { this.ov = (this.ov + 7) % this.p.length; slot = this.ov; }
     const p = { x: o.pos.x, y: o.pos.y, z: o.pos.z, vx: o.vel ? o.vel.x : 0, vy: o.vel ? o.vel.y : 0, vz: o.vel ? o.vel.z : 0,
       life: o.life || 1, age: 0, s0: o.size ?? 1, s1: o.size1 ?? o.size ?? 1, r: o.r ?? 1, g: o.g ?? 1, b: o.b ?? 1, a0: o.alpha ?? 1, a1: o.alpha1 ?? 0,
-      rot: o.rot ?? Math.random() * 6.28, rv: o.rv ?? 0, drag: o.drag ?? 0, grav: o.grav ?? 0, len: o.len || 0, fadeIn: o.fadeIn || 0, dir: o.dir || null };
+      rot: o.rot ?? Math.random() * 6.28, rv: o.rv ?? 0, drag: o.drag ?? 0, grav: o.grav ?? 0, len: o.len || 0, fadeIn: o.fadeIn || 0, dir: o.dir || null, wobble: o.wobble || 0 };
     if (slot >= 0) this.p[slot] = p; else this.p.push(p); return p;
   }
   update(dt, fog) {
@@ -64,7 +64,7 @@ export class Particles {
     for (let i = 0; i < this.p.length; i++) {
       const p = this.p[i]; p.age += dt; if (p.age >= p.life) { this.p[i] = this.p[this.p.length - 1]; this.p.pop(); i--; continue; }
       const t = p.age / p.life, dr = Math.max(0, 1 - p.drag * dt);
-      p.vx *= dr; p.vy = p.vy * dr - p.grav * dt; p.vz *= dr; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.rot += p.rv * dt;
+      p.vx *= dr; p.vy = p.vy * dr - p.grav * dt; p.vz *= dr; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; if (p.wobble) p.x += Math.sin(p.age * 3 + p.wobble) * 0.4 * dt; p.rot += p.rv * dt;
       let a = p.a0 + (p.a1 - p.a0) * t; if (p.fadeIn) a *= Math.min(1, t / p.fadeIn);
       P[n * 4] = p.x; P[n * 4 + 1] = p.y; P[n * 4 + 2] = p.z; P[n * 4 + 3] = p.s0 + (p.s1 - p.s0) * t;
       C[n * 4] = p.r; C[n * 4 + 1] = p.g; C[n * 4 + 2] = p.b; C[n * 4 + 3] = a;
@@ -76,6 +76,15 @@ export class Particles {
   }
 }
 
+function bubbleTexture() {
+  const N = 64, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
+  const rim = g.createRadialGradient(32, 32, 16, 32, 32, 28);
+  rim.addColorStop(0, 'rgba(230,255,255,0)'); rim.addColorStop(0.72, 'rgba(230,255,255,0)'); rim.addColorStop(0.86, 'rgba(230,255,255,0.92)'); rim.addColorStop(1, 'rgba(230,255,255,0)');
+  g.fillStyle = rim; g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(24, 22, 3.2, 0, Math.PI * 2); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
 export class FX {
   constructor(scene, assets, audio) {
     this.scene = scene; this.sfx = audio;
@@ -83,6 +92,7 @@ export class FX {
     this.smoke = new Particles(scene, 1700, assets.smoke, false);
     this.glow = new Particles(scene, 2300, assets.glow, true);
     this.fire = new Particles(scene, 1500, assets.smoke, true);
+    this.bubble = new Particles(scene, 500, bubbleTexture(), false);
     this.light = new THREE.PointLight(0xff9a40, 0, 40, 1.6); scene.add(this.light); this.lightT = 0;
     this.em = []; this.debris = []; this.k = 1; this.maxDebris = 40; this.maxEm = 40;
     // scorch decals + warning circles (pooled meshes)

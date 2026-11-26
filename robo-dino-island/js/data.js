@@ -132,7 +132,7 @@ export const SEA = [
     back: 0x5d6e7c, belly: 0xeef2f2, accent: 0x2ad8ff, eye: 0x101010 },
   { id: 'megalodon', name: 'Megalodon', price: 0, kind: 'shark', mega: true, desc: 'A prehistoric MEGA shark as big as a bus. Its CRUSHING CHOMP flattens anything!',
     hp: 420, speed: 14.5, bite: 44, biteRate: 0.55, special: 'crush', specialName: 'CRUSHING<br>CHOMP', specialCD: 3.5, roar: 2.8, scale: 1.9, radius: 4.2,
-    back: 0x3a4048, belly: 0xb8bcb8, accent: 0xff3a1a, eye: 0xff2a1a },
+    back: 0x56626e, belly: 0xe8ece6, accent: 0xff3a1a, eye: 0xff2a1a },
   { id: 'stingray', name: 'Thunder Stingray', price: 0, kind: 'ray', glide: true, desc: 'Glides super fast (hold SWIM FAST). Its tail STING poisons and its ZAP STRIKE chains lightning!',
     hp: 150, speed: 18, bite: 18, biteRate: 0.28, special: 'zap', specialName: 'ZAP<br>STRIKE', specialCD: 2.5, roar: 1.6, sting: true, scale: 1.0, radius: 2.4,
     back: 0x3a4a5a, belly: 0xe8e4dc, accent: 0x5ae8ff, spot: 0x9ad8ff },

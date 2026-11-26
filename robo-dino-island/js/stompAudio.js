@@ -1,11 +1,14 @@
 // Stompolis rock theme and arcade hits. HTML audio so iPad Safari can unlock on the first tap.
 import { isMuted } from './audio.js';
+import { voice } from './voice.js';
 
-const THEMES = { stomp: 'audio/swing-theme.mp3', farm: 'audio/farm-theme.mp3', jungle: 'audio/jungle-theme.mp3' };
+const THEMES = { stomp: 'audio/swing-theme.mp3', farm: 'audio/farm-theme.mp3', jungle: 'audio/jungle-theme.mp3', ocean: 'audio/deepsea-theme.mp3' };
 const SFX = {
   swing: 'audio/sfx-swing.mp3', zip: 'audio/sfx-zip.mp3', coin: 'audio/sfx-coin.mp3', wrap: 'audio/sfx-wrap.mp3', win: 'audio/sfx-win.mp3',
   roar: 'audio/sfx-dino-roar.mp3', fart: 'audio/sfx-fart.mp3', plop: 'audio/sfx-poop-plop.mp3',
+  torpedo: 'audio/sfx-torpedo.mp3', chomp: 'audio/sfx-chomp-water.mp3', sonar: 'audio/sfx-sonar-boost.mp3',
 };
+const POOP_MP3 = 'audio/voice-ricky-bobby-poop.mp3';
 
 const theme = new Audio();
 theme.loop = true;
@@ -19,6 +22,9 @@ let wantLevel = '';
 let musicOn = true;
 let musicVol = 0.9;
 const pools = {};
+const poop = new Audio(POOP_MP3);
+poop.preload = 'auto';
+poop.volume = 1;
 
 function pool(url) {
   let list = pools[url];
@@ -47,8 +53,15 @@ function applyTheme() {
   } else { theme.dataset.level = ''; if (!theme.paused) theme.pause(); }
 }
 
+let poopUnlocked = false;
+function unlockPoop() {
+  if (poopUnlocked || poop.dataset.live) return;
+  poopUnlocked = true;
+  const p = poop.play();
+  if (p && p.then) p.then(() => { if (!poop.dataset.live) { poop.pause(); try { poop.currentTime = 0; } catch (e) { /* not seekable yet */ } } }).catch(() => {});
+}
 for (const ev of ['touchstart', 'pointerdown', 'click']) {
-  document.addEventListener(ev, () => applyTheme(), { capture: true });
+  document.addEventListener(ev, () => { applyTheme(); unlockPoop(); }, { capture: true });
 }
 
 export const stompAudio = {
@@ -63,5 +76,24 @@ export const stompAudio = {
   roar() { playUrl(SFX.roar, 0.8); },
   fart() { playUrl(SFX.fart, 0.75); },
   plop() { playUrl(SFX.plop, 0.7); },
+  torpedo() { playUrl(SFX.torpedo, 0.8); },
+  chomp() { playUrl(SFX.chomp, 0.8); },
+  sonar() { playUrl(SFX.sonar, 0.75); },
+  // Real line. Returns 'played', 'muted', or 'fail' so speechSynthesis is only the fallback.
+  poopLine() {
+    if (isMuted()) return 'muted';
+    poop.dataset.live = '1';
+    try { poop.currentTime = 0; } catch (e) { /* seek can fail before the first successful play */ }
+    poop.volume = 1;
+    try {
+      const p = poop.play();
+      if (p && p.then) p.then(() => {}).catch(() => { poop.dataset.live = ''; voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true }); });
+      return 'played';
+    } catch (e) {
+      poop.dataset.live = '';
+      voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true });
+      return 'fail';
+    }
+  },
   get theme() { return theme; },
 };

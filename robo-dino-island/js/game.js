@@ -9,6 +9,7 @@ import { Westies, Pup, setScuba } from './westies.js';
 import { music } from './music.js';
 import { BASE, ARENA, VOLC } from './world.js';
 import { sfx } from './audio.js';
+import { stompAudio } from './stompAudio.js';
 import { clamp, lerp, rng } from './noise.js';
 import { Mayhem } from './mayhem.js';
 import { Rider, rideOpts } from './rider.js';
@@ -36,7 +37,7 @@ import { CostumeRex, COSTUME } from './costume.js';
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
 export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
 
-const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), _tail = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
 const dampAngle = (a, b, lambda, dt, cap) => {
@@ -419,7 +420,7 @@ export class Game {
       if (dist < 3.4 * reach + 1.5 && tmp.dot(fwd) > 0.15 && dist < bd) { bd = dist; t = e; } }
     if (!t && target && target.alive && target.pos.distanceTo(d.pos) - target.radius - d.radius < 6.5 * reach + 2.5) t = target; // lunge assist
     const bm = d.rageT > 0 ? 1.6 : 1;
-    d.biteA = 1; d.jaw = 1.6; sfx.bite(s); this.mh.damageAt(d.pos.clone().addScaledVector(fwd, d.radius + 1.5 * reach).setY(d.pos.y + 1), 2.5 * reach + 1, d.st.bite * bm, d);
+    d.biteA = 1; d.jaw = 1.6; sfx.bite(s); if (d === this.player && d.def.sea) stompAudio.chomp(); this.mh.damageAt(d.pos.clone().addScaledVector(fwd, d.radius + 1.5 * reach).setY(d.pos.y + 1), 2.5 * reach + 1, d.st.bite * bm, d);
     if (t) {
       d.yaw += angDiff(d.yaw, Math.atan2(t.pos.x - d.pos.x, t.pos.z - d.pos.z)) * 0.75;
       const gap = d.pos.distanceTo(t.pos) - t.radius - d.radius; if (gap > 0.8) d.knock.addScaledVector(d.forward(tmp), Math.min(16, gap * 5));
@@ -518,7 +519,7 @@ export class Game {
     else if (k === 'bark') { this.barkBlast(d); return; }
     else if (k === 'breath') { this.dragonBreath(d); return; }
     // ---- v5 Deep Sea signature moves ----
-    else if (k === 'ram') { d.act = { type: 'charge', t: 0, dur: 0.9, dir: fwd.clone(), speed: Math.max(36, d.st.speed * 2.6), hit: new Set(), ram: true }; sfx.whoosh(1.3); sfx.bubbles && sfx.bubbles(0.7, 6); if (d === this.player) this.hud.toast('🦈 TORPEDO RAM!'); return; }
+    else if (k === 'ram') { d.act = { type: 'charge', t: 0, dur: 0.9, dir: fwd.clone(), speed: Math.max(36, d.st.speed * 2.6), hit: new Set(), ram: true }; sfx.whoosh(1.3); sfx.bubbles && sfx.bubbles(0.7, 6); if (d === this.player) { stompAudio.torpedo(); this.hud.toast('🦈 TORPEDO RAM!'); } return; }
     else if (k === 'crush') { d.act = { type: 'chomp', t: 0, dur: 0.6, dir: fwd.clone(), speed: 26 * s + 8, hit: new Set(), crush: true }; d.roar = 0.6; sfx.whoosh(1.4); if (d === this.player) this.hud.toast('🦈 CRUSHING CHOMP!'); return; }
     else if (k === 'zap') { this.stingZap(d, target); return; }
     else if (k === 'grab') { this.tentacleGrab(d, target); return; }
@@ -529,7 +530,7 @@ export class Game {
     sfx.whoosh(k === 'charge' || k === 'stomp' ? 0.6 : 1);
   }
   // ---------- v5 Deep Sea moves ----------
-  bubbles(pos, n = 10, spread = 2, up = 6) { const fx = this.fx; for (let i = 0; i < fx.n(n); i++) fx.glow.spawn({ pos: { x: pos.x + (this.r() - 0.5) * spread, y: pos.y + (this.r() - 0.5) * spread, z: pos.z + (this.r() - 0.5) * spread }, vel: { x: (this.r() - 0.5) * 2.5, y: up * (0.5 + this.r() * 0.8), z: (this.r() - 0.5) * 2.5 }, size: 0.22 + this.r() * 0.4, size1: 0.45, life: 1.1 + this.r() * 1.2, r: 1.1, g: 1.5, b: 1.8, alpha: 0.75, grav: -3, drag: 0.9 }); }
+  bubbles(pos, n = 10, spread = 2, up = 6) { const fx = this.fx, pool = fx.bubble || fx.glow; const rise = Math.min(4, Math.max(2, up * 0.45)); for (let i = 0; i < fx.n(n); i++) pool.spawn({ pos: { x: pos.x + (this.r() - 0.5) * spread, y: pos.y + (this.r() - 0.5) * spread * 0.4, z: pos.z + (this.r() - 0.5) * spread }, vel: { x: (this.r() - 0.5) * 0.6, y: rise * (0.7 + this.r() * 0.5), z: (this.r() - 0.5) * 0.6 }, size: 0.15, size1: 0.45, life: 1.4 + this.r() * 1.4, r: 0.85, g: 0.95, b: 1, alpha: 0.9, grav: 0, drag: 0.15, wobble: this.r() * 6.28 }); }
   // stingray / jellyfish primary: a venomous sting (bite + poison)
   sting(d, target) { const t = this.bite(d, target); d.mech.zapK = Math.max(d.mech.zapK || 0, 0.5); d.whipA = 1; this.later(0.25, () => { d.whipA = 0; });
     if (t) this.later(0.12, () => { if (!t.alive) return; t.poisonT = Math.max(t.poisonT || 0, 3.5); t.poisonBy = d; this.fx.sparks(t.center.clone(), 8, { r: 0.6, g: 0.9, b: 1.2 }, 0.7); }); return t; }
@@ -628,7 +629,7 @@ export class Game {
     const slide = (dir, sp) => { d.speedNow = sp; d.yaw = Math.atan2(dir.x, dir.z); d.pos.addScaledVector(dir, sp * dt); const h = this.world.height(d.pos.x, d.pos.z); if (h < -1.6 && !d.swim) d.pos.addScaledVector(dir, -sp * dt); this.world.collide(d.pos, d.radius * 0.6, false); d.groundY(); };
     const reach = s * (d.def.kind === 'trex' ? 1.5 : d.def.id === 'brachio' ? 1.8 : d.def.id === 'giga' ? 1.55 : d.def.id === 'spinos' ? 1.7 : d.def.id === 'trice' ? 1.45 : d.def.id === 'carno' ? 1.4 : 1);
     if (A.type === 'chomp') { slide(A.dir, A.speed * Math.max(0, 1 - u * 1.4)); d.biteA = Math.max(d.biteA, 0.6); d.jaw = u < 0.55 ? 1.8 : 0.1;
-      if (u > 0.55 && !A.done) { A.done = true; d.biteA = 1; const cr = A.crush ? 1.7 : 1; if (hitFoes(d.radius + 3.5 * reach * cr, d.st.bite * (A.crush ? 4.2 : 3), A.crush ? 22 : 12, A.crush ? 1.6 : 0.8, A.hit)) { this.fx.shake = Math.max(this.fx.shake, A.crush ? 1.3 : 0.8); sfx.chomp(1.5); }
+      if (u > 0.55 && !A.done) { A.done = true; d.biteA = 1; const cr = A.crush ? 1.7 : 1; if (hitFoes(d.radius + 3.5 * reach * cr, d.st.bite * (A.crush ? 4.2 : 3), A.crush ? 22 : 12, A.crush ? 1.6 : 0.8, A.hit)) { this.fx.shake = Math.max(this.fx.shake, A.crush ? 1.3 : 0.8); sfx.chomp(1.5); if (d === this.player && d.def.sea) stompAudio.chomp(); }
         if (A.crush) { const m = this.mouthPos(d); this.fx.ring(m, 14 * s, 0xff3a1a); this.fx.ring(m, 8 * s, 0xffffff); this.bubbles(m, 40, 5 * s, 8); sfx.boom(d === this.player ? 0.9 : 0.4); this.mh.damageAt(m, 6 * s, 80, d); this.crushes = (this.crushes || 0) + 1; } } }
     else if (A.type === 'grab') { const t = A.target; d.speedNow = 0; d.biteA = Math.max(d.biteA, 0.3); d.mech.grabK = 1;
       if (t && t.alive) { const f = d.forward(new THREE.Vector3()), gx = d.pos.x + f.x * (d.radius + t.radius * 0.6 + 1), gz = d.pos.z + f.z * (d.radius + t.radius * 0.6 + 1); t.pos.x += (gx - t.pos.x) * Math.min(1, dt * 5); t.pos.z += (gz - t.pos.z) * Math.min(1, dt * 5);
@@ -975,9 +976,10 @@ export class Game {
     // player control (camera-relative)
     if (p.alive) {
       const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw); // camera forward on ground
-      const dir = new THREE.Vector3(fx * -inp.y + (-fz) * inp.x, 0, fz * -inp.y + fx * inp.x);
+      const dir = tmp2.set(fx * -inp.y + (-fz) * inp.x, 0, fz * -inp.y + fx * inp.x);
       const mag = Math.min(1, Math.hypot(inp.x, inp.y));
       p.boosting = !p.def.westie && inp.btn.boost && p.boostE > 0.05;
+      if (p.def.sea && inp.pressed.boost && p.boostE > 0.05) stompAudio.sonar();
       if (p.def.westie) this.pupJump(p, inp, dt);
       if (p.boosting) { p.boostE = Math.max(0, p.boostE - dt); if (inp.pressed.boost && !p.def.farmKid && !p.def.lion && !p.def.costume) sfx.boost(); this.jetFlame(p); if (p.def.lion && inp.pressed.boost) { this.gallops = (this.gallops || 0) + 1; if (!this._gallopTold) { this._gallopTold = true; this.hud.toast('💨 GALLOP! Hold the blue button to run.'); } } } else p.boostE = Math.min(p.st.boost, p.boostE + dt * 0.45);
       if (p.def.dash && inp.pressed.boost && !(p.dashCD > 0)) { p.dashCD = 0.7; const dv = mag > 0.05 ? dir.clone().normalize() : p.forward(new THREE.Vector3()); p.act = { type: 'charge', t: 0, dur: 0.55, dir: dv, speed: Math.max(42, p.st.speed * 3.2), hit: new Set(), ram: true }; this.flipperDashes = (this.flipperDashes || 0) + 1; sfx.flipper && sfx.flipper(1); this.bubbles(p.center.clone(), 18, 3, 3); if (!this._dashTold) { this._dashTold = true; this.hud.toast('🐢 FLIPPER DASH!'); } } // v5.5 turtle
@@ -1092,7 +1094,7 @@ export class Game {
       if (p.jy <= 0) { if (p.jvy < -12) { this.fx.dust(p.pos, 8, 1.6, 6); sfx.step(0.4); this.mh.damageAt(p.pos, 4, 12, p); } p.jvy = 0; p.air = 0; p.hops = 0; } }
     this.jumps = (this.jumps || 0) + Math.min(3, +inp.pressed.boost || 0);
   }
-  jetFlame(d) { if (d.def.sea) { if (this.r() < 0.6) this.bubbles(d.pos.clone().addScaledVector(d.forward(tmp), -d.radius).setY(d.pos.y + d.mech.height * 0.5), 2, 1, 2); return; }
+  jetFlame(d) { if (d.def.sea) { d.forward(tmp); const tail = _tail.copy(d.pos).addScaledVector(tmp, -d.radius); tail.y = d.pos.y + d.mech.height * 0.5; for (let i = 0; i < 3; i++) this.bubbles(tail, 1, 0.6, 3); return; }
     if (d.real) { if (!d.fly && Math.random() < 0.5) this.fx.dust(d.pos, 1, 1.2 * d.def.scale, 3); return; }
     const m = d.mech, f = d.forward(tmp).clone();
     const at = new THREE.Vector3(); if (m.sockets.jet) m.sockets.jet.getWorldPosition(at); else at.copy(d.pos).addScaledVector(f, -1.2 * d.def.scale).setY(d.pos.y + m.height * 0.55);

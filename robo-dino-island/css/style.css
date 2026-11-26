@@ -285,6 +285,19 @@ body.city #boss { top: calc(var(--sat) + 112px); }
 .lv.card.ocean.on { box-shadow: 0 0 0 3px rgba(90,230,255,.95), 0 0 30px rgba(40,200,255,.8); }
 @keyframes seaPulse { 0%,100% { box-shadow: 0 0 0 3px rgba(40,180,255,.9), 0 0 18px 4px rgba(20,160,255,.7), inset 0 0 18px rgba(120,230,255,.5); border-color: #6adcff; } 50% { box-shadow: 0 0 0 5px rgba(140,250,255,1), 0 0 42px 12px rgba(0,170,255,.9), inset 0 0 28px rgba(160,240,255,.8); border-color: #e8ffff; } }
 body.ocean .logo i { color: #8ae8ff; }
+body.ocean .logo em { letter-spacing: 4px; }
+@media (orientation: portrait) and (min-width: 700px) {
+  #title .logo em { letter-spacing: 1px; font-size: clamp(20px, 5vw, 38px); }
+  #title .levels { flex-wrap: wrap; width: min(96vw, 740px); }
+  #title .levels .lv.card, #title .levels #lv-farm { flex: 1 1 30%; height: auto; min-height: 92px; }
+  #title .levels .lv.card b, #title .levels #lv-farm b { font-size: 15px; line-height: 1.05; white-space: normal; }
+}
+body.ocean .rb-btn { top: calc(var(--sat) + 88px); width: 76px; height: 76px; }
+body.ocean #a-missile { right: 128px; bottom: 8px; }
+body.ocean #a-melee { right: 120px; bottom: 122px; }
+body.ocean #a-boost { right: 6px; bottom: 126px; }
+@media (min-width: 1000px) and (min-height: 700px) { body.ocean #actions { transform: none; } }
+@media (orientation: portrait) { body.ocean .rb-btn { top: calc(var(--sat) + 108px); width: 72px; height: 72px; } body.ocean #actions { transform: none; } }
 /* 5 level cards: keep them readable side by side in landscape */
 @media (orientation: landscape) { #title .levels, .lv-panel .levels { width: min(98vw, 1000px); gap: clamp(6px, 1.2vw, 14px); } .lv-panel { width: min(97vw, 1020px); }
   #title .levels .lv.card, #title .levels #lv-farm, #title .levels .lv.card.jungle, #title .levels .lv.card.peak, .lv-panel .lv.card { flex: 1 1 0; flex-direction: column; justify-content: center; text-align: center; padding: 6px 6px 8px; gap: 2px; }
