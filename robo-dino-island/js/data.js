@@ -101,16 +101,16 @@ REALS.forEach(d => { d.real = true; d.melee = d.bite; });
 export const DRAGONS = [
   { id: 'dfire', name: 'Fire Dragon', price: 0, kind: 'dragon', element: 'fire', desc: 'Spits FIREBALLS and breathes a roaring river of FIRE!',
     hp: 175, speed: 15, bite: 18, biteRate: 0.5, special: 'breath', specialName: 'FIRE<br>BREATH', specialCD: 4, roar: 2.2, scale: 1.2, radius: 3.0,
-    back: 0x5a120c, belly: 0xd08a4a, stripe: 0x1a0606, accent: 0xff4a12, eye: 0xffa21a },
+    back: 0x7a1a10, belly: 0xe8a050, stripe: 0x2a0a06, accent: 0xff5a1a, eye: 0xffb02a },
   { id: 'dice', name: 'Ice Dragon', price: 0, kind: 'dragon', element: 'ice', desc: 'Fires ICE SHARDS. Its FROST BREATH slows foes and FREEZES them solid!',
     hp: 175, speed: 15, bite: 15, biteRate: 0.42, special: 'breath', specialName: 'FROST<br>BREATH', specialCD: 4, roar: 2.2, scale: 1.2, radius: 3.0,
-    back: 0x2a4a6a, belly: 0xcfe6f2, stripe: 0x0e1e30, accent: 0x7ad8ff, eye: 0x8af4ff },
+    back: 0x3a6a92, belly: 0xe6f6ff, stripe: 0x12304a, accent: 0x8ae6ff, eye: 0xb8ffff },
   { id: 'dstorm', name: 'Storm Dragon', price: 0, kind: 'dragon', element: 'storm', desc: 'Throws LIGHTNING BOLTS and calls a chain-lightning STORM!',
     hp: 165, speed: 16, bite: 14, biteRate: 0.55, special: 'breath', specialName: 'LIGHTNING<br>STORM', specialCD: 4.5, roar: 2.2, scale: 1.15, radius: 2.9,
-    back: 0x2a2440, belly: 0x8a86a8, stripe: 0x0e0c1a, accent: 0x7a5aff, eye: 0xffe24a },
+    back: 0x3a3260, belly: 0xa8a4c8, stripe: 0x14102a, accent: 0x9a7aff, eye: 0xffe24a },
   { id: 'rdragon', name: 'Robo-Dragon', price: 0, kind: 'rdragon', desc: 'A jet-winged dragon mech: lasers, missiles and FLAME JETS!', breath: true, fly: true, robodragon: true,
     hp: 165, speed: 15.5, laser: 9, rate: 0.14, missiles: 4, melee: 30, scale: 1.1, radius: 2.8,
-    body: 0x3a2a2a, armor: 0x121010, glow: 0xff5a1a },
+    body: 0x3a3a40, armor: 0x1a1a1e, glow: 0xff5a1a },
 ];
 DRAGONS.forEach(d => { d.dragon = true; d.fly = true; if (d.kind === 'dragon') { d.real = true; d.melee = d.bite; } else d.real = false; });
 // the Dragon Peak arena boss (not in the garage)
@@ -129,13 +129,13 @@ WESTIES.forEach(d => { d.real = true; d.melee = d.bite; });
 export const SEA = [
   { id: 'shark', name: 'Great White Shark', price: 0, kind: 'shark', desc: 'The fastest hunter in the sea! Snappy bites and a TORPEDO RAM that sends foes spinning.',
     hp: 175, speed: 19, bite: 26, biteRate: 0.3, special: 'ram', specialName: 'TORPEDO<br>RAM', specialCD: 3, roar: 1.8, third: 'frenzy', thirdName: 'FEEDING<br>FRENZY', scale: 1.0, radius: 2.2,
-    back: 0x5d6e7c, belly: 0xeef2f2, accent: 0x2ad8ff, eye: 0x101010 },
+    back: 0x6a747c, belly: 0xeef2f2, accent: 0x2ad8ff, eye: 0x101010 },
   { id: 'megalodon', name: 'Megalodon', price: 0, kind: 'shark', mega: true, desc: 'A prehistoric MEGA shark as big as a bus. Its CRUSHING CHOMP flattens anything!',
     hp: 420, speed: 14.5, bite: 44, biteRate: 0.55, special: 'crush', specialName: 'CRUSHING<br>CHOMP', specialCD: 3.5, roar: 2.8, scale: 1.9, radius: 4.2,
     back: 0x56626e, belly: 0xe8ece6, accent: 0xff3a1a, eye: 0xff2a1a },
   { id: 'stingray', name: 'Thunder Stingray', price: 0, kind: 'ray', glide: true, desc: 'Glides super fast (hold SWIM FAST). Its tail STING poisons and its ZAP STRIKE chains lightning!',
     hp: 150, speed: 18, bite: 18, biteRate: 0.28, special: 'zap', specialName: 'ZAP<br>STRIKE', specialCD: 2.5, roar: 1.6, sting: true, scale: 1.0, radius: 2.4,
-    back: 0x3a4a5a, belly: 0xe8e4dc, accent: 0x5ae8ff, spot: 0x9ad8ff },
+    back: 0x4a4440, belly: 0xe8e4dc, accent: 0x5ae8ff, spot: 0x9ad8ff },
   { id: 'octopus', name: 'Giant Octopus', price: 0, kind: 'octo', desc: 'Eight arms! TENTACLE GRAB pulls a foe in and squeezes, and an INK CLOUD blinds every enemy around.',
     hp: 210, speed: 13, bite: 22, biteRate: 0.4, special: 'grab', specialName: 'TENTACLE<br>GRAB', specialCD: 3, roar: 1.6, third: 'ink', thirdName: 'INK<br>CLOUD', scale: 1.0, radius: 2.2,
     back: 0xb8402a, belly: 0xf0a888, accent: 0xff7a3a, spot: 0xffc0a0 },
@@ -151,7 +151,7 @@ export const SEA = [
     back: 0x2a2018, belly: 0x5a4a3a, accent: 0x7affd8 },
   { id: 'serpent', name: 'Sea Serpent', price: 0, kind: 'serpent', wildOnly: true, desc: 'A giant glowing sea snake.',
     hp: 230, speed: 15, bite: 28, biteRate: 0.5, special: 'whip', specialName: 'TAIL<br>WHIP', specialCD: 4, roar: 2, scale: 1.15, radius: 2.4,
-    back: 0x1a4a3a, belly: 0x9ad8a0, accent: 0x3affb0 },
+    back: 0x2a6a4a, belly: 0x9ad8a0, accent: 0x3affb0 },
   { id: 'crab', name: 'Giant Crab', price: 0, kind: 'crab', wildOnly: true, walker: true, desc: 'Armored claws that never let go.',
     hp: 250, speed: 9, bite: 24, biteRate: 0.5, special: 'combo', specialName: 'CLAW<br>COMBO', specialCD: 4, roar: 1.6, scale: 1.1, radius: 2.8,
     back: 0xc8401a, belly: 0xf0b070, accent: 0xffb03a },
@@ -159,8 +159,8 @@ export const SEA = [
 SEA.forEach(d => { d.real = true; d.sea = true; d.melee = d.bite; if (!d.walker) { d.fly = true; d.swim = true; } });
 // the Deep Sea bosses (not in the garage): the KRAKEN and a monster mega-shark
 export const KRAKEN = { id: 'kraken', name: 'THE KRAKEN', price: 0, kind: 'kraken', real: true, sea: true, fly: true, swim: true, boss: true, hp: 900, speed: 11, bite: 30, biteRate: 0.8, special: 'kraken', specialName: 'KRAKEN', specialCD: 5, roar: 2.6,
-  scale: 3.0, radius: 7, back: 0x4a1030, belly: 0xc86a8a, accent: 0xff2a6a };
-export const MONSTER_MEG = { ...SEA[1], id: 'monstermeg', name: 'MONSTER MEGALODON', scale: 4.0, radius: 8.5, boss: true, back: 0x22262c, belly: 0x8a8e8a, accent: 0xff1a0a };
+  scale: 3.0, radius: 7, back: 0x6a1a44, belly: 0xe07a9a, accent: 0xff2a6a };
+export const MONSTER_MEG = { ...SEA[1], id: 'monstermeg', name: 'MONSTER MEGALODON', scale: 4.0, radius: 8.5, boss: true, back: 0x3a4048, belly: 0xc8ccc6, accent: 0xff1a0a };
 // v5.6 original wild dinos with PERSONALITIES (not in the garage; they roam the land levels, and more show up with Robo Dinos OFF)
 export const PERSONAS = [
   { id: 'grumbletop', name: 'Grumbletop', price: 0, kind: 'grumble', persona: 'grumpy', real: true, wildOnly: true, desc: 'A grumpy old armour-back. Get too close and it huffs, stamps and charges. HMPH!',

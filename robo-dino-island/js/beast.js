@@ -4,7 +4,7 @@
 // Each dino renders in 3 draw calls: skin, horn/teeth/claws, glowing eyes.
 import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
-import { scaleTextures } from './proctex.js';
+import { scaleTextures, membraneTexture } from './proctex.js';
 import { noise2, rng } from './noise.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -24,7 +24,7 @@ function palette(def, wild) {
 class OB {
   constructor(def, wild) {
     this.def = def; this.wild = wild; this.pal = palette(def, wild); this.r = rng(def.id.length * 977 + (wild ? 5 : 1));
-    this.bones = {}; this.list = []; this.sockets = {}; this.geo = { skin: [], horn: [], eye: [] }; this.dirty = true; this.eyes = [];
+    this.bones = {}; this.list = []; this.sockets = {}; this.geo = { skin: [], horn: [], eye: [], mem: [] }; this.dirty = true; this.eyes = [];
     this.root = this.bone('root', null, 0, 0, 0);
   }
   bone(name, parent, x, y, z) { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); if (parent) this.bones[parent].add(b); this.bones[name] = b; this.list.push(b); this.dirty = true; return b; }
@@ -142,18 +142,21 @@ class OB {
   finish(assets) {
     const sc = scaleTextures();
     const P = this.pal;
+    const dragon = this.def.kind === 'dragon';
+    const vein = membraneTexture();
     const mats = {
-      plate: new THREE.MeshStandardMaterial({ vertexColors: true, map: sc.map, normalMap: sc.normal, normalScale: new THREE.Vector2(1.25, 1.25), roughness: 0.74, metalness: 0, envMapIntensity: 0.85 }),
-      frame: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0, envMapIntensity: 1.0 }),
+      plate: new THREE.MeshStandardMaterial({ vertexColors: true, map: sc.map, normalMap: sc.normal, normalScale: new THREE.Vector2(dragon ? 1.5 : 1.25, dragon ? 1.5 : 1.25), roughness: dragon ? 0.62 : 0.74, metalness: 0, envMapIntensity: dragon ? 1.0 : 0.85 }),
+      frame: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: this.def.element === 'ice' ? 0.25 : 0.42, metalness: 0, envMapIntensity: 1.0 }),
       glow: new THREE.MeshBasicMaterial({ color: P.eye.clone().multiplyScalar(3.2), toneMapped: false }),
+      mem: new THREE.MeshStandardMaterial({ vertexColors: true, map: vein, emissiveMap: vein, emissive: P.accent, emissiveIntensity: 0.35, roughness: 0.6, side: THREE.DoubleSide }),
       glowColor: P.eye.clone(),
     };
     const group = new THREE.Group(); group.add(this.root); this.root.updateMatrixWorld(true);
     const skeleton = new THREE.Skeleton(this.list); this.meshes = [];
-    for (const [k, mk] of [['skin', 'plate'], ['horn', 'frame'], ['eye', 'glow']]) {
+    for (const [k, mk] of [['skin', 'plate'], ['horn', 'frame'], ['eye', 'glow'], ['mem', 'mem']]) {
       if (!this.geo[k].length) continue;
       const geo = mergeGeometries(this.geo[k]); geo.computeBoundingSphere(); geo.boundingSphere.radius *= 1.5;
-      const mesh = new THREE.SkinnedMesh(geo, mats[mk]); mesh.castShadow = k !== 'eye'; mesh.receiveShadow = k !== 'eye';
+      const mesh = new THREE.SkinnedMesh(geo, mats[mk]); mesh.castShadow = k !== 'eye' && k !== 'mem'; mesh.receiveShadow = k !== 'eye';
       mesh.bind(skeleton, new THREE.Matrix4()); mesh.boundingSphere = geo.boundingSphere.clone(); group.add(mesh); this.meshes.push(mesh);
     }
     this.mats = mats; return group;
@@ -578,7 +581,7 @@ const SPECIES = {
     teethRow(B, 'head', 0.3, 1.38, 8, z => 0.3 - 0.1 * z, z => -0.12 - 0.04 * z, true, 0.15, 1);
     teethRow(B, 'jaw', 0.35, 1.3, 7, z => 0.24 - 0.1 * z, () => 0.03, false, 0.11, 1);
     // element colours for horns + spikes
-    const HC = { fire: [0x1a0e0a, 0xd9c3a0], ice: [0x6aa8d8, 0xeafaff], storm: [0x1c1a2c, 0xfff08a], king: [0x0e0b08, 0xffc23a] }[el];
+    const HC = { fire: [0x1a0e0a, 0xffd9a0], ice: [0x8ac4ee, 0xf4feff], storm: [0x1c1a2c, 0xfff08a], king: [0x0e0b08, 0xffc23a] }[el];
     P.hornDark = C(HC[0]); P.horn = C(HC[1]);
     const dirRot = d => { const e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize())); return [e.x, e.y, e.z]; };
     // horns: big swept-back pair, a second pair, cheek blades, nose horn (+ a crown for the king)
@@ -592,7 +595,7 @@ const SPECIES = {
     // spikes all down the neck, back and tail
     const bp = B.bodyPts;
     for (let i = 1; i < bp.length - 1; i++) { const q = bp[i], big = 0.25 + q.r[1] * 0.5;
-      B.horn(q.b, [0, q.p[1] + q.r[1] * 0.93, q.p[2]], [-0.55, 0, 0], big * (king ? 1.2 : 1), q.r[0] * 0.14 + 0.03, -0.3, P.hornDark, P.horn, 'horn', 6, 3); }
+      B.horn(q.b, [0, q.p[1] + q.r[1] * 0.93, q.p[2]], [-0.55, 0, 0], big * (king ? 1.2 : 1), q.r[0] * 0.14 + 0.03, -0.3, P.hornDark, el === 'fire' ? C(0xff8a3a) : P.horn, 'horn', 6, 3); }
     // spade tail blade
     B.plate('tail10', [[0, 0.25], [0.6, -0.35], [0.15, -0.55], [0, -1.35], [-0.15, -0.55], [-0.6, -0.35]], 0.05, M([0, 0, -0.35], [Math.PI / 2, 0, 0]), v => P.back.clone().lerp(P.accent, sstep(0.2, 0.6, Math.abs(v.x))), 'horn', 0.02);
     // inner-fire glow: throat + chest vents in the eye colour (pulses with the roar)
@@ -605,7 +608,7 @@ const SPECIES = {
       B.bone(S + 'wing', 'chest', sd * 0.55, 0.82, 0.25); B.bone(S + 'wing2', S + 'wing', sd * 2.3, 0, 0); B.bone(S + 'wing3', S + 'wing2', sd * 2.1, 0, -0.1);
       B.tube([{ b: S + 'wing', p: [-sd * 0.25, -0.05, 0], r: [0.24, 0.26] }, { b: S + 'wing2', p: [0, 0, 0], r: [0.14, 0.15] }, { b: S + 'wing3', p: [0, 0, 0], r: [0.11, 0.11] }, { b: S + 'wing3', p: [sd * 1.9, 0, -0.3], r: [0.035, 0.035] }],
         { seg: 10, per: 3, up: [0, 0, 1], ts: 0.6, stripes: false });
-      const mk = (bone, pts) => B.plate(bone, pts.map(([x, y]) => [sd * x, y]), 0.035, M([0, -0.02, 0], [Math.PI / 2, 0, 0]), memC, 'skin', 0.01);
+      const mk = (bone, pts) => B.plate(bone, pts.map(([x, y]) => [sd * x, y]), 0.035, M([0, -0.02, 0], [Math.PI / 2, 0, 0]), memC, 'mem', 0.01);
       mk(S + 'wing', [[-0.15, 0.12], [2.35, 0.08], [2.35, -1.8], [1.6, -2.1], [0.8, -2.65], [-0.3, -2.45], [-0.45, -0.6]]);
       mk(S + 'wing2', [[0, 0.08], [2.1, 0.0], [1.95, -1.1], [1.4, -2.65], [0.7, -2.05], [-0.05, -1.85]]);
       mk(S + 'wing3', [[-0.3, 0.05], [1.95, -0.32], [1.2, -0.9], [1.1, -1.95], [0.5, -1.35], [-0.1, -2.2], [-0.35, -1.0]]);
@@ -749,8 +752,9 @@ export class Beast {
     // ---- hit flash / KO dim / angry eye pulse
     this.flash = Math.max(0, this.flash - dt * 5);
     this.mats.plate.emissive.setRGB(this.flash * 0.75, this.flash * 0.5, this.flash * 0.35);
-    const pulse = (1 - ko) * (1.7 + 0.5 * Math.sin(t * 3.5) + 1.2 * roar) + 0.04;
+    const pulse = this.def.kind === 'dragon' ? (3.2 * (0.85 + 0.15 * Math.sin(t * 3)) + roar * 1.5) : ((1 - ko) * (1.7 + 0.5 * Math.sin(t * 3.5) + 1.2 * roar) + 0.04);
     this.mats.glow.color.copy(this.mats.glowColor).multiplyScalar(pulse);
+    if (this.mats.mem && this.def.element === 'storm') this.mats.mem.emissiveIntensity = 0.35 + 0.25 * (Math.sin(t * 17) > 0.92 ? 1 : 0);
     this.haloMat.opacity = (1 - ko) * (0.6 + 0.2 * Math.sin(t * 3.5) + 0.3 * roar);
   }
 }

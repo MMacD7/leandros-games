@@ -131,12 +131,14 @@ export function scaleTextures() {
 }
 
 // ---------- battle damage for the robots: scratches, scorch marks, chipped paint (multiplied over the plate colour) ----------
-export function battleDamageTexture() {
+let _dmg = null;
+export function battleDamageTexture() { return _dmg || (_dmg = buildBattleDamage()); }
+function buildBattleDamage() {
   const N = 512, [c, g] = canvas(N, N), r = rng(31);
-  g.fillStyle = '#9c9c9c'; g.fillRect(0, 0, N, N);
-  // grime / soot gradients
+  g.fillStyle = '#E6E6E6'; g.fillRect(0, 0, N, N);
+  // grime / soot gradients (lighter so the plate colour stays in range)
   for (let i = 0; i < 26; i++) { const x = r() * N, y = r() * N, rad = 20 + r() * 70; const grd = g.createRadialGradient(x, y, 0, x, y, rad);
-    grd.addColorStop(0, `rgba(20,16,12,${0.35 + r() * 0.35})`); grd.addColorStop(1, 'rgba(20,16,12,0)'); g.fillStyle = grd;
+    grd.addColorStop(0, `rgba(20,16,12,${(0.35 + r() * 0.35) * 0.6})`); grd.addColorStop(1, 'rgba(20,16,12,0)'); g.fillStyle = grd;
     for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { g.save(); g.translate(ox, oy); g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill(); g.restore(); } }
   // scratches: bright thin lines (bare metal) with a dark edge
   for (let i = 0; i < 140; i++) { const x = r() * N, y = r() * N, a = r() * Math.PI, L = 10 + r() * 60, w = 0.6 + r() * 1.6;
@@ -152,4 +154,71 @@ export function battleDamageTexture() {
   g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 2; for (let k = 0; k < 4; k++) { g.beginPath(); g.moveTo(0, k * 128 + 3); g.lineTo(N, k * 128 + 3); g.stroke(); g.beginPath(); g.moveTo(k * 128 + 3, 0); g.lineTo(k * 128 + 3, N); g.stroke(); }
   for (let y = 0; y < 4; y++) for (let x = 0; x < 16; x++) { g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.arc(x * 32 + 10, y * 128 + 12, 2.4, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.arc(x * 32 + 9.4, y * 128 + 11.4, 1, 0, 7); g.fill(); }
   const t = tex(c, true, true); t.anisotropy = 8; return t;
+}
+
+let _panels = null;
+export function panelTextures() {
+  if (_panels) return _panels;
+  const N = 512, H = new Float32Array(N * N), R = new Uint8Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const sx = Math.min(x % 128, 128 - (x % 128)), sy = Math.min(y % 128, 128 - (y % 128));
+    const seam = Math.min(sx, sy);
+    let h = 0.55;
+    if (seam < 2) h = 0.12; else if (seam < 4) h = 0.32;
+    const dx = (x % 32) - 10, dy = (y % 128) - 12, d = Math.hypot(dx, dy);
+    if (d < 4.2) h = Math.max(h, 0.95 - d * 0.12);
+    H[y * N + x] = h;
+    const scratch = ((x * 13 + y * 7) % 97) < 2;
+    R[y * N + x] = scratch ? 46 : seam < 3 ? 178 : 82;
+  }
+  const [cN, gN] = canvas(N, N), [cR, gR] = canvas(N, N);
+  const Nm = gN.createImageData(N, N), Rm = gR.createImageData(N, N), n = Nm.data, r = Rm.data;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    const hx = H[y * N + ((x + 1) % N)] - H[y * N + ((x + N - 1) % N)];
+    const hy = H[((y + 1) % N) * N + x] - H[((y + N - 1) % N) * N + x];
+    let nx = -hx * 4, ny = -hy * 4, nz = 1, l = Math.hypot(nx, ny, nz) || 1;
+    n[i * 4] = (nx / l * 0.5 + 0.5) * 255; n[i * 4 + 1] = (ny / l * 0.5 + 0.5) * 255; n[i * 4 + 2] = (nz / l * 0.5 + 0.5) * 255; n[i * 4 + 3] = 255;
+    const v = R[i]; r[i * 4] = r[i * 4 + 1] = r[i * 4 + 2] = v; r[i * 4 + 3] = 255;
+  }
+  gN.putImageData(Nm, 0, 0); gR.putImageData(Rm, 0, 0);
+  const normal = tex(cN, false, true), rough = tex(cR, false, true);
+  normal.anisotropy = rough.anisotropy = 8;
+  _panels = { normal, rough }; return _panels;
+}
+
+let _membrane = null;
+export function membraneTexture() {
+  if (_membrane) return _membrane;
+  const W = 256, H = 512, [c, g] = canvas(W, H);
+  const grd = g.createRadialGradient(W * 0.5, H * 0.42, 10, W * 0.5, H * 0.5, H * 0.72);
+  grd.addColorStop(0, '#fff4e0'); grd.addColorStop(0.45, '#d8c8b0'); grd.addColorStop(1, '#6a5848');
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 2; g.lineCap = 'round';
+  const vein = (x, y, a, len, depth) => {
+    if (depth > 5 || len < 8) return;
+    const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y2); g.stroke();
+    vein(x2, y2, a - 0.45, len * 0.62, depth + 1);
+    vein(x2, y2, a + 0.4, len * 0.58, depth + 1);
+  };
+  for (let i = 0; i < 7; i++) vein(20 + i * 36, 8, Math.PI * 0.5 + (i - 3) * 0.08, 150, 0);
+  const t = tex(c, true, true); t.anisotropy = 8; _membrane = t; return t;
+}
+
+let _bio = null;
+export function bioTexture() {
+  if (_bio) return _bio;
+  const N = 256, [c, g] = canvas(N, N), r = rng(19);
+  g.fillStyle = '#000'; g.fillRect(0, 0, N, N);
+  for (let i = 0; i < 46; i++) {
+    const x = r() * N, y = r() * N, rad = 4 + r() * 14;
+    const grd = g.createRadialGradient(x, y, 0, x, y, rad);
+    grd.addColorStop(0, 'rgba(255,255,255,0.95)'); grd.addColorStop(0.45, 'rgba(255,255,255,0.35)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill();
+  }
+  g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.setLineDash([10, 8]);
+  g.beginPath(); g.moveTo(0, 78); g.lineTo(N, 96); g.stroke();
+  g.beginPath(); g.moveTo(0, 168); g.lineTo(N, 150); g.stroke();
+  const t = tex(c, true, true); t.anisotropy = 4; _bio = t; return t;
 }

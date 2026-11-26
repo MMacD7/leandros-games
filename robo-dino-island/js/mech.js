@@ -2,7 +2,7 @@
 // rigidly skinned onto a bone rig so a whole robot renders in ~4 draw calls (plates / frame / joints / glow).
 import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
-import { battleDamageTexture } from './proctex.js';
+import { battleDamageTexture, panelTextures } from './proctex.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const geoCache = new Map();
@@ -29,18 +29,21 @@ const cyl = (rt, rb, h, seg = 14) => new THREE.CylinderGeometry(rt, rb, h, Math.
 const cone = (r, h, seg = 6) => new THREE.ConeGeometry(r, h, Math.max(seg, 7), 1);
 const sph = (r) => new THREE.IcosahedronGeometry(r, 2);
 
-const matCache = {};
+const matCache = new Map();
 function makeMats(def, assets, wild) {
+  const key = (def.id || def.kind || 'mech') + (wild ? ':wild' : '');
+  if (matCache.has(key)) return matCache.get(key);
   const body = wild ? 0x1d1e22 : def.body, armor = wild ? 0x3a3d44 : def.armor, glow = wild ? 0xff2414 : def.glow;
-  // battle-damage map: scratches, soot, claw marks and rivets (the map is ~0.33 grey on average, so colours are boosted to match)
-  const dmg = battleDamageTexture();
-  const plate = new THREE.MeshStandardMaterial({ color: new THREE.Color(body).multiplyScalar(3.0), map: dmg, metalness: wild ? 0.7 : 0.55, roughness: 0.4, normalMap: assets.metalNor, normalScale: new THREE.Vector2(0.7, 0.7), roughnessMap: assets.metalRough, envMapIntensity: wild ? 1.35 : 1.1 });
+  const dmg = battleDamageTexture(), pan = panelTextures();
+  const robo = def.kind === 'rdragon' || def.robodragon;
+  const plate = new THREE.MeshStandardMaterial({ color: new THREE.Color(body).multiplyScalar(1.15), map: dmg, metalness: (robo || wild) ? 0.7 : 0.65, roughness: 0.32, normalMap: pan.normal, normalScale: new THREE.Vector2(1, 1), roughnessMap: pan.rough, envMapIntensity: wild ? 1.35 : 1.25 });
   plate.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'reflectedLight.indirectSpecular += vec3(0.847, 0.925, 1.0) * 0.25 * pow(clamp(1.0 - dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);\n#include <opaque_fragment>'); };
-  plate.customProgramCacheKey = () => 'robo-rim-v514';
-  const frame = new THREE.MeshStandardMaterial({ color: new THREE.Color(armor).multiplyScalar(2.8), map: dmg, metalness: wild ? 0.7 : 0.55, roughness: 0.4, normalMap: assets.metalNor, normalScale: new THREE.Vector2(0.9, 0.9), envMapIntensity: wild ? 1.1 : 1.1 });
-  const joint = new THREE.MeshStandardMaterial({ color: 0x9aa1aa, metalness: wild ? 0.85 : 0.35, roughness: 0.45, envMapIntensity: 0.8 });
+  plate.customProgramCacheKey = () => 'robo-rim-v515';
+  const frame = new THREE.MeshStandardMaterial({ color: new THREE.Color(armor).multiplyScalar(1.1), map: dmg, metalness: 0.7, roughness: 0.4, normalMap: pan.normal, normalScale: new THREE.Vector2(1.2, 1.2), roughnessMap: pan.rough, envMapIntensity: 1.1 });
+  const joint = new THREE.MeshStandardMaterial({ color: 0x4a5058, metalness: wild ? 0.85 : 0.8, roughness: 0.35, envMapIntensity: 0.8 });
   const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(glow).multiplyScalar(2.2), toneMapped: false });
-  return { plate, frame, joint, glow: glowM, glowColor: new THREE.Color(glow) };
+  const mats = { plate, frame, joint, glow: glowM, glowColor: new THREE.Color(glow) };
+  matCache.set(key, mats); return mats;
 }
 
 class Builder {
@@ -450,13 +453,14 @@ export class Mech {
     const hm = new THREE.SpriteMaterial({ map: assets.glow, color: B.mats.glowColor, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9 });
     this.halos = [];
     for (const k of ['eyeL', 'eyeR']) if (this.sockets[k]) { const sp = new THREE.Sprite(hm); sp.scale.setScalar(0.9); this.sockets[k].add(sp); this.halos.push(sp); }
+    if (this.b.chest && assets && assets.glow) { const core = new THREE.Sprite(hm); core.scale.set(1.5, 1.5, 1); core.position.set(0, 0.15, 0.55); this.b.chest.add(core); this.halos.push(core); }
     this.haloMat = hm;
     this.obj.traverse(o => { if (o.isSkinnedMesh) o.frustumCulled = true; });
     { const bb = new THREE.Box3(); for (const m of this.meshes) { m.geometry.computeBoundingBox(); bb.union(m.geometry.boundingBox); } this.box = bb; this.fitR = bb.getSize(new THREE.Vector3()).length() * 0.5 * def.scale; }
     this.height = this.info.height ? this.info.height * def.scale : (this.flyer ? 2.6 : (this.info.hipH + (this.quad ? 1.5 : 2.4))) * def.scale;
   }
   socketPos(name, out) { const s = this.sockets[name] || this.sockets.mouth; return s.getWorldPosition(out); }
-  dispose() { this.meshes.forEach(m => { m.geometry.dispose(); }); Object.values(this.mats).forEach(m => m.dispose && m.dispose()); this.haloMat.dispose(); }
+  dispose() { this.meshes.forEach(m => { m.geometry.dispose(); }); this.haloMat.dispose(); }
 
   animate(dt, speed, opts = {}) {
     const b = this.b, r = this.rest, sc = this.def.scale;

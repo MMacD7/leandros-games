@@ -315,6 +315,10 @@ body.ocean #a-boost { right: 6px; bottom: 126px; }
 body.swimmer .act.ud { display: block; }
 #a-up { right: 178px; bottom: 152px; } #a-down { right: 188px; bottom: 88px; }
 @media (max-height: 430px) { .act.ud { width: 52px; height: 52px; font-size: 16px; } #a-up { right: 170px; bottom: 140px; } #a-down { right: 174px; bottom: 82px; } }
+body.swimmer #actions { width: 300px; height: 250px; }
+body.swimmer #a-up { right: 222px; bottom: 178px; }
+body.swimmer #a-down { right: 228px; bottom: 108px; }
+body.ocean #a-melee { right: 96px; bottom: 136px; }
 body.swimmer #a-boost span, body.swimmer #a-laser span, body.swimmer #a-missile span, body.swimmer #a-melee span { font-size: 11px; }
 /* octopus ink splat on the player's screen */
 #ink { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; background: radial-gradient(circle at 30% 40%, rgba(5,5,15,.95) 0 18%, transparent 30%), radial-gradient(circle at 70% 60%, rgba(5,5,15,.9) 0 16%, transparent 28%), radial-gradient(circle at 50% 50%, rgba(5,5,20,.6), rgba(5,5,20,.25) 70%); }

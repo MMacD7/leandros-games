@@ -5,6 +5,7 @@
 // Same interface the game uses on Beast / Mech / Pup (obj, height, fitR, mats, meshes, sockets, socketPos, animate, ...).
 import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
+import { bioTexture } from './proctex.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const UP = V(0, 1, 0), FWD = V(0, 0, 1);
@@ -21,7 +22,7 @@ class Tube {
       if (i < n - 1) { const a0 = v, b0 = (k * n + i) * sides + (j + 1) % sides; idx.push(a0, a0 + sides, b0, b0, a0 + sides, b0 + sides); } }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(this.nor, 3));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(idx); g.boundingSphere = new THREE.Sphere(V(), 60);
-    this.geo = g; this.mesh = new THREE.Mesh(g, mat); this.mesh.frustumCulled = false; this._t = V(); this._n = V(); this._b = V();
+    this.geo = g; this.mesh = new THREE.Mesh(g, mat); this.mesh.frustumCulled = false; this.mesh.userData.noMerge = true; this._t = V(); this._n = V(); this._b = V();
   }
   // spine: array of n Vector3; rad(i) -> [rx, ry]
   set(k, spine, rad) {
@@ -55,6 +56,46 @@ function shade(geo, top, bot, lo = -0.3, hi = 0.3, spots = 0, spotC = 0xffffff) 
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); return geo; }
 const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.38, metalness: 0.05, envMapIntensity: 1.2, ...o });
 
+function mergeStatic(root) {
+  const parents = [];
+  root.traverse(o => { if (o.children && o.children.some(c => c.isMesh)) parents.push(o); });
+  for (const p of parents) {
+    const buckets = new Map(), stay = [];
+    for (const ch of p.children) {
+      if (!ch.isMesh || ch.userData.noMerge || ch.visible === false || !ch.material) { stay.push(ch); continue; }
+      const list = buckets.get(ch.material.uuid) || [];
+      list.push(ch); buckets.set(ch.material.uuid, list);
+    }
+    for (const ch of [...p.children]) if (ch.isMesh && !stay.includes(ch)) p.remove(ch);
+    for (const meshes of buckets.values()) {
+      if (meshes.length < 2) { p.add(meshes[0]); continue; }
+      const colored = meshes.every(m => m.geometry.getAttribute('color'));
+      const plain = meshes.every(m => !m.geometry.getAttribute('color'));
+      const uvs = meshes.every(m => m.geometry.getAttribute('uv'));
+      if (!colored && !plain) { meshes.forEach(m => p.add(m)); continue; }
+      const geos = meshes.map(m => {
+        m.updateMatrix();
+        const src = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', src.getAttribute('position').clone());
+        const nor = src.getAttribute('normal');
+        if (nor) g.setAttribute('normal', nor.clone());
+        if (colored) { const col = src.getAttribute('color'); if (col) g.setAttribute('color', col.clone()); }
+        if (uvs) { const uv = src.getAttribute('uv'); if (uv) g.setAttribute('uv', uv.clone()); }
+        g.applyMatrix4(m.matrix);
+        return g;
+      });
+      let merged = null;
+      try { merged = mergeGeometries(geos, false); } catch (e) { merged = null; }
+      if (!merged) { meshes.forEach(m => p.add(m)); continue; }
+      const mesh = new THREE.Mesh(merged, meshes[0].material);
+      mesh.castShadow = meshes.some(m => m.castShadow);
+      mesh.frustumCulled = false;
+      p.add(mesh);
+    }
+  }
+}
+
 // ---------- the creature ----------
 export class SeaBeast {
   constructor(def) {
@@ -65,9 +106,17 @@ export class SeaBeast {
     const glowColor = new THREE.Color(def.accent || 0x40e0ff).multiplyScalar(1.6);
     this.skin = std({ vertexColors: true, roughness: def.kind === 'jelly' ? 0.2 : 0.35, emissive: 0x000000 });
     this.glowM = new THREE.MeshStandardMaterial({ color: def.accent, emissive: def.accent, emissiveIntensity: 2.2, roughness: 0.3, toneMapped: false });
-    this.dark = std({ color: 0x120a0a, roughness: 0.3 }); this.white = std({ color: 0xf4f0e2, roughness: 0.35 }); this.gum = std({ color: 0x6a1418, roughness: 0.6 });
+    this.dark = std({ color: 0x120a0a, roughness: 0.3 });     this.white = std({ color: 0xf4f0e2, roughness: 0.25 }); this.gum = std({ color: 0x6a1418, roughness: 0.6 });
     this.mats = { plate: this.skin, frame: this.dark, glow: this.glowM, glowColor };
     (BUILD[def.kind] || BUILD.shark)(this, def);
+    const BIO = { angler: [0x7affd8, 0.6], serpent: [0x3affb0, 0.5], ray: [0x5ae8ff, 0.45], kraken: [0xff2a6a, 0.4] };
+    if (BIO[def.kind] && this.skin && !this.skin.transparent) {
+      const [col, inten] = BIO[def.kind];
+      this.skin.emissiveMap = bioTexture(); this.skin.emissive = new THREE.Color(col); this.skin.emissiveIntensity = inten;
+    }
+    for (const m of [this.lure, this.bell, this.bubble]) if (m && m.isMesh) m.userData.noMerge = true;
+    mergeStatic(this.pivot);
+    this.baseEmissive = this.skin.emissive.clone(); this.baseGlow = this.skin.emissiveIntensity || 0;
     this.obj.traverse(o => { if (o.isMesh) { o.castShadow = !o.material.transparent; o.receiveShadow = false; this.meshes.push(o); } });
     this.animate(0.016, 0, {}); this.obj.updateMatrixWorld(true);
     const bb = new THREE.Box3().setFromObject(this.obj); this.height = Math.max(1.2, bb.max.y); this.fitR = bb.getSize(V()).length() * 0.42;
@@ -81,7 +130,9 @@ export class SeaBeast {
     this.t += dt; this.climbS += ((o.climb || 0) - this.climbS) * Math.min(1, dt * 4); this.turnS += ((o.turn || 0) - this.turnS) * Math.min(1, dt * 5);
     this.zapK = Math.max(0, this.zapK - dt * 2.5);
     this.anim(dt, speed, o);
-    this.flash = Math.max(0, this.flash - dt * 4); const f = this.flash; this.skin.emissive.setRGB(f * 0.9, f * 0.3, f * 0.3);
+    this.flash = Math.max(0, this.flash - dt * 4); const f = this.flash;
+    this.skin.emissive.copy(this.baseEmissive); this.skin.emissive.r += f * 0.9; this.skin.emissive.g += f * 0.3; this.skin.emissive.b += f * 0.3;
+    if (this.baseGlow) this.skin.emissiveIntensity = this.baseGlow * (0.8 + 0.2 * Math.sin(this.t * 2));
   }
   // ---- spine-driven swimmer (shark, megalodon, angler, serpent) ----
   swimmer(cfg) {
@@ -110,12 +161,12 @@ const BUILD = {
     const mega = def.id === 'megalodon' || def.mega, L = 7;
     S.swimmer({ L, segs: 18, sides: 12, yc: 1.6, top: def.back, belly: def.belly, amp: 0.055, rate: 2.2, headK: 0.12,
       prof: [[0, 0.06, 0.06], [0.03, 0.4, 0.32], [0.1, 0.78, 0.7], [0.26, 1.02, 1.08], [0.42, 0.98, 1.04], [0.62, 0.62, 0.66], [0.8, 0.3, 0.34], [0.93, 0.15, 0.2], [1, 0.08, 0.14]] });
-    const fm = std({ color: def.back, side: THREE.DoubleSide, roughness: 0.5 });
+    const fm = std({ color: def.back, side: THREE.DoubleSide, roughness: 0.3 });
     // head: eyes, teeth, jaw, mouth, gills
     const H = S.part(0.1), mz = 0.1, my = -0.5;
     for (const s of [-1, 1]) { S.add(new THREE.SphereGeometry(0.11, 10, 8), mega ? S.glowM : S.dark, H, s * 0.62, 0.18, 0.35); }
     if (mega) { const em = new THREE.MeshBasicMaterial({ color: 0xff2a1a, toneMapped: false }); for (const s of [-1, 1]) S.add(new THREE.SphereGeometry(0.05, 6, 5), em, H, s * 0.69, 0.2, 0.38); }
-    S.add(new THREE.SphereGeometry(0.55, 14, 10).scale(1, 0.35, 0.9), S.gum, H, 0, my + 0.08, mz - 0.15);
+    S.add(new THREE.SphereGeometry(0.55, 14, 10).scale(1, 0.35, 0.9), S.dark, H, 0, my + 0.08, mz - 0.15);
     S.add(teeth(mega ? 15 : 11, 0.5, 0.25, mega ? 0.28 : 0.18, 0.35, true, mega ? 0.07 : 0.05), S.white, H, 0, my + 0.12, mz);
     const jaw = new THREE.Group(); jaw.position.set(0, my + 0.05, mz - 0.55); H.add(jaw); S.jaw = jaw;
     S.add(shade(new THREE.SphereGeometry(0.5, 14, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(1, 0.32, 1.15), def.back, def.belly), S.skin, jaw, 0, 0.02, 0.5);
@@ -126,8 +177,11 @@ const BUILD = {
     // fins
     const D = S.part(0.36); S.add(fin(1.5, mega ? 1.9 : 1.6, 0.7), fm, D, 0, 0.95, 0);
     S.pecs = []; const Pp = S.part(0.3); for (const s of [-1, 1]) { const g = new THREE.Group(); g.position.set(s * 0.8, -0.45, 0.1); Pp.add(g); const m = S.add(fin(1.1, 1.7, 0.8), fm, g); m.rotation.z = -s * (Math.PI / 2 - 0.45); S.pecs.push(g); }
-    const D2 = S.part(0.72); S.add(fin(0.5, 0.45, 0.2), fm, D2, 0, 0.3, 0); const A2 = S.part(0.74); S.add(fin(0.45, 0.4, 0.2).scale(1, -1, 1), fm, A2, 0, -0.32, 0);
-    const T = S.part(0.97); const up = S.add(fin(0.7, 2.0, 0.9), fm, T, 0, 0.05, 0); up.rotation.x = -0.25; const lo = S.add(fin(0.6, 1.3, 0.5).scale(1, -1, 1), fm, T, 0, -0.05, 0); lo.rotation.x = 0.3;
+    const D2 = S.part(0.73); S.add(fin(0.5, 0.45, 0.2), fm, D2, 0, 0.3, 0); S.add(fin(0.45, 0.4, 0.2).scale(1, -1, 1), fm, D2, 0, -0.32, 0);
+    const T = S.part(0.97);
+    const upG = fin(0.7, 2.0, 0.9); upG.translate(0, 0.05, 0); upG.rotateX(-0.25);
+    const loG = fin(0.6, 1.3, 0.5).scale(1, -1, 1); loG.translate(0, -0.05, 0); loG.rotateX(0.3);
+    S.add(mergeGeometries([upG.index ? upG.toNonIndexed() : upG, loG.index ? loG.toNonIndexed() : loG]), fm, T);
     if (mega) { // battle scars + a glowing ridge
       const sc = []; for (let k = 0; k < 6; k++) { const b = new THREE.BoxGeometry(0.04, 0.05, 0.9); b.rotateZ(0.6); b.rotateY((k % 2 ? 1 : -1) * 0.4); b.translate((k % 2 ? 1 : -1) * 0.95, 0.35 - k * 0.07, 0.2 - k * 0.35); sc.push(b); }
       S.add(mergeGeometries(sc), S.white, S.part(0.32));
@@ -141,7 +195,7 @@ const BUILD = {
     const wg = new THREE.ExtrudeGeometry(half, { depth: 0.16, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.14, bevelSegments: 2, curveSegments: 12 }); wg.rotateX(Math.PI / 2); wg.translate(0, 0.08, 0);
     { const p = wg.attributes.position; for (let i = 0; i < p.count; i++) { const x = Math.abs(p.getX(i)); p.setY(i, p.getY(i) * (1 - Math.min(1, x / 3) * 0.75) + 0.25 * (1 - Math.min(1, x / 1.2)) * (p.getY(i) > 0 ? 1 : 0.3)); } wg.computeVertexNormals(); }
     shade(wg, def.back, def.belly, -0.2, 0.2, 5.5, def.spot || 0x9ab8c8);
-    const wm = std({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.55 }); S.skin = wm; S.mats.plate = wm;
+    const wm = std({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.3 }); S.skin = wm; S.mats.plate = wm;
     S.wings = [1, -1].map(s => { const g = new THREE.Group(); S.pivot.add(g); const m = S.add(s > 0 ? wg : wg.clone().scale(-1, 1, 1), wm, g); return g; });
     S.add(shade(new THREE.SphereGeometry(1, 16, 12).scale(0.55, 0.32, 1.5), def.back, def.belly), wm, S.pivot, 0, 0.1, 0.1);
     for (const s of [-1, 1]) { S.add(new THREE.SphereGeometry(0.12, 8, 6), S.dark, S.pivot, s * 0.32, 0.36, 0.95); S.add(new THREE.SphereGeometry(0.07, 6, 5), S.glowM, S.pivot, s * 0.3, 0.3, 0.6); }
@@ -222,7 +276,7 @@ const BUILD = {
   angler(S, def) {
     S.swimmer({ L: 4.6, segs: 14, sides: 12, yc: 1.6, top: def.back, belly: def.belly, amp: 0.06, rate: 2.6, headK: 0.05, jawOpen: 0.95, jaw0: 0.25, pow: 2,
       prof: [[0, 0.7, 0.75], [0.06, 1.2, 1.25], [0.28, 1.3, 1.35], [0.52, 0.95, 1.0], [0.78, 0.38, 0.42], [1, 0.12, 0.16]] });
-    const fm = std({ color: def.back, side: THREE.DoubleSide });
+    const fm = std({ color: def.back, side: THREE.DoubleSide, roughness: 0.3 });
     const H = S.part(0.04);
     for (const s of [-1, 1]) S.add(new THREE.SphereGeometry(0.13, 8, 6), S.glowM, H, s * 0.9, 0.5, -0.1);
     S.add(teeth(13, 0.75, 0.3, 0.55, 0.2, true, 0.05), S.white, H, 0, -0.1, 0.1);
@@ -251,7 +305,7 @@ const BUILD = {
     S.socket('mouth', H, 0, -0.2, 0.9);
     const fm = std({ color: def.accent, emissive: def.accent, emissiveIntensity: 0.6, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
     for (const s of [-1, 1]) S.add(fin(0.8, 1.1, 0.4), fm, H, s * 0.5, 0.1, -0.5).rotation.z = -s * 1.1;
-    for (let k = 0; k < 12; k++) { const g = S.part(0.12 + k * 0.065); S.add(new THREE.ConeGeometry(0.13, 0.75 * (1 - k * 0.05), 5).rotateX(-0.45), S.glowM, g, 0, 0.72 * (1 - k * 0.045), 0); }
+    for (let k = 0; k < 12; k += 3) { const g = S.part(0.16 + k * 0.06); for (let j = 0; j < 3; j++) { const i = k + j; S.add(new THREE.ConeGeometry(0.13, 0.75 * (1 - i * 0.05), 5).rotateX(-0.45), S.glowM, g, 0, 0.72 * (1 - i * 0.045), -j * 0.9); } }
     const T = S.part(0.99); S.add(fin(0.5, 1.2, 0.5), fm, T).rotation.x = -1.3; S.add(fin(0.5, 1.2, 0.5).scale(1, -1, 1), fm, T).rotation.x = 1.3;
   },
   // ---------------- GIANT CRAB (wild, walks on the sea floor) ----------------
