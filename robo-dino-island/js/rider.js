@@ -230,6 +230,7 @@ varying vec3 vBind;
 const vec3 SUIT = vec3(0.1946, 0.0070, 0.0144);
 const vec3 SEAM = vec3(0.0685, 0.0030, 0.0061);
 const vec3 INK = vec3(0.0056, 0.0056, 0.0070);
+const vec3 TRUNK = vec3(0.0066, 0.0049, 0.0066);
 const vec3 CHALK = vec3(0.905, 0.896, 0.888);
 float lineAA(float d, float hw) { float aa = fwidth(d) * 1.2 + 1e-5; return 1.0 - smoothstep(hw - aa, hw + aa, d); }
 vec3 stripes(vec2 p, float ang, float pitch, vec3 base) {
@@ -241,8 +242,9 @@ vec3 stripes(vec2 p, float ang, float pitch, vec3 base) {
 }
 vec3 hoopSuit(vec3 p, float lum) {
   if (p.y < -0.78) return SEAM;
-  if (p.y > -0.345 && p.y < -0.285 && abs(p.x) < 0.30) return CHALK;
-  if (p.y > -0.60 && p.y < -0.285 && abs(p.x) < 0.30 && lum > 0.80) return CHALK;
+  if (p.y > -0.60 && p.y < -0.54 && abs(p.x) < 0.30 && lum > 0.80) return SUIT;
+  if (p.y > -0.345 && p.y < -0.285 && abs(p.x) < 0.30) return TRUNK;
+  if (p.y > -0.60 && p.y < -0.285 && abs(p.x) < 0.30 && lum > 0.80) return TRUNK;
   if (p.y > 0.22 && abs(p.x) < 0.42) return SUIT;
   if (abs(p.x) > 0.27 && p.y > -0.2 && p.y < 0.72) return stripes(p.xy, p.x > 0.0 ? 2.20 : 0.94, 0.12, SUIT);
   if (p.y > -0.30 && abs(p.x) < 0.30) return stripes(p.xy, 0.62, 0.12, SUIT);
@@ -255,13 +257,10 @@ float suitLum = 1.0;
   suitLum = dot(texture2D(map, vMapUv).rgb, vec3(0.2126, 0.7152, 0.0722));
 #endif
 ${hide}
-diffuseColor.rgb = hoopSuit(vBind, suitLum);
-float trunkMask = 0.0;
-if ((vBind.y > -0.345 && vBind.y < -0.285 && abs(vBind.x) < 0.30) || (vBind.y > -0.60 && vBind.y < -0.285 && abs(vBind.x) < 0.30 && suitLum > 0.80)) trunkMask = 1.0;
-totalEmissiveRadiance += CHALK * 0.35 * trunkMask;`);
+diffuseColor.rgb = hoopSuit(vBind, suitLum);`);
     };
     mat.onBeforeCompile = (sh) => compile(sh, false);
-    mat.customProgramCacheKey = () => 'swingboy-suit-v4';
+    mat.customProgramCacheKey = () => 'swingboy-suit-v5';
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = (sh) => compile(sh, true);
     depth.customProgramCacheKey = () => 'swingboy-suit-v3-depth';

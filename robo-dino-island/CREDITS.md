@@ -50,8 +50,8 @@ Spinosaurus 3D model generated with Meshy AI from original concept art.
 The Swing Boy 3D model was generated with Meshy AI from an original concept, then rigged with a Mixamo skeleton.
 
 - File: `assets/models/swingboy.glb` (iPad and desktop, 2048 textures) and `assets/models/swingboy-1024.glb` (iPhone).
-- Original concept: a chunky kid in a crimson suit with thin white and black diagonal stripes, white shorts, round white eye lenses, and lime cuffs with a cyan ring. No webs, no spider, no blue.
-- The mesh, the auto-rig, and the Idle, Walking, Running, RunFast, Jump, Hang, and Vault clips come from Meshy. The stripe repaint, the palm socket, and the KTX2 textures were made for this game.
+- Original concept: a chunky kid in a crimson suit with thin white and black diagonal stripes, black shorts with a slim crimson hem, round white eye lenses, and lime cuffs with a cyan ring. No webs, no spider, no blue.
+- The mesh, the auto-rig, and the Idle, Walking, Running, RunFast, Jump, Hang, and Vault clips come from Meshy. The black shorts, the thin black pinstripes, and the palm socket were added for this game. The colour texture is WebP.
 - License: Meshy Pro paid plan, commercial-ready private license. Fine to ship in this free browser game.
 
 ## Leandro
