@@ -143,6 +143,17 @@ function makeWorld(lv) {
   for (const k in worlds) worlds[k].setVisible(k === lv);
   return worlds[lv];
 }
+function stompSky() {
+  const w = 1024, h = 512, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, h);
+  gr.addColorStop(0, '#4FA8FF'); gr.addColorStop(0.42, '#8ECFFF'); gr.addColorStop(0.62, '#BFE6FF'); gr.addColorStop(1, '#BFE6FF');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  for (const [x, y, rw, rh] of [[160, 150, 110, 28], [430, 190, 140, 36], [700, 130, 90, 24], [880, 200, 120, 30]]) {
+    g.beginPath(); g.ellipse(x, y, rw, rh, 0, 0, Math.PI * 2); g.fill();
+  }
+  const t = new THREE.CanvasTexture(c); t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 function applyEnv(lv) {
   if (lv === 'peak' && !ENV.peak) {
     const sky = peakSky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
@@ -163,7 +174,8 @@ function applyEnv(lv) {
       const sky = citySky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
       ENV.city = { bg: sky, env, envI: 0.6, fog: new THREE.Color(0xd8906a), near: 70, far: 760, sunDir: new THREE.Vector3(-0.72, 0.3, 0.62).normalize(), sunC: 0xffb070, sunI: 3.6, hs: 0xffc8a0, hg: 0x4a3a40, hi: 0.7, exp: 1.12 };
     }
-    const C = ENV.city; ENV.stomp = { ...C, fog: new THREE.Color(0xc98a9a), near: 80, far: 520, sunDir: new THREE.Vector3(-0.72, 0.18, 0.62).normalize(), sunC: 0xffb36b, sunI: 3.0, hs: 0xffc8a0, hg: 0x5a3a50, hi: 0.9, exp: 1.0 };
+    const sky = stompSky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
+    ENV.stomp = { bg: sky, env, envI: 0.28, fog: new THREE.Color(0xbfe6ff), near: 140, far: 980, sunDir: new THREE.Vector3(0.28, 0.9, 0.32).normalize(), sunC: 0xfff6ea, sunI: 3.3, hs: 0xd7eeff, hg: 0xc5d4df, hi: 0.62, exp: 1.02 };
   }
   const E = ENV[lv]; if (!E) return;
   sun.castShadow = lv !== 'stomp';
