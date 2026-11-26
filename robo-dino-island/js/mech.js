@@ -34,8 +34,10 @@ function makeMats(def, assets, wild) {
   const body = wild ? 0x1d1e22 : def.body, armor = wild ? 0x3a3d44 : def.armor, glow = wild ? 0xff2414 : def.glow;
   // battle-damage map: scratches, soot, claw marks and rivets (the map is ~0.33 grey on average, so colours are boosted to match)
   const dmg = battleDamageTexture();
-  const plate = new THREE.MeshStandardMaterial({ color: new THREE.Color(body).multiplyScalar(3.0), map: dmg, metalness: wild ? 0.7 : 0.4, roughness: 0.45, normalMap: assets.metalNor, normalScale: new THREE.Vector2(0.7, 0.7), roughnessMap: assets.metalRough, envMapIntensity: wild ? 1.35 : 0.9 });
-  const frame = new THREE.MeshStandardMaterial({ color: new THREE.Color(armor).multiplyScalar(2.8), map: dmg, metalness: wild ? 0.7 : 0.4, roughness: 0.5, normalMap: assets.metalNor, normalScale: new THREE.Vector2(0.9, 0.9), envMapIntensity: wild ? 1.1 : 0.75 });
+  const plate = new THREE.MeshStandardMaterial({ color: new THREE.Color(body).multiplyScalar(3.0), map: dmg, metalness: wild ? 0.7 : 0.55, roughness: 0.4, normalMap: assets.metalNor, normalScale: new THREE.Vector2(0.7, 0.7), roughnessMap: assets.metalRough, envMapIntensity: wild ? 1.35 : 1.1 });
+  plate.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'reflectedLight.indirectSpecular += vec3(0.847, 0.925, 1.0) * 0.25 * pow(clamp(1.0 - dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);\n#include <opaque_fragment>'); };
+  plate.customProgramCacheKey = () => 'robo-rim-v514';
+  const frame = new THREE.MeshStandardMaterial({ color: new THREE.Color(armor).multiplyScalar(2.8), map: dmg, metalness: wild ? 0.7 : 0.55, roughness: 0.4, normalMap: assets.metalNor, normalScale: new THREE.Vector2(0.9, 0.9), envMapIntensity: wild ? 1.1 : 1.1 });
   const joint = new THREE.MeshStandardMaterial({ color: 0x9aa1aa, metalness: wild ? 0.85 : 0.35, roughness: 0.45, envMapIntensity: 0.8 });
   const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(glow).multiplyScalar(2.2), toneMapped: false });
   return { plate, frame, joint, glow: glowM, glowColor: new THREE.Color(glow) };

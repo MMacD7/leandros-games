@@ -163,14 +163,15 @@ export class World {
     if (this.isCity) { mat.defines = { CITY: '' }; mat.customProgramCacheKey = () => 'terrain-city'; }
     if (this.ocean) { mat.defines = { OCEAN: '' }; mat.customProgramCacheKey = () => 'terrain-ocean'; }
     if (this.farm) { mat.defines = { FARM: '' }; mat.customProgramCacheKey = () => 'terrain-farm'; }
+    if (!this.peak && !this.isCity && !this.ocean && !this.farm && !this.stomp) { mat.defines = { VOLCANO: '' }; mat.customProgramCacheKey = () => 'terrain-volcano'; }
     const cityGLSL = this.isCity ? cityGroundGLSL() : this.ocean ? oceanGLSL() : '';
     mat.onBeforeCompile = sh => {
       sh.uniforms.uTime = this.terrainU.uTime;
-      Object.assign(sh.uniforms, { tG: { value: A.grass }, tS: { value: A.sand }, tR: { value: A.rock }, tD: { value: A.dirt }, nS: { value: A.sandNor }, nR: { value: A.rockNor } });
+      Object.assign(sh.uniforms, { tG: { value: A.grass }, tS: { value: A.sand }, tR: { value: A.rock }, tD: { value: A.dirt }, nS: { value: A.sandNor }, nR: { value: A.rockNor }, nD: { value: A.dirtNor } });
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 splat; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;')
         .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvSplat = splat; vWP = (modelMatrix * vec4(transformed,1.0)).xyz; vWN = normalize(mat3(modelMatrix) * objectNormal);');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-uniform sampler2D tG, tS, tR, tD, nS, nR; uniform float uTime; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;
+uniform sampler2D tG, tS, tR, tD, nS, nR, nD; uniform float uTime; varying vec4 vSplat; varying vec3 vWP; varying vec3 vWN;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
 float vno(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h21(i), h21(i+vec2(1.0,0.0)), f.x), mix(h21(i+vec2(0.0,1.0)), h21(i+vec2(1.0,1.0)), f.x), f.y); }
 vec3 triR(float s){ vec3 b = pow(abs(vWN), vec3(4.0)); b /= (b.x+b.y+b.z);
@@ -186,6 +187,10 @@ vec3 cs = texture2D(tS, wuv*0.12).rgb * vec3(1.08,1.0,0.86);
 cs = mix(cs, vec3(0.910,0.863,0.784), 0.35);
 vec3 cr = sp.z > 0.02 ? triR(0.045) * vec3(0.78,0.74,0.72) : vec3(0.0);
 vec3 cd = texture2D(tD, wuv*0.11).rgb * vec3(1.05,0.95,0.8);
+float nearD = 1.0 - smoothstep(8.0, 30.0, distance(vWP, cameraPosition));
+cg *= mix(1.0, texture2D(tG, wuv*0.55).r*1.6+0.2, nearD);
+cs *= mix(1.0, texture2D(tS, wuv*0.55).r*1.6+0.2, nearD);
+cd *= mix(1.0, texture2D(tD, wuv*0.55).r*1.6+0.2, nearD);
 #ifdef PEAK
 cg = gl * vec3(0.55,0.32,0.22) * 1.1; cs *= vec3(0.34,0.31,0.32); cr *= vec3(0.62,0.56,0.6); cd *= vec3(0.7,0.44,0.32);
 float vn = vno(vWP.xz*0.018) * 0.62 + vno(vWP.xz*0.047 + 7.0) * 0.28 + vno(vWP.xz*0.16) * 0.1;
@@ -200,12 +205,22 @@ float pulse = 0.8 + 0.2 * sin(vWP.x * 0.07 + vWP.z * 0.05 + uTime * 1.3);
 vec3 lavaE = vec3(2.2, 0.42, 0.05) * max(vein * heat, (1.0 - smoothstep(-0.6, 0.9, vWP.y)) * 0.85) * pulse;
 #endif
 #ifdef FARM
-cg = gl * vec3(0.62, 1.12, 0.26) * 1.42; cd *= vec3(1.15, 0.95, 0.72);
+cg = mix(gl * vec3(0.58, 1.0, 0.34) * 1.30, vec3(0.243, 0.784, 0.353), 0.25); cd *= vec3(1.1, 0.92, 0.74);
+#else
+cd *= vec3(1.05, 0.9, 0.72);
+#endif
+#ifdef VOLCANO
+float vcdJ = length(vWP.xz - vec2(${VOLC.x.toFixed(1)}, ${VOLC.z.toFixed(1)}));
+float heatJ = smoothstep(150.0, 60.0, vcdJ) * smoothstep(${'0.0'}, 40.0, vWP.y);
+float vnJ = vno(vWP.xz*0.02) * 0.6 + vno(vWP.xz*0.07 + 3.0) * 0.4;
+float veinJ = smoothstep(0.42, 0.58, vnJ);
+vec3 lavaJ = vec3(2.2, 0.42, 0.05) * veinJ * heatJ * 0.7 * (0.85 + 0.15 * sin(uTime * 1.3 + vWP.x * 0.05));
 #endif
 #ifdef OCEAN
 cg = gl * vec3(0.20, 0.42, 0.28) * 1.15; cs *= vec3(1.02, 0.98, 0.86); cr *= vec3(0.6, 0.68, 0.74); cd = cs * vec3(0.74, 0.7, 0.62);
 #endif
 diffuseColor.rgb *= cg*sp.x + cs*sp.y + cr*sp.z + cd*sp.w;
+roughnessFactor = 0.92*sp.x + 0.88*sp.y + 0.90*sp.z + 0.85*sp.w;
 #ifdef CITY
 diffuseColor.rgb = cityGround(diffuseColor.rgb, vWP.xz, vWP.y);
 #endif`)
@@ -213,12 +228,15 @@ diffuseColor.rgb = cityGround(diffuseColor.rgb, vWP.xz, vWP.y);
 #ifdef PEAK
 totalEmissiveRadiance += lavaE;
 #endif
+#ifdef VOLCANO
+totalEmissiveRadiance += lavaJ;
+#endif
 #ifdef OCEAN
 float cau = caus(vWP.xz * 0.055, uTime * 0.55) * 0.75 + caus(vWP.xz * 0.11 + 0.37, uTime * 0.8) * 0.45;
 totalEmissiveRadiance += vec3(0.5, 0.85, 0.95) * cau * 0.5 * smoothstep(-0.1, 0.7, vWN.y) * diffuseColor.rgb * 2.2;
 #endif`)
         .replace('vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
-          'vec3 mapN = (texture2D(normalMap, vWP.xz*0.09).xyz*sp.x + texture2D(nS, vWP.xz*0.12).xyz*sp.y + texture2D(nR, vWP.xz*0.045).xyz*(sp.z+sp.w))*2.0-1.0;');
+          'vec3 mapN = (texture2D(normalMap, vWP.xz*0.09).xyz*sp.x + texture2D(nS, vWP.xz*0.12).xyz*sp.y + texture2D(nR, vWP.xz*0.045).xyz*sp.z + texture2D(nD, vWP.xz*0.11).xyz*sp.w)*2.0-1.0; float nearN = 1.0 - smoothstep(8.0, 30.0, distance(vWP, cameraPosition)); vec3 mapC = (texture2D(normalMap, vWP.xz*0.55).xyz*sp.x + texture2D(nS, vWP.xz*0.55).xyz*sp.y + texture2D(nR, vWP.xz*0.18).xyz*sp.z + texture2D(nD, vWP.xz*0.55).xyz*sp.w)*2.0-1.0; mapN = mix(mapN, mapC, nearN);');
     };
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; this.root.add(m); this.terrain = m;
   }
@@ -253,12 +271,14 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
   buildVolcano() {
     let lowest = Infinity; for (let a = 0; a < 6.28; a += 0.5) lowest = Math.min(lowest, this.height(VOLC.x + Math.cos(a) * 3, VOLC.z + Math.sin(a) * 3));
     this.craterY = this.height(VOLC.x, VOLC.z) + 1.5;
-    const lava = new THREE.Mesh(new THREE.CircleGeometry(16, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a12, toneMapped: false }));
+    const lava = new THREE.Mesh(new THREE.CircleGeometry(16, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff5a12, toneMapped: false }));
     lava.position.set(VOLC.x, this.craterY, VOLC.z); this.root.add(lava);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(16, 1.2, 6, 40), new THREE.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false }));
+    rim.rotation.x = Math.PI / 2; rim.position.set(VOLC.x, this.craterY + 0.4, VOLC.z); this.root.add(rim); this.lavaRim = rim;
     this.lavaGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.assets.glow, color: 0xff6a20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false }));
     this.lavaGlow.scale.set(this.islandR > 400 ? 90 : 60, this.islandR > 400 ? 58 : 40, 1); if (this.peak) this.lavaGlow.material.color.set(0xff4a10); this.lavaGlow.position.set(VOLC.x, this.craterY + 8, VOLC.z); this.root.add(this.lavaGlow);
     this.smokeOrigin = new THREE.Vector3(VOLC.x, this.craterY + 4, VOLC.z);
-    if (this.isCity || this.farm || this.stomp) { lava.visible = false; this.lavaGlow.visible = false; }
+    if (this.isCity || this.farm || this.stomp) { lava.visible = false; this.lavaGlow.visible = false; if (this.lavaRim) this.lavaRim.visible = false; }
   }
 
   // ---------- colliders ----------
@@ -285,15 +305,20 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
       #endif
       float sw = max(0.0, transformed.y - ${amt.toFixed(1)}) ;
       transformed.x += sin(uTime*1.3 + ph) * 0.02 * sw * (1.0 + 0.5*sin(uTime*2.7+ph+transformed.z));
-      transformed.z += cos(uTime*1.1 + ph) * 0.015 * sw;`); }; };
+      transformed.z += cos(uTime*1.1 + ph) * 0.015 * sw;`);
+      sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+totalEmissiveRadiance += diffuseColor.rgb * 0.22 * max(0.0, dot(-normalize(geometryNormal), normalize(vec3(0.45, 0.75, 0.35))));`);
+    }; };
+    const cover = mat => { mat.alphaToCoverage = true; };
     const leafMat = new THREE.MeshStandardMaterial({ map: leaf, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 0.7, metalness: 0, color: 0x3ec85a, emissive: 0x0c4a16, emissiveIntensity: 0.18 });
-    leafMat.userData.canopy = true;
+    leafMat.userData.canopy = true; cover(leafMat);
     sway(leafMat, 6);
-    const broadMat = new THREE.MeshStandardMaterial({ map: broad, alphaTest: 0.28, side: THREE.DoubleSide, roughness: 0.65, color: 0x2f9a3c, emissive: 0x0a3a12, emissiveIntensity: 0.16 });
-    broadMat.userData.canopy = true;
+    const broadMat = new THREE.MeshStandardMaterial({ map: broad, alphaTest: 0.28, side: THREE.DoubleSide, roughness: 0.65, color: 0x2f9a3c, emissive: 0x0a3a12, emissiveIntensity: 0.1 });
+    broadMat.userData.canopy = true; cover(broadMat);
     sway(broadMat, 0.5);
     const barkMat = new THREE.MeshStandardMaterial({ map: bark, roughness: 0.92, color: 0xc4a078 });
     const fernMat = new THREE.MeshStandardMaterial({ map: leaf, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 0.75, color: 0x49c45a, emissive: 0x0c4014, emissiveIntensity: 0.12 });
+    cover(fernMat);
     sway(fernMat, 0.2);
     // palm variants (hi + lo detail)
     const variants = [];

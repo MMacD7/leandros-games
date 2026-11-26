@@ -1,10 +1,13 @@
 // Stompolis rock theme and arcade hits. HTML audio so iPad Safari can unlock on the first tap.
 import { isMuted } from './audio.js';
 
-const THEME_URL = 'audio/swing-theme.mp3';
-const SFX = { swing: 'audio/sfx-swing.mp3', zip: 'audio/sfx-zip.mp3', coin: 'audio/sfx-coin.mp3', wrap: 'audio/sfx-wrap.mp3', win: 'audio/sfx-win.mp3' };
+const THEMES = { stomp: 'audio/swing-theme.mp3', farm: 'audio/farm-theme.mp3', jungle: 'audio/jungle-theme.mp3' };
+const SFX = {
+  swing: 'audio/sfx-swing.mp3', zip: 'audio/sfx-zip.mp3', coin: 'audio/sfx-coin.mp3', wrap: 'audio/sfx-wrap.mp3', win: 'audio/sfx-win.mp3',
+  roar: 'audio/sfx-dino-roar.mp3', fart: 'audio/sfx-fart.mp3', plop: 'audio/sfx-poop-plop.mp3',
+};
 
-const theme = new Audio(THEME_URL);
+const theme = new Audio();
 theme.loop = true;
 theme.preload = 'auto';
 theme.volume = 0.55;
@@ -12,7 +15,7 @@ theme.setAttribute('data-stomp-theme', '1');
 const mount = () => { if (document.body && !theme.parentNode) document.body.appendChild(theme); };
 if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
 
-let want = false;
+let wantLevel = '';
 const pools = {};
 
 function pool(url) {
@@ -32,10 +35,13 @@ function playUrl(url, vol) {
 }
 
 function applyTheme() {
-  if (want && !isMuted()) {
+  const url = THEMES[wantLevel];
+  if (url && !isMuted()) {
+    theme.dataset.level = wantLevel;
+    if (!theme.src || !theme.src.endsWith(url)) { theme.src = url; theme.loop = true; }
     theme.volume = 0.55;
     if (theme.paused) { const p = theme.play(); if (p && p.catch) p.catch(() => {}); }
-  } else if (!theme.paused) theme.pause();
+  } else { theme.dataset.level = ''; if (!theme.paused) theme.pause(); }
 }
 
 for (const ev of ['touchstart', 'pointerdown', 'click']) {
@@ -43,12 +49,15 @@ for (const ev of ['touchstart', 'pointerdown', 'click']) {
 }
 
 export const stompAudio = {
-  sync(on) { want = !!on; applyTheme(); },
+  sync(level) { wantLevel = THEMES[level] ? level : ''; applyTheme(); },
   setMuted() { applyTheme(); },
   swing() { playUrl(SFX.swing, 0.7); },
   zip() { playUrl(SFX.zip, 0.75); },
   coin() { playUrl(SFX.coin, 0.65); },
   wrap() { playUrl(SFX.wrap, 0.8); },
   win() { playUrl(SFX.win, 0.85); },
+  roar() { playUrl(SFX.roar, 0.8); },
+  fart() { playUrl(SFX.fart, 0.75); },
+  plop() { playUrl(SFX.plop, 0.7); },
   get theme() { return theme; },
 };

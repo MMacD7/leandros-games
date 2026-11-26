@@ -2,7 +2,9 @@
 import * as THREE from './vendor/three.bundle.min.js';
 import { rng } from './noise.js';
 
+const TEX2 = !/iPhone|Android/.test(navigator.userAgent || '');
 function canvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return [c, c.getContext('2d')]; }
+function canvas2(w, h) { const S = TEX2 ? 2 : 1; const [c, g] = canvas(w * S, h * S); if (S > 1) g.scale(S, S); return [c, g]; }
 function tex(c, srgb = true, repeat = false) {
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.needsUpdate = true; return t;
@@ -10,7 +12,7 @@ function tex(c, srgb = true, repeat = false) {
 
 export function leafTexture() {
   // palm frond: central rib along +y, leaflets angled outwards. Alpha cut-out.
-  const [c, g] = canvas(256, 512); const r = rng(7);
+  const [c, g] = canvas2(256, 512); const r = rng(7);
   g.clearRect(0, 0, 256, 512);
   for (let i = 0; i < 46; i++) {
     const y = 500 - i * 10.5, len = 118 * Math.sin(Math.min(1, (i + 3) / 40) * Math.PI * 0.92) + 8;
@@ -28,7 +30,7 @@ export function leafTexture() {
 
 export function broadLeafTexture() {
   // cluster of broad tropical leaves for bushes / jungle trees
-  const [c, g] = canvas(256, 256); const r = rng(11);
+  const [c, g] = canvas2(256, 256); const r = rng(11);
   for (let i = 0; i < 26; i++) {
     const x = 30 + r() * 196, y = 30 + r() * 196, a = r() * Math.PI * 2, L = 40 + r() * 40, W = L * 0.42;
     g.save(); g.translate(x, y); g.rotate(a);
@@ -42,7 +44,7 @@ export function broadLeafTexture() {
 }
 
 export function barkTexture() {
-  const [c, g] = canvas(128, 256); const r = rng(3);
+  const [c, g] = canvas2(128, 256); const r = rng(3);
   g.fillStyle = '#6d5a45'; g.fillRect(0, 0, 128, 256);
   for (let y = 0; y < 256; y += 16) {
     const grd = g.createLinearGradient(0, y, 0, y + 16); grd.addColorStop(0, '#4a3b2c'); grd.addColorStop(0.35, '#8a7558'); grd.addColorStop(1, '#5a4836');

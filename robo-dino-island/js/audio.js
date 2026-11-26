@@ -26,6 +26,8 @@ export function duck(amount = 0.6, dur = 1) { if (!ctx || !musicBus) return; con
   duckUntil = Math.max(duckUntil, t + dur); g.setTargetAtTime(1, duckUntil, 0.35); }
 export function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.7, now(), 0.05); }
 export function isMuted() { return muted; }
+let roarHook = null;
+export function setRoarHook(fn) { roarHook = fn; }
 
 function env(g, t, a, peak, dec) { peak = Math.max(0.0002, peak || 0); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
 function noise(t, dur, type, f0, f1, peak, q = 1) {
@@ -221,7 +223,7 @@ export const sfx = {
   whoosh(v = 1) { if (!ctx) return; const t = now(); noise(t, 0.45, 'bandpass', 300, 1800 * v, 0.3, 1.2); },
   slam() { if (!ctx) return; const t = now(); tone(t, 'sine', 70, 25, 0.7, 0.9); noise(t, 0.6, 'lowpass', 1200, 60, 0.6, 0.7); tone(t, 'triangle', 220, 50, 0.3, 0.2); },
   // big dramatic roar: growling sub layer + roaring formant noise + snarl overtones (robots get a metallic ring-mod layer)
-  bigRoar(pitch = 1, vol = 1, robotic = false) { if (!ctx || vol <= 0.02) return; const t = now(), D = 1.5 + 0.4 / pitch; if (vol > 0.4) duck(0.5, D * 0.8);
+  bigRoar(pitch = 1, vol = 1, robotic = false) { if (roarHook && vol > 0.35) roarHook(); if (!ctx || vol <= 0.02) return; const t = now(), D = 1.5 + 0.4 / pitch; if (vol > 0.4) duck(0.5, D * 0.8);
     const out = ctx.createGain(); out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.9 * vol, t + 0.12); out.gain.setValueAtTime(0.9 * vol, t + D * 0.6); out.gain.exponentialRampToValueAtTime(0.0001, t + D); out.connect(master);
     const ws = ctx.createWaveShaper(); const c = new Float32Array(512); for (let i = 0; i < 512; i++) { const x = i / 256 - 1; c[i] = Math.tanh(x * 6); } ws.curve = c;
     const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 2; f1.frequency.setValueAtTime(520 * pitch, t); f1.frequency.linearRampToValueAtTime(900 * pitch, t + 0.35); f1.frequency.linearRampToValueAtTime(380 * pitch, t + D);

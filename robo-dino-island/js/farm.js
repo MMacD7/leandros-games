@@ -7,6 +7,8 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { fbm, noise2, rng, smooth, clamp, lerp } from './noise.js';
 import { sfx } from './audio.js';
+import { stompAudio } from './stompAudio.js';
+import { waterNormal } from './proctex.js';
 import { voice } from './voice.js';
 import { Rider } from './rider.js';
 import { LionMech, LION } from './lion.js';
@@ -67,11 +69,21 @@ export function farmDirt(x, z) {
 export const farmGLSL = () => '';
 
 // ---------------- geometry helpers: vertex-coloured parts merged into one mesh ----------------
+function farmMatId(col) {
+  const hex = new THREE.Color(col).getHex();
+  if (hex === 0xb8322a || hex === 0xc0392b || hex === 0x9e2a22) return 1;
+  if (hex === 0x8b5a2b || hex === 0xa8743f || hex === 0x7a5a3a || hex === 0x8a5a3a || hex === 0x6b4a2a) return 2;
+  if (hex === 0xf4f1e8) return 3;
+  if (hex === 0x6e2a22 || hex === 0x3e5a7a) return 4;
+  return 0;
+}
 function C(geo, col, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
   const g = geo.index ? geo.toNonIndexed() : geo; for (const a of ['uv', 'uv1', 'uv2']) if (g.attributes[a]) g.deleteAttribute(a);
   g.scale(sx, sy, sz); if (rx) g.rotateX(rx); if (ry) g.rotateY(ry); if (rz) g.rotateZ(rz); g.translate(x, y, z);
-  const c = new THREE.Color(col), n = g.attributes.position.count, a = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g;
+  const c = new THREE.Color(col), n = g.attributes.position.count, a = new Float32Array(n * 3), ids = new Float32Array(n);
+  const id = farmMatId(col);
+  for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; ids[i] = id; }
+  g.setAttribute('color', new THREE.BufferAttribute(a, 3)); g.setAttribute('matId', new THREE.BufferAttribute(ids, 1)); return g;
 }
 const SPH = (r = 1, w = 12, h = 9) => new THREE.SphereGeometry(r, w, h);
 const BOX = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -80,10 +92,46 @@ const CONE = (r, h, s = 8) => new THREE.ConeGeometry(r, h, s);
 let MAT = null;
 function mats() {
   if (MAT) return MAT;
-  MAT = { vc: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }),
+  const vc = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 });
+  vc.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float matId;\nvarying float vMat;\nvarying vec3 vWP;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+vMat = matId;
+#ifdef USE_INSTANCING
+vWP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+#else
+vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;
+#endif`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying float vMat; varying vec3 vWP;
+float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float id = floor(vMat + 0.5);
+if (id > 0.5 && id < 1.5) {
+  float board = abs(fract(vWP.x / 0.30) - 0.5);
+  float seam = smoothstep(0.06, 0.0, board - 0.44);
+  diffuseColor.rgb = mix(diffuseColor.rgb * (0.94 + hsh(floor(vWP.yz * 6.0)) * 0.12), vec3(0.541, 0.137, 0.118), seam);
+}
+if (id > 1.5 && id < 2.5) {
+  diffuseColor.rgb *= 0.86 + 0.18 * hsh(vec2(floor(vWP.y * 10.0), floor(vWP.z * 2.0)));
+}
+if (id > 3.5 && id < 4.5) {
+  float row = smoothstep(0.03, 0.0, abs(fract((vWP.x + vWP.z) / 0.35) - 0.5) - 0.42);
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55, row);
+}`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+float idr = floor(vMat + 0.5);
+if (idr > 0.5 && idr < 1.5) roughnessFactor = 0.78;
+else if (idr > 1.5 && idr < 2.5) roughnessFactor = 0.85;
+else if (idr > 2.5 && idr < 3.5) roughnessFactor = 0.6;
+else if (idr > 3.5 && idr < 4.5) roughnessFactor = 0.7;`);
+  };
+  vc.customProgramCacheKey = () => 'farm-boards-v514';
+  const mudN = waterNormal(); mudN.wrapS = mudN.wrapT = THREE.RepeatWrapping; mudN.repeat.set(0.4, 0.4);
+  MAT = { vc,
     vcD: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0, side: THREE.DoubleSide }),
-    mud: new THREE.MeshStandardMaterial({ color: 0x5a3818, roughness: 0.22, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
-    poop: new THREE.MeshStandardMaterial({ color: 0x8a5530, roughness: 0.6, metalness: 0, emissive: 0x2a1408, emissiveIntensity: 0.15 }),
+    mud: new THREE.MeshStandardMaterial({ color: 0x5a3818, roughness: 0.22, metalness: 0, normalMap: mudN, normalScale: new THREE.Vector2(0.4, 0.4), polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+    poop: new THREE.MeshStandardMaterial({ color: 0x8a5530, roughness: 0.55, metalness: 0, emissive: 0x2a1408, emissiveIntensity: 0.15 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xffc22a, roughness: 0.18, metalness: 0.9, emissive: 0x7a4a00, emissiveIntensity: 0.6 }),
     eyes: new THREE.MeshBasicMaterial({ vertexColors: true }),
     print: new THREE.MeshStandardMaterial({ color: 0x4a2c14, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }),
@@ -180,7 +228,7 @@ export function buildFarm(W) {
     W.addCollider(m.x, m.z, 1.8, 16); }
   // --- fences around every pen (posts + 2 rails, gate gaps) with colliders ---
   const fence = (x1, z1, x2, z2) => { const L = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(L / 2.4)), a = Math.atan2(x2 - x1, z2 - z1);
-    for (let i = 0; i <= n; i++) { const x = lerp(x1, x2, i / n), z = lerp(z1, z2, i / n), y = gy(x, z); B.at(x, y, z, a); B.add(C(BOX(0.2, 1.45, 0.2), WOOD, 0, 0.72, 0));
+    for (let i = 0; i <= n; i++) { const x = lerp(x1, x2, i / n), z = lerp(z1, z2, i / n), y = gy(x, z); B.at(x, y, z, a); B.add(C(CYL(0.12, 0.12, 1.45, 6), WOOD, 0, 0.72, 0)); B.add(C(BOX(0.16, 0.08, 0.16), WHITE, 0, 1.48, 0));
       if (i < n) { const x3 = lerp(x1, x2, (i + 0.5) / n), z3 = lerp(z1, z2, (i + 0.5) / n), y3 = gy(x3, z3); B.at(x3, y3, z3, a); B.add(C(BOX(0.08, 0.16, L / n + 0.1), WOOD2, 0, 0.55, 0)); B.add(C(BOX(0.08, 0.16, L / n + 0.1), WOOD2, 0, 1.1, 0)); } }
     const k = Math.max(1, Math.round(L / 1.5)); for (let i = 0; i <= k; i++) W.addCollider(lerp(x1, x2, i / k), lerp(z1, z2, i / k), 0.5, 1.6); };
   for (const key in FARM.pens) { const P = FARM.pens[key], x0 = P.x - P.w / 2, x1 = P.x + P.w / 2, z0 = P.z - P.d / 2, z1 = P.z + P.d / 2, g = GATE_W / 2;
@@ -194,12 +242,14 @@ export function buildFarm(W) {
     if (key !== 'chick') { const tx = P.x + P.w * 0.3, tz = P.z - P.d * 0.3, ty = gy(tx, tz); B.at(tx, ty, tz, 0); B.add(C(BOX(2.6, 0.7, 1.0), WOOD, 0, 0.35, 0)); B.add(C(BOX(2.3, 0.05, 0.75), 0x4aa8d8, 0, 0.62, 0)); W.addCollider(tx, tz, 1.1, 1); } }
   B.build(M.vc, root);
   // --- hay bales (round ones can be knocked over by Bad David) ---
-  const strawTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#e2bf55'; g.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { g.strokeStyle = ['#c9a23e', '#f2d77a', '#b8902e'][i % 3]; g.lineWidth = 1 + Math.random() * 1.5; g.beginPath(); const x = Math.random() * w, y = Math.random() * h, a = (Math.random() - 0.5) * 0.6; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 18, y + Math.sin(a) * 18); g.stroke(); } });
+  const strawTex = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#e8c65a'; g.fillRect(0, 0, w, h); for (let i = 0; i < 520; i++) { g.strokeStyle = ['#c9a23e', '#ffd23a', '#e8c65a'][i % 3]; g.lineWidth = 1 + Math.random() * 2; g.beginPath(); const x = Math.random() * w, y = Math.random() * h, a = (Math.random() - 0.5) * 0.6; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 28, y + Math.sin(a) * 28); g.stroke(); } });
   strawTex.wrapS = strawTex.wrapT = THREE.RepeatWrapping;
-  const hayM = new THREE.MeshStandardMaterial({ map: strawTex, roughness: 0.95 }), endTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#d9b44e'; g.fillRect(0, 0, w, h); g.strokeStyle = '#a8862c'; g.lineWidth = 3; for (let r = 6; r < 64; r += 7) { g.beginPath(); g.arc(64, 64, r, 0, TAU); g.stroke(); } });
-  const endM = new THREE.MeshStandardMaterial({ map: endTex, roughness: 0.95 }), baleGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.25, 18, 1); baleGeo.rotateZ(Math.PI / 2);
+  const endNor = canvasTex(256, 256, (g, w, h) => { const img = g.createImageData(w, h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = x - 128, dy = y - 128, rad = Math.hypot(dx, dy); const ring = Math.sin(rad / 10); const i = (y * w + x) * 4; img.data[i] = 128; img.data[i + 1] = 128 + ring * 28; img.data[i + 2] = 220; img.data[i + 3] = 255; } g.putImageData(img, 0, 0); });
+  endNor.colorSpace = THREE.NoColorSpace || THREE.LinearSRGBColorSpace;
+  const hayM = new THREE.MeshStandardMaterial({ map: strawTex, normalMap: endNor, roughness: 0.9 });
+  const baleGeo = new THREE.CylinderGeometry(0.85, 0.85, 1.25, 24, 1); baleGeo.rotateZ(Math.PI / 2);
   const BALES = [[-12, 171], [-13, 175.5], [-9, 177], [38, 162], [35.5, 166], [44, 190], [-55, 180], [-52, 185], [9, 130], [29, 168], [-2, 197], [74, 172], [-20, 140], [30, 205]];
-  for (const [x, z] of BALES) { const m = new THREE.Mesh(baleGeo, [hayM, endM, endM]); const y = gy(x, z) + 0.85, yaw = r() * TAU; m.position.set(x, y, z); m.rotation.y = yaw; m.castShadow = m.receiveShadow = true; root.add(m);
+  for (const [x, z] of BALES) { const m = new THREE.Mesh(baleGeo, hayM); const y = gy(x, z) + 0.85, yaw = r() * TAU; m.position.set(x, y, z); m.rotation.y = yaw; m.receiveShadow = true; root.add(m);
     W.addCollider(x, z, 1.0, 2); F.bales.push({ m, x, z, y, yaw, col: W.colliders[W.colliders.length - 1], fallen: false, roll: null }); }
   // square bale stacks (static)
   const sq = []; for (const [x, z, n] of [[-14, 150, 3], [-6, 158, 2], [48, 188, 2], [-58, 200, 3]]) { const y = gy(x, z); for (let i = 0; i < n; i++) { sq.push(C(BOX(1.3, 0.65, 0.7), STRAW, x, y + 0.33, z + i * 0.75)); if (i < n - 1) sq.push(C(BOX(1.3, 0.65, 0.7), 0xdcb84c, x, y + 0.98, z + i * 0.75 + 0.37)); } W.addCollider(x, z + n * 0.35, 1.3, 2); }
@@ -650,7 +700,7 @@ export class FarmLife {
     for (let i = 0; i < fx.n(4 * big); i++) fx.glow.spawn({ pos: { x: p.x + (Math.random() - 0.5) * 0.6 * big, y: p.y, z: p.z + (Math.random() - 0.5) * 0.6 * big }, vel: { x: dir.x * 1.5 + (Math.random() - 0.5) * 1.2, y: 1.2 + Math.random() * 1.6, z: dir.z * 1.5 + (Math.random() - 0.5) * 1.2 }, size: 0.1, size1: 0.18, life: 1.1, r: 1.0, g: 0.82, b: 0.23, alpha: 0.8, drag: 1, grav: -0.4 });
     fx.ring(p, 1.2 * big, 0xa8d83a); }
   fartFrom(a, v = 1, trail = false) {
-    this.n.farts++; const near = clamp(1.25 - this.camDist(a.pos) / 50, 0, 1); sfx.fart(pick(a.K.farts), v * near * (a.kind === 'chicken' ? 0.7 : 1));
+    this.n.farts++; const near = clamp(1.25 - this.camDist(a.pos) / 50, 0, 1); sfx.fart(pick(a.K.farts), v * near * (a.kind === 'chicken' ? 0.7 : 1)); stompAudio.fart();
     const p = a.worldPt(a.rear), back = V(-Math.sin(a.yaw), 0, -Math.cos(a.yaw)); this.cloud(p, back, trail ? 14 : 9, a.kind === 'chicken' ? 0.5 : a.kind === 'cow' || a.kind === 'horse' ? 1.2 : 0.85); this.emote('stink', a, 1, p);
     if (trail) for (let i = 1; i < 5; i++) this.g.later(i * 0.12, () => this.cloud(a.worldPt(a.rear), back, 4, 0.9));
     for (const b of this.animals) if (b !== a && !b.busy && b.kind === 'chicken' && b.pos.distanceTo(a.pos) < 4) this.startle(b, a.pos, 1.2);
@@ -677,7 +727,7 @@ export class FarmLife {
     this.sinceGold++; const gold = this.poops.filter(q => q.gold).length < GOLD_MAX && (Math.random() < 0.1 || this.sinceGold >= 7); if (gold) this.sinceGold = 0;
     if (!gold && this.poops.filter(q => !q.gold).length >= POOP_MAX) { const i = this.poops.findIndex(q => !q.gold); if (i >= 0) this.poops.splice(i, 1); }
     const y = this.W.height(x, z); this.poops.push({ x, z, y, y0: fromY ?? y + 1, s, gold, squish: 0, t: 0, landed: false, yaw: Math.random() * 0.8 - 0.4 + Math.atan2(this.g.camera.position.x - x, this.g.camera.position.z - z), ph: Math.random() * 6 });
-    this.n.poops++; this.bar(); sfx.plop(clamp(1.3 - this.camDist({ x, z }) / 45, 0.05, 1)); if (gold) { const g = $('fb-gold'); this.toast('✨ A GOLDEN POOP! Go grab it! ✨', 3); }
+    this.n.poops++; this.bar(); sfx.plop(clamp(1.3 - this.camDist({ x, z }) / 45, 0.05, 1)); stompAudio.plop(); if (gold) { const g = $('fb-gold'); this.toast('✨ A GOLDEN POOP! Go grab it! ✨', 3); }
   }
   squish(q, p) { q.squish = 1; this.n.squish++; sfx.squish(1); sfx.stars(0.7); this.n.starSplats++; const at = V(q.x, q.y, q.z); this.splat(at, 16, q.s * 1.3); this.emote('star', null, 3, at.clone().setY(at.y + 0.5)); this.fx.ring(at, 1.6 * q.s, 0x6a4020);
     if (p) { p.mech.mud = Math.min(1, (p.mech.mud || 0) + 0.15); p.mech.squishT = 0.6;
@@ -886,7 +936,7 @@ export class FarmLife {
     this.toast('🤢 Uh oh… something is BREWING…', 0); return true; }
   stinkAt() { const p = this.kid, back = V(-Math.sin(p.yaw), 0, -Math.cos(p.yaw)); return { back, at: V(p.pos.x + back.x * (this.riding ? 1.6 : this.driving ? 2.2 : 0.4), p.pos.y + (this.riding ? 2.2 : this.driving ? 1.6 : 0.8), p.pos.z + back.z * (this.riding ? 1.6 : this.driving ? 2.2 : 0.4)) }; }
   blast() { const p = this.kid, { back, at } = this.stinkAt(), fx = this.fx; this.stink.at = at.clone();
-    sfx.fart('long', 1); this.g.later(0.12, () => sfx.fart('wet', 1)); this.g.later(0.45, () => sfx.fart('trombone', 0.9)); this.g.later(0.95, () => sfx.fart('bubbly', 0.9)); this.g.later(1.3, () => sfx.fart('squeakup', 0.7));
+    sfx.fart('long', 1); stompAudio.fart(); this.g.later(0.12, () => sfx.fart('wet', 1)); this.g.later(0.45, () => sfx.fart('trombone', 0.9)); this.g.later(0.95, () => sfx.fart('bubbly', 0.9)); this.g.later(1.3, () => sfx.fart('squeakup', 0.7));
     fx.shake = Math.max(fx.shake, 0.9); p.mech.jumpT = 0.55;
     // the BIG BROWN cloud (brown instead of green), with stink lines
     for (let i = 0; i < fx.n(70); i++) { const g = Math.random(), a = Math.random() * TAU, sp = 2 + Math.random() * 6; fx.smoke.spawn({ pos: { x: at.x + (Math.random() - 0.5), y: at.y + (Math.random() - 0.5), z: at.z + (Math.random() - 0.5) },

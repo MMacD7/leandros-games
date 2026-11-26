@@ -2,7 +2,7 @@
    Pages and code (html/js/css/manifest) are network-first with a cache fallback, so new versions show up right away when online
    and the game still works offline. Big assets (textures, sky, icons, vendored three.js) are cache-first; they are re-downloaded
    whenever this file's cache name changes. */
-const CACHE = 'rdi-v5-13-6';
+const CACHE = 'rdi-v5-14-0';
 const FILES = ['./',
   './CREDITS.md',
   './assets/art/lion-rider.webp',
@@ -30,6 +30,7 @@ const FILES = ['./',
   './assets/models/trike.glb',
   './assets/models/westie.glb',
   './assets/tex/dirt_diff.jpg',
+  './assets/tex/dirt_nor.jpg',
   './assets/tex/grass_diff.jpg',
   './assets/tex/grass_nor.jpg',
   './assets/tex/metal_nor.jpg',
@@ -45,7 +46,12 @@ const FILES = ['./',
   './assets/textures/stomp/facade-atlas-tintmask.ktx2',
   './assets/textures/stomp/roof-cap-albedo.ktx2',
   './assets/textures/stomp/roof-cap-normal.ktx2',
+  './audio/farm-theme.mp3',
+  './audio/jungle-theme.mp3',
   './audio/sfx-coin.mp3',
+  './audio/sfx-dino-roar.mp3',
+  './audio/sfx-fart.mp3',
+  './audio/sfx-poop-plop.mp3',
   './audio/sfx-swing.mp3',
   './audio/sfx-win.mp3',
   './audio/sfx-wrap.mp3',

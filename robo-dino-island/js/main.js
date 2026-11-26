@@ -18,8 +18,9 @@ import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
 import { prepareLoaders, preloadCityMaps, preloadCityMapsLow, preloadSwingBoy } from './models.js';
 import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky, preloadStego, preloadAllo, preloadDilo, preloadPachy, preloadPara, preloadWestie } from './models.js';
-import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
+import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart, setRoarHook } from './audio.js';
 import { stompAudio } from './stompAudio.js';
+setRoarHook(() => stompAudio.roar());
 import { voice } from './voice.js';
 import { smokeTexture, glowTexture } from './proctex.js';
 
@@ -60,7 +61,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, 1, 0.3, 1400);
 const sun = new THREE.DirectionalLight(0xfff1dc, 3.6); sun.castShadow = true; scene.add(sun, sun.target);
 const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x4a5a2a, 0.25); scene.add(hemi);
-const fill = new THREE.DirectionalLight(0xd8ecff, 1.45); fill.castShadow = false; scene.add(fill, fill.target);
+const fill = new THREE.DirectionalLight(0xfff4e0, 0.55); fill.castShadow = false; scene.add(fill, fill.target);
 const sunDir = new THREE.Vector3(0.45, 0.62, 0.35).normalize();
 
 function applyQuality(q) {
@@ -95,7 +96,7 @@ function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = T
 assets.grass = tex('assets/tex/grass_diff.jpg'); assets.grassNor = tex('assets/tex/grass_nor.jpg', false);
 assets.sand = tex('assets/tex/sand_diff.jpg'); assets.sandNor = tex('assets/tex/sand_nor.jpg', false);
 assets.rock = tex('assets/tex/rock_diff.jpg'); assets.rockNor = tex('assets/tex/rock_nor.jpg', false);
-assets.dirt = tex('assets/tex/dirt_diff.jpg');
+assets.dirt = tex('assets/tex/dirt_diff.jpg'); assets.dirtNor = tex('assets/tex/dirt_nor.jpg', false);
 assets.metalNor = tex('assets/tex/metal_nor.jpg', false); assets.metalRough = tex('assets/tex/metal_rough.jpg', false);
 assets.smoke = smokeTexture(); assets.glow = glowTexture();
 const skyTex = tl.load((forced ?? startTier) >= 2 ? 'assets/hdri/sky_4k.jpg' : 'assets/hdri/sky_2k.jpg', t => { t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace; });
@@ -121,7 +122,7 @@ function boot() {
   const fogC = new THREE.Color(0xb6cde0);
   try { const im = skyTex.image, cv = document.createElement('canvas'); cv.width = 64; cv.height = 32; const g = cv.getContext('2d'); g.drawImage(im, 0, 0, 64, 32); const px = g.getImageData(0, 15, 64, 2).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < px.length; i += 4) { r += px[i]; gg += px[i + 1]; b += px[i + 2]; } const n = px.length / 4; fogC.setRGB(r / n / 255, gg / n / 255, b / n / 255, THREE.SRGBColorSpace); } catch (e) { }
   scene.fog = new THREE.Fog(fogC, 60, 900);
-  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone(), near: 80, far: 1300, sunDir: sunDir.clone(), sunC: 0xfff6e4, sunI: 3.8, hs: 0xc8e6ff, hg: 0x6a8a4a, hi: 0.6, exp: 1.0 };
+  ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone().lerp(new THREE.Color(0xfff4e0), 0.25), near: 90, far: 1100, sunDir: new THREE.Vector3(0.5, 0.77, 0.32).normalize(), sunC: 0xfff4e0, sunI: 3.8, hs: 0xd8ecff, hg: 0x2f9a3c, hi: 0.75, exp: 1.0 };
   fx = new FX(scene, assets, sfx);
   world = makeWorld(level); applyEnv(level);
   input = new Input(document.body); window.input = input;
@@ -171,7 +172,7 @@ function applyEnv(lv) {
     ENV.ocean = { bg: sky, env, envI: 0.55, fog: new THREE.Color(0x0e5a78), near: 8, far: 240, sunDir: new THREE.Vector3(0.25, 0.92, 0.3).normalize(), sunC: 0xb8f0ff, sunI: 2.6, hs: 0x4ac0e0, hg: 0x1a3040, hi: 0.95, exp: 1.15 };
   }
   if (lv === 'farm' && !ENV.farm) { // v5.1 Farty Poop Farm: the island sky, but a brighter, sunnier, happier day
-    const J = ENV.jungle; ENV.farm = { ...J, envI: 0.5, fog: J.fog.clone().lerp(new THREE.Color(0xd8ecff), 0.3), near: 90, far: 950, sunC: 0xfff4e0, sunI: 3.9, hs: 0xd0ecff, hg: 0x5a7a2a, hi: 0.38, exp: 1.05 }; }
+    const J = ENV.jungle; ENV.farm = { ...J, envI: 0.5, fog: J.fog.clone().lerp(new THREE.Color(0xd8ecff), 0.3), near: 110, far: 900, sunDir: new THREE.Vector3(0.82, 0.64, 0.32).normalize(), sunC: 0xfff4e0, sunI: 3.6, hs: 0xd8ecff, hg: 0x6a7a3a, hi: 0.7, exp: 1.05 }; }
   if (lv === 'stomp' && !ENV.stomp) {
     if (!ENV.city) {
       const sky = citySky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
@@ -189,9 +190,8 @@ function applyEnv(lv) {
   }
   const E = ENV[lv]; if (!E) return;
   sun.castShadow = true;
-  if (lv === 'stomp') { fill.color.set(0xffe6c8); fill.intensity = 0.5; }
-  else {
-    fill.color.set(0xd8ecff); fill.intensity = 1.45;
+  fill.color.set(0xfff4e0); fill.intensity = 0.55;
+  if (lv !== 'stomp') {
     if (stompTexLow) { stompTexLow = false; setCityDetail(true); }
     if (stompDprDrop) { stompDprDrop = false; renderer.setPixelRatio(pixelCap()); }
   }
@@ -209,6 +209,7 @@ function levelUI() {
 }
 function setLevel(lv) {
   if (!['peak', 'city', 'ocean', 'farm', 'stomp'].includes(lv)) lv = 'jungle';
+  if (lv !== 'stomp') { const win = $('stompwin'); if (win) win.classList.add('hidden'); }
   if (lv === level && world === worlds[lv]) return;
   level = lv; world = makeWorld(lv); world.applyQuality(Q); applyEnv(lv);
   if (game.battle) game.battle = null;
@@ -392,10 +393,9 @@ function jungleHot() {
 function syncMusic() {
   const b = game && game.battle;
   const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
-  if (level === 'farm') { music.play(screen === 'play' || screen === 'pause' || screen === 'levels' || screen === 'results' ? 'farm' : 'farmtitle'); if (screen === 'play' && music.setIntensity) music.setIntensity(0); return; } // v5.1 hoedown!
-  if (level === 'stomp') {
+  if (level === 'stomp' || level === 'farm' || level === 'jungle') {
     music.setEnabled(false);
-    stompAudio.sync(screen === 'play' || screen === 'title');
+    stompAudio.sync(screen === 'play' || screen === 'title' ? level : false);
     return;
   }
   music.setEnabled(true);
@@ -736,24 +736,20 @@ let stompDprDrop = false, stompTexLow = false, dprAcc = 0, dprN = 0, dprHigh = 0
 function pixelCap() {
   const dpr = window.devicePixelRatio || 1;
   if (lockDpr) return lockDpr;
-  if (level === 'stomp') {
-    let cap = Math.min(dpr, 2);
-    if (stompDprDrop) cap = Math.min(cap, 1.5);
-    if (isIPad) cap = Math.max(1.5, cap);
-    return cap;
-  }
-  const prCap = (isIPhone || isIPad) ? IOS_PR[Q.tier] : Q.pr;
-  return Math.min(dpr, prCap);
+  let cap = Math.min(dpr, 2);
+  if (stompDprDrop) cap = Math.min(cap, 1.5);
+  if (isIPad) cap = Math.max(1.5, cap);
+  return cap;
 }
 function fpsReset() { fpsAcc = 0; fpsN = 0; fpsWarm = 1.5; dprAcc = 0; dprN = 0; }
 function stompAdapt(dt) {
-  if (lockDpr || level !== 'stomp') return;
+  if (lockDpr) return;
   dprAcc += dt; dprN++;
   if (dprAcc < 3) return;
   const fps = dprN / dprAcc; dprAcc = 0; dprN = 0;
   if (fps < 50) {
     dprHigh = 0;
-    if (!stompTexLow) {
+    if (level === 'stomp' && !stompTexLow) {
       preloadCityMapsLow();
       if (setCityDetail(false)) { stompTexLow = true; texWait = 0; return; }
       if (++texWait < 3) return;
@@ -764,7 +760,7 @@ function stompAdapt(dt) {
     if (dprHigh >= 5) {
       dprHigh = 0;
       if (stompDprDrop) { stompDprDrop = false; renderer.setPixelRatio(pixelCap()); resize(); }
-      else if (stompTexLow) { stompTexLow = false; setCityDetail(true); }
+      else if (level === 'stomp' && stompTexLow) { stompTexLow = false; setCityDetail(true); }
     }
   } else dprHigh = 0;
 }
@@ -779,6 +775,32 @@ function fpsTick(dt, now) {
   else goodWindows = 0;
 }
 
+let blobMesh = null, blobDummy = null;
+function placeBlobs() {
+  if (!blobMesh) {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(64, 64, 6, 64, 64, 62);
+    grd.addColorStop(0, 'rgba(0,0,0,0.5)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+    const map = new THREE.CanvasTexture(c);
+    const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: THREE.MultiplyBlending, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    blobMesh = new THREE.InstancedMesh(geo, mat, 24); blobMesh.frustumCulled = false; blobMesh.count = 0; scene.add(blobMesh);
+    blobDummy = new THREE.Object3D();
+  }
+  const spots = [];
+  const add = (x, y, z, r) => { if (spots.length < 24 && Number.isFinite(x)) spots.push([x, y, z, r]); };
+  const p = game.player;
+  if (p && p.pos) add(p.pos.x, world.height(p.pos.x, p.pos.z) + 0.04, p.pos.z, 0.55 * (p.def.radius || 0.8) * 2);
+  if (game.westies && game.westies.dogs) for (const d of game.westies.dogs) if (d && d.pos) add(d.pos.x, world.height(d.pos.x, d.pos.z) + 0.03, d.pos.z, 0.7);
+  if (game.farm && game.farm.animals) for (const a of game.farm.animals) if (a && a.pos) add(a.pos.x, world.height(a.pos.x, a.pos.z) + 0.03, a.pos.z, 0.55 * (a.K && a.K.r || 0.8) * 2);
+  if (game.stomp && game.stomp.david) add(game.stomp.david.x, game.stomp.david.y + 0.02, game.stomp.david.z, 0.7);
+  for (const e of game.enemies || []) if (e.alive && e.pos) add(e.pos.x, world.height(e.pos.x, e.pos.z) + 0.04, e.pos.z, 0.55 * (e.radius || 1.2) * 2);
+  blobMesh.count = spots.length;
+  spots.forEach(([x, y, z, r], i) => { blobDummy.position.set(x, y, z); blobDummy.scale.set(r, 1, r); blobDummy.updateMatrix(); blobMesh.setMatrixAt(i, blobDummy.matrix); });
+  if (spots.length) blobMesh.instanceMatrix.needsUpdate = true;
+}
 // ---------------- loop ----------------
 let last = performance.now(), smokeT = 0, titleT = 0, frames = 0, cpuMs = 0, garageFrame = null;
 function loop(now) {
@@ -864,24 +886,25 @@ function loop(now) {
     fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog);
   }
   if (world.peak && screen !== 'pause') peakAmbience(dt);
-  // shadow camera follows the action. Stompolis uses one 2048 map, ±24 m, snapped to texels.
+  // shadow camera follows the action, snapped to texels so the edges do not crawl.
   const P = game.player.pos;
-  if (level === 'stomp') {
-    const map = Q.tier === 0 ? 1024 : 2048;
-    if (sun.shadow.mapSize.x !== map) {
-      sun.shadow.mapSize.set(map, map);
-      if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
-    }
-    const texel = 48 / map;
-    const sx = Math.round(P.x / texel) * texel, sy = Math.round(P.y / texel) * texel, sz = Math.round(P.z / texel) * texel;
-    sun.target.position.set(sx, sy, sz);
-    sun.position.copy(sun.target.position).addScaledVector(sunDir, 80);
-    const c = sun.shadow.camera;
-    c.left = c.bottom = -24; c.right = c.top = 24; c.near = 1; c.far = 140;
-    c.updateProjectionMatrix();
-    sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
-    sun.castShadow = true;
-  } else { sun.target.position.set(P.x, P.y, P.z); sun.position.copy(P).addScaledVector(sunDir, 150); }
+  const mobile = isIPhone || isIPad;
+  const map = isIPad || (!mobile && Q.tier >= 2) ? 2048 : (mobile ? 1024 : Q.shadow);
+  const radius = mobile || level === 'stomp' ? 28 : Q.shadowR;
+  if (sun.shadow.mapSize.x !== map) {
+    sun.shadow.mapSize.set(map, map);
+    if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+  }
+  const texel = (2 * radius) / map;
+  const sx = Math.round(P.x / texel) * texel, sy = Math.round(P.y / texel) * texel, sz = Math.round(P.z / texel) * texel;
+  sun.target.position.set(sx, sy, sz);
+  sun.position.copy(sun.target.position).addScaledVector(sunDir, 120);
+  const sc = sun.shadow.camera;
+  sc.left = sc.bottom = -radius; sc.right = sc.top = radius; sc.near = 1; sc.far = 220;
+  sc.updateProjectionMatrix();
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+  sun.castShadow = true;
+  placeBlobs();
   fill.position.copy(camera.position); fill.target.position.set(P.x, P.y + 1.5, P.z);
   const c1 = performance.now(); cpuMs += ((c1 - c0) - cpuMs) * 0.05;
   renderer.render(scene, camera);
