@@ -246,6 +246,7 @@ export const sfx = {
     o.connect(ws); ws.connect(f); f.connect(g); g.connect(master); o.start(t); lfo.start(t); o.stop(t + 1.2); lfo.stop(t + 1.2);
     noise(t, 1.0, 'bandpass', 900, 400, 0.18, 1.2); },
   pickup() { if (!ctx) return; const t = now(); tone(t, 'triangle', 880, 880, 0.08, 0.15); tone(t + 0.07, 'triangle', 1320, 1320, 0.12, 0.15); },
+  coinChime(chain = 1) { if (!ctx) return; const t = now(); const f = 880 * Math.pow(2, Math.max(0, chain - 1) / 12); tone(t, 'square', f, f * 1.02, 0.07, 0.16); tone(t + 0.06, 'triangle', f * 1.5, f * 1.5, 0.12, 0.14); },
   squeak(v = 1) { if (!ctx) return; const t = now(); tone(t, 'sine', 880 * v, 1400 * v, 0.09, 0.12); tone(t + 0.08, 'triangle', 1200, 700, 0.1, 0.08); },
   squeakRoar() { if (!ctx) return; const t = now(); tone(t, 'sawtooth', 520, 280, 0.22, 0.07); tone(t + 0.05, 'sine', 980, 640, 0.16, 0.06); },
   eggPop(v = 1) { this.nEggPop = (this.nEggPop || 0) + 1; if (!ctx) return; const t = now(); noise(t, 0.07, 'highpass', 2200, 900, 0.22 * v, 1.2); noise(t, 0.14, 'bandpass', 1600, 380, 0.2 * v, 1.8); tone(t, 'triangle', 640, 160, 0.11, 0.14 * v); tone(t + 0.03, 'sine', 920, 1380, 0.07, 0.07 * v); },

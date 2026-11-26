@@ -38,6 +38,13 @@ export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stego
 
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
+const dampAngle = (a, b, lambda, dt, cap) => {
+  const step = angDiff(a, b) * (1 - Math.exp(-lambda * dt));
+  const max = (cap == null ? Infinity : cap) * dt;
+  return a + Math.max(-max, Math.min(max, step));
+};
+const smoothstep = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 const pool = new Map();
 export function makeDino(def, assets, wild) {
   const m = def.costume ? new CostumeRex(def) : def.lion ? new LionMech(def) : def.kind === 'trex' ? new TrexMech(def) : (def.id === 'brachio' || def.id === 'brachiotank') ? new BrachioMech(def) : def.id === 'giga' ? new GigaMech(def) : (def.id === 'spinos' || def.id === 'spinotitan') ? new SpinoMech(def) : (def.id === 'trice' || def.id === 'megatrike') ? new TrikeMech(def) : def.id === 'carno' ? new CarnoMech(def) : (def.id === 'velo' || def.id === 'raptorpack') ? new RaptorMech(def) : (def.id === 'ankys' || def.id === 'lavaanky') ? new AnkyMech(def) : def.id === 'stegos' ? new StegoMech(def) : def.id === 'allo' ? new AlloMech(def) : def.id === 'dilo' ? new DiloMech(def) : def.id === 'pachy' ? new PachyMech(def) : def.id === 'para' ? new ParaMech(def) : def.farmKid ? new KidMech(def) : def.westie ? new Pup(def) : def.sea ? new SeaBeast(def) : def.real ? new Beast(def, assets, wild) : new Mech(def, assets, wild);
@@ -1240,44 +1247,38 @@ export class Game {
   updateCamera(dt, inp) {
     const p = this.player, c = this.cam, h = p.mech.height;
     // auto-follow behind the dino while moving (unless the player is steering the camera)
-    if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI + (p.def.id === 'brachio' ? -0.62 : 0); c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
-    if (p.def.hoopster && !inp.looking) {
-      const s = this.stomp, air = s && (s.state === 'swing' || s.state === 'air' || s.state === 'wall');
-      let wantPitch = air ? 0.34 : 0.38;
-      if (!air && s && s.lastRoof && Math.hypot(p.pos.x - s.lastRoof.x, p.pos.z - s.lastRoof.z) > s.lastRoof.r - 2.5) wantPitch = 0.50;
-      const k = 1 - Math.exp(-3 * dt);
-      let wantYaw = p.yaw + Math.PI;
-      if (s && s.hooked && s.anchor && s.anchor.roof) {
-        const roof = s.anchor.roof;
-        const out = Math.atan2(p.pos.x - roof.x, p.pos.z - roof.z);
-        const delta = angDiff(wantYaw, out);
-        wantYaw += Math.max(-0.35, Math.min(0.35, delta));
+    if (!inp.looking && p.speedNow > 1.5 && !(p.def && p.def.hoopster)) { const want = p.yaw + Math.PI + (p.def.id === 'brachio' ? -0.62 : 0); c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
+    if (p.def.hoopster && this.stomp) {
+      const s = this.stomp;
+      const air = s.state === 'swing' || s.state === 'air' || s.state === 'wall';
+      if (s.camHeading == null || !Number.isFinite(s.camHeading)) s.camHeading = p.yaw;
+      if (!air) {
+        if (p.speedNow > 1.5 && Math.abs(angDiff(s.camHeading, p.yaw)) > 18 * Math.PI / 180) s.camHeading = dampAngle(s.camHeading, p.yaw, 2.5, dt, 90 * Math.PI / 180);
+        s._inAirCam = false;
+      } else {
+        const route = Number.isFinite(s.routeHeading) ? s.routeHeading : s.camHeading;
+        s.camHeading = dampAngle(s.camHeading, route, 1.5, dt, 60 * Math.PI / 180);
       }
-      c.pitch += (wantPitch - c.pitch) * k; c.yaw += angDiff(c.yaw, wantYaw) * k;
+      if (!inp.looking) c.yaw = dampAngle(c.yaw, s.camHeading + Math.PI, air ? 1.0 : 2.5, dt, (air ? 12 : 90) * Math.PI / 180);
+      let wantPitch = 0.36;
+      if (!air && s.lastRoof) {
+        const rim = Math.hypot(p.pos.x - s.lastRoof.x, p.pos.z - s.lastRoof.z);
+        wantPitch = 0.38 + 0.08 * smoothstep(s.lastRoof.r - 4, s.lastRoof.r - 1.5, rim);
+      }
+      c.pitch = damp(c.pitch, wantPitch, 2, dt);
     }
     else if (p.def.farmKid && !inp.looking) { c.pitch += (0.16 - c.pitch) * Math.min(1, dt * 2); if (p.speedNow < 0.35) c.yaw += angDiff(c.yaw, p.yaw + Math.PI + 0.44) * Math.min(1, dt * 1.4); }
     if (p.def.hoopster) {
       const portrait = window.innerHeight > window.innerWidth;
-      const s = this.stomp;
-      let chase = false;
-      if (portrait && s && !s.won && s.david && p) {
-        const c01 = v => Math.max(0, Math.min(1, v));
-        const dx = s.david.x - p.pos.x, dz = s.david.z - p.pos.z, dd = Math.hypot(dx, dz) || 1;
-        const ahead = (-dx * Math.sin(c.yaw) - dz * Math.cos(c.yaw)) / dd;
-        chase = 0.35 * c01((26 - dd) / 8) * c01((dd - 3) / 3) * c01((ahead - 0.2) / 0.5) > 0.02;
-      }
-      this._chase = chase;
-      const want = portrait ? (chase ? 56 : 62) : 54;
-      const next = this.camera.fov + (want - this.camera.fov) * (1 - Math.exp(-4 * dt));
-      if (Math.abs(next - this.camera.fov) > 0.02) { this.camera.fov = next; this.camera.updateProjectionMatrix(); }
+      const w = this.stomp && this.stomp.davidW || 0;
+      const want = portrait ? 62 - 6 * w : 54;
+      const next = damp(this.camera.fov, want, 1.5, dt);
+      if (Math.abs(next - this.camera.fov) > 0.5) { this.camera.fov = next; this.camera.updateProjectionMatrix(); }
     }
     else if (p.def.farmKid) { const want = window.innerWidth > window.innerHeight ? 42 : 56; if (Math.abs(this.camera.fov - want) > 0.4) { this.camera.fov = want; this.camera.updateProjectionMatrix(); } }
     if (p.def.id === 'brachio' && !inp.looking) c.pitch += (0.32 - c.pitch) * Math.min(1, dt * 2);
-    const hoopAir = p.def.hoopster && this.stomp && (this.stomp.state === 'swing' || this.stomp.state === 'air' || this.stomp.state === 'wall');
     const hoopPortrait = p.def.hoopster && window.innerHeight > window.innerWidth;
-    const airDist = hoopPortrait ? 4.4 : 4.7;
-    const roofDist = hoopPortrait && this._chase ? 5.0 : 5.4;
-    let dist = (p.def.hoopster ? (hoopAir ? airDist : roofDist) : p.def.farmKid ? 3.65 : 4 + h * 1.55) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.def.id === 'stegos' ? 5 : 0) + (p.def.id === 'allo' ? 4 : 0) + (p.def.id === 'dilo' ? 3 : 0) + (p.def.id === 'pachy' ? 3 : 0) + (p.def.id === 'para' ? 5 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
+    let dist = (p.def.hoopster ? (hoopPortrait ? 4.6 : 5.0) : p.def.farmKid ? 3.65 : 4 + h * 1.55) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.def.id === 'stegos' ? 5 : 0) + (p.def.id === 'allo' ? 4 : 0) + (p.def.id === 'dilo' ? 3 : 0) + (p.def.id === 'pachy' ? 3 : 0) + (p.def.id === 'para' ? 5 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
     // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
@@ -1288,36 +1289,89 @@ export class Game {
     if (CC) { CC.t += dt; const b = CC.b; ck = Math.min(1, CC.t / 0.45) * Math.min(1, Math.max(0, (CC.dur - CC.t) / 0.9)); if (CC.t >= CC.dur || !this.world.city) this.collapseCam = null;
       else { this.collapseShots++; if (CC.yaw === undefined) this.pickCollapseShot(CC, p, c);
         dist = lerp(dist, Math.max(dist, CC.dist), ck); if (!inp.looking) c.yaw += angDiff(c.yaw, CC.yaw) * Math.min(1, dt * 3) * ck; } }
-    const tgt = tmp.set(p.pos.x, p.pos.y + (p.def.hoopster ? (hoopAir ? 0.6 : 0.9) : p.def.farmKid ? h * 0.42 : h * 0.82) + (p.def.lion ? 0.35 : 0) + (p.def.costume ? 0.25 : 0) + (p.def.kind === 'trex' ? 0.45 : 0) + (p.def.id === 'brachio' ? 0.2 : 0) + (p.def.id === 'giga' ? 0.3 : 0) + (p.def.id === 'spinos' ? 0.35 : 0) + (p.def.id === 'trice' ? 0.15 : 0) + (p.def.id === 'carno' ? 0.2 : 0), p.pos.z);
+    const tgt = tmp.set(p.pos.x, p.pos.y + (p.def.hoopster ? 0.8 : p.def.farmKid ? h * 0.42 : h * 0.82) + (p.def.lion ? 0.35 : 0) + (p.def.costume ? 0.25 : 0) + (p.def.kind === 'trex' ? 0.45 : 0) + (p.def.id === 'brachio' ? 0.2 : 0) + (p.def.id === 'giga' ? 0.3 : 0) + (p.def.id === 'spinos' ? 0.35 : 0) + (p.def.id === 'trice' ? 0.15 : 0) + (p.def.id === 'carno' ? 0.2 : 0), p.pos.z);
     if (p.def.farmKid && p.mech.castleH) tgt.y += p.mech.castleH * 0.45; // v5.6.1 the camera rises a little with the big castle bounces, so Leandro stays in the picture
     if (CC && ck > 0) { const b = CC.b, gy = this.world.height(b.x, b.z); tgt.lerp(new THREE.Vector3((b.x + p.pos.x) / 2, gy + b.h * 0.45, (b.z + p.pos.z) / 2), ck); } // same aim point pickCollapseShot checked
     if (this.hype && (this.swoop || this.koCam)) dist = this.hype.camera(dt, dist, tgt, c, p, inp); // v5.4 KO punch-in + surprise / boss swoop
-    c.dist = lerp(c.dist, dist, p.def.hoopster ? (1 - Math.exp(-3 * dt)) : Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : CC ? 4 : 3)));
-    const pitch = CC && ck > 0 && CC.pitch !== undefined ? lerp(c.pitch, CC.pitch, ck) : c.pitch; // v5.6: the collapse shot rises above the rooftops
-    const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(pitch) * c.dist, tgt.y + Math.sin(pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(pitch) * c.dist);
-    const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
+    c.dist = p.def.hoopster ? damp(c.dist, dist, 1.5, dt) : lerp(c.dist, dist, Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : CC ? 4 : 3)));
     if (p.def.hoopster && this.stomp) {
-      const s = this.stomp, air = s.state === 'swing' || s.state === 'air' || s.state === 'wall';
-      const lead = air ? 2.5 : 1.5; const vx = s.vel.x, vz = s.vel.z, vl = Math.hypot(vx, vz);
-      if (vl > 0.4) { tgt.x += vx / vl * lead; tgt.z += vz / vl * lead; }
-      if (air && s.hooked && s.anchor) { tgt.x = tgt.x * 0.85 + s.anchor.x * 0.15; tgt.z = tgt.z * 0.85 + s.anchor.z * 0.15; tgt.y = Math.min(p.pos.y + 2.2, tgt.y * 0.85 + Math.min(s.anchor.y, p.pos.y + 4) * 0.15); }
+      const s = this.stomp;
+      const head = Number.isFinite(s.camHeading) ? s.camHeading : p.yaw;
+      if (s.camY == null || !Number.isFinite(s.camY)) s.camY = p.pos.y;
+      if (s.state === 'roof' && s.lastRoof) s.camY = damp(s.camY, s.lastRoof.h, 3, dt);
+      else {
+        const dy = p.pos.y - s.camY;
+        if (dy < -1 || dy > 1.5) s.camY = damp(s.camY, p.pos.y, 2, dt);
+      }
+      tgt.set(p.pos.x + Math.sin(head) * 1.6, s.camY + 0.8, p.pos.z + Math.cos(head) * 1.6);
+      const airNow = s.state === 'swing' || s.state === 'air' || s.state === 'wall';
+      if (airNow && s.takeoff) {
+        const trackHead = Number.isFinite(s.trackHeading) ? s.trackHeading : head;
+        const hx = Math.sin(trackHead), hz = Math.cos(trackHead);
+        const along = (p.pos.x - s.takeoff.x) * hx + (p.pos.z - s.takeoff.z) * hz;
+        const across = (p.pos.x - s.takeoff.x) * -hz + (p.pos.z - s.takeoff.z) * hx;
+        s.camAcross = damp(s.camAcross || 0, across, 0.7, dt);
+        const ax = 0;
+        tgt.x = s.takeoff.x + hx * along - hz * ax + hx * 1.6;
+        tgt.z = s.takeoff.z + hz * along + hx * ax + hz * 1.6;
+      } else s.camAcross = 0;
+      if (airNow) {
+        if (s.airY0 == null) s.airY0 = s.camY;
+        const dy = p.pos.y - s.camY;
+        if (dy < -1 || dy > 1.5) s.camY = damp(s.camY, p.pos.y, 2, dt);
+        s.camY = Math.max(s.airY0 - 0.22, Math.min(s.airY0 + 0.22, s.camY));
+        tgt.y = s.camY + 0.8;
+      } else s.airY0 = null;
+      let wantW = 0;
       if (!s.won && s.david) {
         const c01 = v => Math.max(0, Math.min(1, v));
         const dx = s.david.x - p.pos.x, dz = s.david.z - p.pos.z, dd = Math.hypot(dx, dz) || 1;
-        const ahead = (-dx * Math.sin(c.yaw) - dz * Math.cos(c.yaw)) / dd; // 1 = David beyond the hero, away from the camera
-        const w = 0.35 * c01((26 - dd) / 8) * c01((dd - 3) / 3) * c01((ahead - 0.2) / 0.5);
-        tgt.x += (s.david.x - tgt.x) * w; tgt.z += (s.david.z - tgt.z) * w;
-        tgt.y += (Math.min(s.david.y + 0.6, p.pos.y + 1.6) - tgt.y) * w;
+        const ahead = (dx * Math.sin(head) + dz * Math.cos(head)) / dd;
+        wantW = 0.35 * c01((26 - dd) / 8) * c01((dd - 3) / 3) * c01((ahead - 0.2) / 0.5);
       }
-      tgt.y = Math.min(tgt.y, p.pos.y + 2.4);
+      s.davidW = damp(s.davidW || 0, Math.min(0.2, wantW), 1.5, dt);
+      if (s.david && s.davidW > 0) {
+        if (!airNow) {
+          const ox = (s.david.x - tgt.x) * s.davidW, oz = (s.david.z - tgt.z) * s.davidW;
+          const od = Math.hypot(ox, oz) || 1, k = od > 0.35 ? 0.35 / od : 1;
+          tgt.x += ox * k; tgt.z += oz * k;
+        }
+        tgt.y += (s.david.y - tgt.y) * s.davidW;
+      }
     }
+    const pitch = (!p.def.hoopster && CC && ck > 0 && CC.pitch !== undefined) ? lerp(c.pitch, CC.pitch, ck) : c.pitch;
+    const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(pitch) * c.dist, tgt.y + Math.sin(pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(pitch) * c.dist);
+    const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
     if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
-    const spring = p.def.hoopster ? (1 - Math.exp(-6 * dt)) : Math.min(1, dt * 8);
-    const lookSpring = p.def.hoopster ? (1 - Math.exp(-9 * dt)) : Math.min(1, dt * 12);
-    c.pos.lerp(cp, spring); c.look.lerp(tgt, lookSpring);
+    if (p.def.hoopster) {
+      const kx = 1 - Math.exp(-5 * dt), ky = 1 - Math.exp(-3 * dt);
+      let dx = (tgt.x - c.look.x) * kx, dy = (tgt.y - c.look.y) * ky, dz = (tgt.z - c.look.z) * kx;
+      const mag = Math.hypot(dx, dy, dz);
+      if (mag > 0.12) { const s = 0.12 / mag; dx *= s; dy *= s; dz *= s; }
+      c.look.x += dx; c.look.y += dy; c.look.z += dz;
+      cp.set(
+        c.look.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist,
+        c.look.y + Math.sin(c.pitch) * c.dist,
+        c.look.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist
+      );
+      this.stomp.keepCameraOut(cp, c.look, dt);
+      c.pos.copy(cp);
+    } else {
+      const spring = Math.min(1, dt * 8), lookSpring = Math.min(1, dt * 12);
+      c.pos.lerp(cp, spring); c.look.lerp(tgt, lookSpring);
+    }
     this.camera.position.copy(c.pos);
-    const sh = this.fx.shake; if (sh > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
-    if (p.def.hoopster && this.stomp) this.stomp.keepCameraOut(this.camera);
+    const sh = this.fx.shake;
+    if (p.def.hoopster) {
+      const quiet = this.stomp && this.stomp.quietShake > 0;
+      const amp = quiet ? 0 : Math.min(0.04, sh || 0);
+      if (amp > 0) {
+        const t = this.world.time || 0;
+        this.camera.position.x += Math.sin(t * 50.2) * amp;
+        this.camera.position.y += Math.sin(t * 47.1 + 1.2) * amp;
+      }
+    } else if (sh > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
+    if (p.def.hoopster) this.camera.up.set(0, 1, 0);
     this.camera.lookAt(c.look);
     if (this.camHook) this.camHook(this.camera); // test/screenshot framing hook
     if (p.def.hoopster && this.stomp) this.stomp.placeChevrons();

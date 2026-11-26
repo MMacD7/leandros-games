@@ -9,6 +9,8 @@ export class Input {
     this.zone.addEventListener('touchstart', e => this.ts(e), opt);
     window.addEventListener('touchmove', e => this.tm(e), opt);
     window.addEventListener('touchend', e => this.te(e), opt); window.addEventListener('touchcancel', e => this.te(e), opt);
+    window.addEventListener('blur', () => this.releaseHolds());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseHolds(); });
     // buttons: pointer events per button, each tracking its own pointerIds, so several buttons can be held at once
     // (and the joystick keeps working). Every press counts; holding auto-repeats in the game loop.
     document.querySelectorAll('[data-btn]').forEach(b => {
@@ -33,15 +35,17 @@ export class Input {
   }
   ts(e) {
     if (!this.enabled) return; e.preventDefault();
+    this.reconcile(e.touches);
     for (const t of e.changedTouches) {
       if (t.clientX < window.innerWidth * 0.45 && this.joyId === null) {
         this.joyId = t.identifier; this.joyC = { x: t.clientX, y: t.clientY };
         this.joyBase.style.transform = `translate(${t.clientX - 60}px, ${t.clientY - 60}px)`; this.joyBase.classList.add('active'); this.setKnob(0, 0);
-      } else if (this.lookId === null) { this.lookId = t.identifier; this.lookP = { x: t.clientX, y: t.clientY }; }
+      } else if (this.lookId === null && t.clientX >= window.innerWidth * 0.45) { this.lookId = t.identifier; this.lookP = { x: t.clientX, y: t.clientY }; }
     }
   }
   tm(e) {
     if (this.enabled) e.preventDefault();
+    this.reconcile(e.touches);
     for (const t of e.changedTouches) {
       if (t.identifier === this.joyId) { let dx = t.clientX - this.joyC.x, dy = t.clientY - this.joyC.y; const L = Math.hypot(dx, dy), M = 55; if (L > M) { dx *= M / L; dy *= M / L; }
         this.move.x = dx / M; this.move.y = dy / M; this.setKnob(dx, dy); }
@@ -50,9 +54,24 @@ export class Input {
   }
   te(e) {
     for (const t of e.changedTouches) {
-      if (t.identifier === this.joyId) { this.joyId = null; this.move.x = this.move.y = 0; this.setKnob(0, 0); this.joyBase.classList.remove('active'); this.joyBase.style.transform = ''; }
+      if (t.identifier === this.joyId) this.releaseJoy();
       if (t.identifier === this.lookId) this.lookId = null;
     }
+    this.reconcile(e.touches);
+    if (!e.touches.length) this.releaseHolds();
+  }
+  reconcile(touches) {
+    const ids = new Set();
+    for (let i = 0; i < touches.length; i++) ids.add(touches[i].identifier);
+    if (this.joyId !== null && !ids.has(this.joyId)) this.releaseJoy();
+    if (this.lookId !== null && !ids.has(this.lookId)) this.lookId = null;
+  }
+  releaseJoy() { this.joyId = null; this.move.x = this.move.y = 0; this.setKnob(0, 0); this.joyBase.classList.remove('active'); this.joyBase.style.transform = ''; }
+  releaseHolds() {
+    this.releaseJoy(); this.lookId = null;
+    for (const k in this.btn) this.btn[k] = false;
+    for (const k in (this.btnIds || {})) this.btnIds[k].clear();
+    document.querySelectorAll('[data-btn]').forEach(b => b.classList.remove('down'));
   }
   setKnob(x, y) { this.joyKnob.style.transform = `translate(${x}px, ${y}px)`; }
   read() {

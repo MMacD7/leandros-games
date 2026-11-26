@@ -273,6 +273,7 @@ export class StompLife {
     this.bubble = new THREE.Mesh(new THREE.SphereGeometry(1.15, 16, 12), new THREE.MeshStandardMaterial({ color: 0xe9fff2, emissive: 0x19e4ff, emissiveIntensity: 0.7, transparent: true, opacity: 0.45, roughness: 0.2 }));
     this.bubble.visible = false; this.data.root.add(this.bubble);
     this.path = [1, 2, 3, 6, 5, 4].map(i => this.towers[i]);
+    this.buildCoins();
     this.reset();
   }
   makeCable() {
@@ -357,6 +358,10 @@ export class StompLife {
       p.pos.set(start.x, start.h, start.z); p.yaw = Math.atan2(this.towers[1].x - start.x, this.towers[1].z - start.z); p.speedNow = 0; p.alive = true;
       const R = p.mech && p.mech.R; if (R) { R.attachSkin(); R.setHoopster(true); }
     }
+    this.camHeading = p ? p.yaw : 0; this.camY = start.h; this.routeHeading = this.camHeading;
+    this.trackHeading = this.camHeading; this._inAirCam = false; this.takeoff = null;
+    this._camLen = null; this.quietShake = 0; this.zipT = 0; this.coinChain = 0; this.coinChainT = 0;
+    this.resetCoins();
     this.placeDavid(0);
     this.sayStep();
     this.rbQueued = 0;
@@ -372,16 +377,13 @@ export class StompLife {
     }
     return null;
   }
-  keepCameraOut(cam) {
-    const p = this.g.player; if (!p) return;
-    const look = this._look || (this._look = new THREE.Vector3());
-    look.set(p.pos.x, p.pos.y + 0.9, p.pos.z);
-    const cp = cam.position;
+  keepCameraOut(cp, look, dt) {
+    if (!cp || !look || !cp.isVector3) return;
     const dir = this._camDir || (this._camDir = new THREE.Vector3());
     dir.copy(cp).sub(look);
-    let len = dir.length(); if (len < 0.4) return;
+    let len = dir.length(); if (len < 0.4 || !Number.isFinite(len)) return;
     dir.multiplyScalar(1 / len);
-    let lift = 0;
+    let blocked = len, lift = 0;
     for (const t of this.towers) {
       const ox = look.x - t.x, oz = look.z - t.z;
       const a = dir.x * dir.x + dir.z * dir.z; if (a < 1e-6) continue;
@@ -393,11 +395,16 @@ export class StompLife {
       if (hit < 0.3 || hit > len) continue;
       const yHit = look.y + dir.y * hit;
       if (yHit > t.h + 1.2) continue;
-      if (t.h - look.y < 8) lift = Math.max(lift, t.h + 1.5);
-      else len = Math.max(4.0, hit - 0.4);
+      if (t.h - look.y < 8) lift = Math.max(lift, (t.h + 1.5) - (look.y + dir.y * Math.max(4, hit - 0.4)));
+      else blocked = Math.min(blocked, Math.max(4.0, hit - 0.4));
     }
-    cp.copy(look).addScaledVector(dir, len);
-    if (lift) cp.y = Math.max(cp.y, lift);
+    const step = typeof dt === 'number' ? dt : 1 / 60;
+    const dampTo = (cur, goal, lambda) => cur + (goal - cur) * (1 - Math.exp(-lambda * step));
+    if (this._camLen == null || !Number.isFinite(this._camLen)) this._camLen = len;
+    this._camLen = dampTo(this._camLen, blocked, blocked < this._camLen - 0.05 ? 12 : 2.5);
+    this._camLift = dampTo(this._camLift || 0, lift, 6);
+    cp.copy(look).addScaledVector(dir, this._camLen);
+    cp.y += this._camLift;
   }
   titlePose() {
     this.reset();
@@ -470,7 +477,11 @@ export class StompLife {
   }
   hook(a) {
     const p = this.g.player;
-    this.anchor = a; this.hooked = true; this.state = 'swing'; this.zipping = false; this.hookT = this.g.world.time;
+    const from = this.lastRoof || { x: p.pos.x, z: p.pos.z };
+    this.routeHeading = Math.atan2(a.x - from.x, a.z - from.z);
+    this.takeoff = { x: p.pos.x, z: p.pos.z, h: this.lastRoof ? this.lastRoof.h : p.pos.y };
+    if (!this._inAirCam) { this.camHeading = this.routeHeading; this.trackHeading = this.routeHeading; this._inAirCam = true; }
+    this.anchor = a; this.hooked = true; this.state = 'swing'; this.zipping = false; this.zipT = 0; this.hookT = this.g.world.time;
     this.len = Math.max(6, Math.hypot(a.x - p.pos.x, a.y - p.pos.y, a.z - p.pos.z));
     this.sawSwing = true; if (this.step === 0) { this.step = 1; this.sayStep(); }
     sfx.whoosh && sfx.whoosh(0.7);
@@ -492,7 +503,11 @@ export class StompLife {
     this.sayStep(); sfx.whoosh && sfx.whoosh(1);
   }
   drive(p, dt, dir, mag, inp) {
+    if (!p || !Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.y) || !Number.isFinite(p.pos.z) || !Number.isFinite(this.vel.x)) { this.recover(p); return; }
+    if (this.quietShake > 0) this.quietShake -= dt;
     if (this.won) { p.speedNow = 0; return; }
+    if (this.state === 'wall' && !this.wall) { this.state = 'air'; this.vel.y = Math.max(this.vel.y, 4); }
+    if (!['roof', 'air', 'swing', 'wall', 'bubble'].includes(this.state)) this.recover(p);
     const hold = !!(inp && inp.btn && inp.btn.laser);
     const zip = !!(inp && inp.pressed && inp.pressed.missile);
     const wrap = !!(inp && inp.pressed && inp.pressed.melee);
@@ -523,7 +538,8 @@ export class StompLife {
     if (this.zipping) {
       const dx = a.x - p.pos.x, dy = (a.y - 1.1) - p.pos.y, dz = a.z - p.pos.z, d = Math.hypot(dx, dy, dz) || 1;
       this.vel.set(dx / d * 26, dy / d * 26, dz / d * 26);
-      if (d < 2.4) { this.landAt(p, a); return; }
+      if (d < 2.4 || this.zipT > 1.3) { this.landAt(p, a); return; }
+      this.zipT += dt;
       p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
       p.speedNow = 16;
       if (this.vel.lengthSq() > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
@@ -551,6 +567,8 @@ export class StompLife {
         const fwd = Math.sin(p.yaw) * (next.x - p.pos.x) + Math.cos(p.yaw) * (next.z - p.pos.z);
         if (flat > 6 && flat < 16 && fwd > 0) {
           this.anchor = next; this.hookT = this.g.world.time;
+          const from = a.roof || this.lastRoof || { x: p.pos.x, z: p.pos.z };
+          this.routeHeading = Math.atan2(next.x - from.x, next.z - from.z);
           this.len = Math.max(4.2, Math.hypot(next.x - p.pos.x, next.y - p.pos.y, next.z - p.pos.z));
         }
       }
@@ -576,7 +594,7 @@ export class StompLife {
   landAt(p, a) {
     const roof = a.roof || this.towers.reduce((b, t) => !b || Math.hypot(t.x - a.x, t.z - a.z) < Math.hypot(b.x - a.x, b.z - a.z) ? t : b, null);
     p.pos.set(roof.x, roof.h, roof.z); this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false;
-    this.lastRoof = roof; p.speedNow = 0; sfx.boing && sfx.boing(0.6, 0.8);
+    this.lastRoof = roof; p.speedNow = 0; this.quietShake = 0.45; this.zipT = 0; sfx.boing && sfx.boing(0.6, 0.8);
   }
   stepRoof(p, dt, wish, mag) {
     const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y + 0.4) || this.lastRoof;
@@ -588,6 +606,12 @@ export class StompLife {
       } else { p.pos.x = nx; p.pos.z = nz; p.yaw = Math.atan2(wish.x, wish.z); }
     }
     p.pos.y = roof.h; this.lastRoof = roof; p.speedNow = spd;
+    const stuck = Math.hypot(p.pos.x - roof.x, p.pos.z - roof.z);
+    if (stuck > roof.r - 0.05 && mag < 0.08) {
+      const k = (roof.r - 0.45) / stuck;
+      p.pos.x = roof.x + (p.pos.x - roof.x) * k;
+      p.pos.z = roof.z + (p.pos.z - roof.z) * k;
+    }
   }
   stepAir(p, dt, wish, mag) {
     this.vel.y -= 20 * dt;
@@ -605,11 +629,11 @@ export class StompLife {
       if (d < t.r + 0.85 && p.pos.y >= t.h - 0.15 && p.pos.y <= t.h + 3.4 && this.vel.y <= 0.4) caught = !caught || t.h > caught.h ? t : caught;
     }
     if (caught) {
-      p.pos.y = caught.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; return;
+      p.pos.y = caught.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; this.quietShake = 0.45; return;
     }
     const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y);
     if (roof && this.vel.y <= 0 && p.pos.y <= roof.h + 0.35) {
-      p.pos.y = roof.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = roof; p.speedNow = 0; return;
+      p.pos.y = roof.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = roof; p.speedNow = 0; this.quietShake = 0.45; return;
     }
     this.keepOutside(p);
     const roofLine = this.lastRoof ? this.lastRoof.h : 20;
@@ -626,7 +650,9 @@ export class StompLife {
     return null;
   }
   stepWall(p, dt, wish, mag) {
-    const w = this.wall; this.wallT -= dt;
+    const w = this.wall;
+    if (!w) { this.state = 'air'; this.vel.y = Math.max(4, this.vel.y); return; }
+    this.wallT -= dt;
     const rx = p.pos.x - w.x, rz = p.pos.z - w.z, rd = Math.hypot(rx, rz) || 1;
     let tx = -rz / rd, tz = rx / rd;
     if (mag > 0.1 && wish.x * tx + wish.z * tz < 0) { tx = -tx; tz = -tz; }
@@ -861,8 +887,146 @@ export class StompLife {
     this.shade.visible = true;
     this.shade.position.set(p.pos.x, roof.h + 0.07, p.pos.z);
   }
+  recover(p) {
+    const roof = (p && this.roofAt(p.pos.x, p.pos.z, (p.pos.y || 0) + 2)) || this.lastRoof || this.towers[0];
+    this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false; this.zipT = 0; this.wall = null;
+    this.lastRoof = roof;
+    if (p) { p.pos.set(roof.x, roof.h, roof.z); p.alive = true; p.speedNow = 0; if (!Number.isFinite(p.yaw)) p.yaw = 0; }
+  }
+  coinClear(x, y, z) {
+    for (const t of this.towers) {
+      if (y < t.h - 0.3 && Math.hypot(x - t.x, z - t.z) < t.r + 1.2) return false;
+    }
+    for (const a of this.anchors) if (Math.hypot(x - a.x, y - a.y, z - a.z) < 1.5) return false;
+    return Number.isFinite(x + y + z);
+  }
+  buildCoins() {
+    const spots = [];
+    const push = (x, y, z) => { if (spots.length >= 60) return; if (this.coinClear(x, y, z)) spots.push({ x, y, z, baseY: y, got: false, fly: 0 }); };
+    const arcs = [[0, 1], [1, 4], [4, 2], [2, 3], [3, 6]];
+    for (const [ia, ib] of arcs) {
+      const a = this.towers[ia], b = this.towers[ib];
+      const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz) || 1;
+      const start = a.r + 1.4, end = len - (b.r + 1.4), span = Math.max(1.2, end - start);
+      const count = Math.max(7, Math.min(9, Math.floor(span / 1.2)));
+      const gap = Math.min(1.2, span / count);
+      const mid = (start + end) * 0.5, total = gap * (count - 1);
+      for (let i = 0; i < count; i++) {
+        const along = mid - total * 0.5 + i * gap;
+        const u = along / len;
+        const sag = Math.sin(Math.PI * Math.max(0, Math.min(1, (along - start) / span))) * Math.min(7.5, len * 0.26);
+        push(a.x + dx / len * along, a.h + (b.h - a.h) * u - sag + 1.1, a.z + dz / len * along);
+      }
+    }
+    const line = (ia, ib, n) => {
+      const a = this.towers[ia], b = this.towers[ib];
+      const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz) || 1;
+      for (let i = 1; i <= n; i++) {
+        const d = Math.min(a.r - 0.9, 1.1 + i * 1.2);
+        if (d < 0.8) continue;
+        push(a.x + dx / len * d, a.h + 1.35, a.z + dz / len * d);
+      }
+    };
+    line(0, 1, 5); line(1, 4, 5); line(4, 2, 4);
+    const land = (ia, ib) => {
+      const a = this.towers[ia], b = this.towers[ib];
+      const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz) || 1;
+      for (let i = 1; i <= 3; i++) {
+        const d = b.r + 1.2 + i * 1.2;
+        const u = 1 - d / len;
+        push(b.x - dx / len * d, b.h + 1.2 + i * 0.7, b.z - dz / len * d);
+        void u;
+      }
+    };
+    land(0, 1); land(1, 4); land(4, 2);
+    this.coinSpots = spots.slice(0, 60);
+    const face = new THREE.CylinderGeometry(0.40, 0.40, 0.10, 20);
+    const edge = new THREE.CylinderGeometry(0.45, 0.45, 0.14, 16, 1, true);
+    const faceMat = new THREE.MeshStandardMaterial({ color: 0xffd23a, roughness: 0.35, metalness: 0.3, emissive: 0xffd23a, emissiveIntensity: 0.35 });
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0x3a0a10, roughness: 0.6, metalness: 0.05 });
+    this.coinFace = new THREE.InstancedMesh(face, faceMat, this.coinSpots.length);
+    this.coinEdge = new THREE.InstancedMesh(edge, edgeMat, this.coinSpots.length);
+    this.coinFace.frustumCulled = this.coinEdge.frustumCulled = false;
+    this.coinFace.castShadow = this.coinEdge.castShadow = false;
+    const star = new THREE.BufferGeometry();
+    star.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      -0.22, 0.22, 0, 0.22, 0.22, 0, 0, 0.55, 0,
+      0.22, 0.22, 0, 0.22, -0.22, 0, 0.55, 0, 0,
+      0.22, -0.22, 0, -0.22, -0.22, 0, 0, -0.55, 0,
+      -0.22, -0.22, 0, -0.22, 0.22, 0, -0.55, 0, 0,
+    ]), 3));
+    this.coinSpark = new THREE.InstancedMesh(star, new THREE.MeshBasicMaterial({ color: 0xfff6d0, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), this.coinSpots.length);
+    this.coinSpark.frustumCulled = false;
+    this.data.root.add(this.coinEdge, this.coinFace, this.coinSpark);
+    this._coinDummy = new THREE.Object3D();
+    this.coinN = this.coinSpots.length;
+  }
+  resetCoins() {
+    if (!this.coinSpots) return;
+    for (const c of this.coinSpots) {
+      if (c.baseX == null) { c.baseX = c.x; c.baseZ = c.z; }
+      c.got = false; c.fly = 0; c._counted = false;
+      c.x = c.baseX; c.y = c.baseY; c.z = c.baseZ;
+    }
+  }
+  updateCoins(dt) {
+    if (!this.coinSpots || !this.coinFace) return;
+    const p = this.g.player, t = (this.g.world && this.g.world.time) || 0;
+    const dummy = this._coinDummy, m = dummy.matrix;
+    if (this.coinChainT > 0) this.coinChainT -= dt;
+    for (let i = 0; i < this.coinSpots.length; i++) {
+      const c = this.coinSpots[i];
+      if (c.got) { dummy.position.set(0, -100, 0); dummy.scale.set(0, 0, 0); dummy.rotation.set(0, 0, 0); dummy.updateMatrix(); this.coinFace.setMatrixAt(i, m); this.coinEdge.setMatrixAt(i, m); this.coinSpark.setMatrixAt(i, m); continue; }
+      if (!c.fly && p && p.alive) {
+        const d = Math.hypot(c.x - p.pos.x, c.y - (p.pos.y + 0.7), c.z - p.pos.z);
+        if (d < 2.1) { c.fly = 0.0001; c.from = { x: c.x, y: c.y, z: c.z }; }
+      }
+      let sc = 1;
+      if (c.fly) {
+        c.fly += dt;
+        const u = Math.min(1, c.fly / 0.15);
+        const chest = p ? { x: p.pos.x, y: p.pos.y + 0.7, z: p.pos.z } : c.from;
+        c.x = c.from.x + (chest.x - c.from.x) * u;
+        c.y = c.from.y + (chest.y - c.from.y) * u;
+        c.z = c.from.z + (chest.z - c.from.z) * u;
+        sc = 1 + 0.4 * u;
+        if (u >= 1 && !c._counted) {
+          c._counted = true; c.got = true;
+          if (this.coinChainT > 0) this.coinChain = (this.coinChain || 0) + 1; else this.coinChain = 1;
+          this.coinChainT = 1.5;
+          if (this.g.addBolts) this.g.addBolts(1);
+          const box = document.getElementById('bolts-box'); if (box) { box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
+          sfx.coinChime && sfx.coinChime(this.coinChain);
+          if (this.g.fx && this.g.fx.sparks) this.g.fx.sparks(new THREE.Vector3(c.x, c.y, c.z), 8, { r: 1, g: 0.89, b: 0.48 }, 0.7);
+          this.coinPop();
+        }
+      } else {
+        c.y = c.baseY + Math.sin(t * Math.PI * 2 * 0.7 + i) * 0.08;
+      }
+      dummy.position.set(c.x, c.y, c.z);
+      dummy.rotation.set(0, t * 1.2 + i, 0);
+      dummy.scale.set(sc, sc, sc);
+      dummy.updateMatrix();
+      this.coinFace.setMatrixAt(i, dummy.matrix);
+      this.coinEdge.setMatrixAt(i, dummy.matrix);
+      const flash = !c.fly && !c.got && ((t * 0.48 + i * 0.17) % 1) > 0.86;
+      dummy.scale.set(flash ? 0.9 : 0, flash ? 0.9 : 0, flash ? 0.9 : 0);
+      dummy.updateMatrix();
+      this.coinSpark.setMatrixAt(i, dummy.matrix);
+    }
+    this.coinFace.instanceMatrix.needsUpdate = this.coinEdge.instanceMatrix.needsUpdate = this.coinSpark.instanceMatrix.needsUpdate = true;
+  }
+  coinPop() {
+    const el = document.createElement('div');
+    el.textContent = '+1';
+    el.style.cssText = 'position:fixed;left:50%;top:42%;z-index:6;pointer-events:none;font:900 28px ui-rounded,sans-serif;color:#FFD23A;-webkit-text-stroke:3px #3A0A10;transform:translate(-50%,-50%) scale(.7);transition:transform .35s,opacity .35s;';
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.style.transform = 'translate(-50%,-80%) scale(1.15)'; el.style.opacity = '0'; });
+    setTimeout(() => el.remove(), 420);
+  }
   update(dt) {
     this._dt = dt;
+    this.updateCoins(dt);
     if (this.rbQueued > 0) {
       if (this.won) this.rbQueued = 0;
       else if (this.state === 'roof') {
@@ -910,7 +1074,8 @@ export class StompLife {
       d.position.y = d.userData.baseY + Math.sin(this.g.world.time * 1.4 + d.userData.bob) * 0.12;
     });
     if (p) {
-      const R = p.mech && p.mech.R; if (R) {
+      const R = p.mech && p.mech.R;       if (R) {
+        try {
         if (!R._hoopster) { R.attachSkin(); R.setHoopster(true); }
         let lean = 0;
         if (this.anchor && (this.state === 'swing' || this.state === 'wall')) {
@@ -923,6 +1088,7 @@ export class StompLife {
         R.heroAct(this.state, this._dt || 0, { speed: p.speedNow, vy: this.vel.y, lean });
         if (shooting) R.aimShoot(this.anchor);
         if (R.pulseCuffs) R.pulseCuffs(!!shooting, this.g.world.time);
+        } catch (err) { /* a bad clip must not freeze the swing */ }
       }
       this.poseCable(p);
       this.fadeProps(p);

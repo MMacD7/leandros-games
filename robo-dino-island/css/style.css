@@ -20,7 +20,8 @@ body.playing #touch-zone { display: block; }
 #timer { font-size: 30px; font-weight: 900; padding: 2px 16px; border-radius: 12px; background: linear-gradient(180deg, rgba(220,40,40,.75), rgba(40,90,220,.75)); border: 2px solid rgba(255,255,255,.5); letter-spacing: 1px; text-shadow: 0 2px 3px rgba(0,0,0,.5); }
 #wave { font-size: 13px; font-weight: 700; margin-top: 3px; text-shadow: 0 1px 3px #000; }
 #hud-tr { position: absolute; top: calc(var(--sat) + 10px); right: calc(var(--sar) + 12px); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-#bolts-box, .g-bolts { background: rgba(10,20,30,.6); border: 2px solid rgba(255,210,80,.7); border-radius: 20px; padding: 4px 14px; font-size: 20px; font-weight: 900; }
+#bolts-box.pop { animation: boltPop .28s ease; }
+@keyframes boltPop { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
 #eggs-box { background: rgba(10,20,30,.6); border: 2px solid rgba(255,180,120,.8); border-radius: 20px; padding: 3px 12px; font-size: 16px; font-weight: 900; }
 #eggs-pop { display: block; max-height: 0; overflow: hidden; font-style: normal; font-size: 12px; font-weight: 800; color: #ffe9a8; opacity: 0; text-align: right; }
 #eggs-pop.show { max-height: 18px; animation: eggPopIn .9s ease; }
