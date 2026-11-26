@@ -1,6 +1,70 @@
 // Loads the Meshy lion (see CREDITS.md). One shared file, a skinned copy per actor.
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clone } from './vendor/SkeletonUtils.js';
+import { KTX2Loader } from './vendor/KTX2Loader.js';
+import { MeshoptDecoder } from './vendor/meshopt_decoder.module.js';
+
+let ktx2 = null;
+
+export function prepareLoaders(renderer, manager) {
+  if (ktx2) return ktx2;
+  ktx2 = new KTX2Loader(manager);
+  ktx2.setTranscoderPath('js/vendor/basis/');
+  ktx2.detectSupport(renderer);
+  return ktx2;
+}
+
+function modelLoader(mgr) {
+  const loader = new GLTFLoader(mgr);
+  if (ktx2) loader.setKTX2Loader(ktx2);
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  return loader;
+}
+
+export const cityMaps = { hi: {}, lo: {} };
+const CITY_HI = {
+  albedo: 'assets/textures/stomp/facade-atlas-albedo.ktx2',
+  normal: 'assets/textures/stomp/facade-atlas-normal.ktx2',
+  orm: 'assets/textures/stomp/facade-atlas-orm.ktx2',
+  emis: 'assets/textures/stomp/facade-atlas-emis.ktx2',
+  tint: 'assets/textures/stomp/facade-atlas-tintmask.ktx2',
+  roof: 'assets/textures/stomp/roof-cap-albedo.ktx2',
+  roofN: 'assets/textures/stomp/roof-cap-normal.ktx2',
+};
+const CITY_LO = {
+  albedo: 'assets/textures/stomp/facade-atlas-1024-albedo.ktx2',
+  normal: 'assets/textures/stomp/facade-atlas-1024-normal.ktx2',
+  orm: 'assets/textures/stomp/facade-atlas-1024-orm.ktx2',
+  emis: 'assets/textures/stomp/facade-atlas-1024-emis.ktx2',
+  tint: 'assets/textures/stomp/facade-atlas-1024-tintmask.ktx2',
+  roof: 'assets/textures/stomp/roof-cap-1024-albedo.ktx2',
+  roofN: 'assets/textures/stomp/roof-cap-1024-normal.ktx2',
+};
+
+function loadCitySet(bucket, table, track) {
+  const mgr = ktx2.manager;
+  for (const [key, url] of Object.entries(table)) {
+    const gate = url + '#decode';
+    if (track && mgr) mgr.itemStart(gate);
+    ktx2.load(url, tex => {
+      bucket[key] = tex;
+      if (track && mgr) mgr.itemEnd(gate);
+    }, undefined, err => {
+      console.error(url, err);
+      if (track && mgr) { mgr.itemError(gate); mgr.itemEnd(gate); }
+    });
+  }
+}
+
+export function preloadCityMaps() {
+  loadCitySet(cityMaps.hi, CITY_HI, true);
+}
+
+export function preloadCityMapsLow() {
+  if (cityMaps.lo.albedo || cityMaps.lo.started) return;
+  cityMaps.lo.started = true;
+  loadCitySet(cityMaps.lo, CITY_LO, false);
+}
 
 const LION_URL = 'assets/models/lion.glb';
 const TREX_URL = 'assets/models/trex.glb';
@@ -12,7 +76,7 @@ let brachioCache = null;
 let gigaCache = null;
 
 export function preloadLion(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(LION_URL, gltf => { lionCache = gltf; }, undefined, err => console.error(LION_URL, err));
 }
 
@@ -22,7 +86,7 @@ export function cloneLion() {
 }
 
 export function preloadTrex(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(TREX_URL, gltf => { trexCache = gltf; }, undefined, err => console.error(TREX_URL, err));
 }
 
@@ -32,7 +96,7 @@ export function cloneTrex() {
 }
 
 export function preloadBrachio(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(BRACHIO_URL, gltf => { brachioCache = gltf; }, undefined, err => console.error(BRACHIO_URL, err));
 }
 
@@ -42,7 +106,7 @@ export function cloneBrachio() {
 }
 
 export function preloadGiga(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(GIGA_URL, gltf => { gigaCache = gltf; }, undefined, err => console.error(GIGA_URL, err));
 }
 
@@ -55,7 +119,7 @@ const SPINO_URL = 'assets/models/spino.glb';
 let spinoCache = null;
 
 export function preloadSpino(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(SPINO_URL, gltf => { spinoCache = gltf; }, undefined, err => console.error(SPINO_URL, err));
 }
 
@@ -68,7 +132,7 @@ const TRIKE_URL = 'assets/models/trike.glb';
 let trikeCache = null;
 
 export function preloadTrike(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(TRIKE_URL, gltf => { trikeCache = gltf; }, undefined, err => console.error(TRIKE_URL, err));
 }
 
@@ -81,7 +145,7 @@ const CARNO_URL = 'assets/models/carno.glb';
 let carnoCache = null;
 
 export function preloadCarno(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(CARNO_URL, gltf => { carnoCache = gltf; }, undefined, err => console.error(CARNO_URL, err));
 }
 
@@ -96,7 +160,7 @@ const LEANDRO_URL = 'assets/models/leandro.glb';
 let leandroCache = null;
 
 export function preloadRaptor(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(RAPTOR_URL, gltf => { raptorCache = gltf; }, undefined, err => console.error(RAPTOR_URL, err));
 }
 export function cloneRaptor() {
@@ -104,7 +168,7 @@ export function cloneRaptor() {
   return { scene: clone(raptorCache.scene), animations: raptorCache.animations };
 }
 export function preloadLeandro(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(LEANDRO_URL, gltf => { leandroCache = gltf; }, undefined, err => console.error(LEANDRO_URL, err));
 }
 export function cloneLeandro() {
@@ -116,7 +180,7 @@ const ANKY_URL = 'assets/models/anky.glb';
 let ankyCache = null;
 
 export function preloadAnky(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(ANKY_URL, gltf => { ankyCache = gltf; }, undefined, err => console.error(ANKY_URL, err));
 }
 export function cloneAnky() {
@@ -128,7 +192,7 @@ const STEGO_URL = 'assets/models/stego.glb';
 let stegoCache = null;
 
 export function preloadStego(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(STEGO_URL, gltf => { stegoCache = gltf; }, undefined, err => console.error(STEGO_URL, err));
 }
 export function cloneStego() {
@@ -140,7 +204,7 @@ const ALLO_URL = 'assets/models/allo.glb';
 let alloCache = null;
 
 export function preloadAllo(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(ALLO_URL, gltf => { alloCache = gltf; }, undefined, err => console.error(ALLO_URL, err));
 }
 export function cloneAllo() {
@@ -152,7 +216,7 @@ const DILO_URL = 'assets/models/dilo.glb';
 let diloCache = null;
 
 export function preloadDilo(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(DILO_URL, gltf => { diloCache = gltf; }, undefined, err => console.error(DILO_URL, err));
 }
 export function cloneDilo() {
@@ -164,7 +228,7 @@ const PACHY_URL = 'assets/models/pachy.glb';
 let pachyCache = null;
 
 export function preloadPachy(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(PACHY_URL, gltf => { pachyCache = gltf; }, undefined, err => console.error(PACHY_URL, err));
 }
 export function clonePachy() {
@@ -176,7 +240,7 @@ const PARA_URL = 'assets/models/para.glb';
 let paraCache = null;
 
 export function preloadPara(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(PARA_URL, gltf => { paraCache = gltf; }, undefined, err => console.error(PARA_URL, err));
 }
 export function clonePara() {
@@ -188,7 +252,7 @@ const WESTIE_URL = 'assets/models/westie.glb';
 let westieCache = null;
 
 export function preloadWestie(mgr) {
-  const loader = new GLTFLoader(mgr);
+  const loader = modelLoader(mgr);
   loader.load(WESTIE_URL, gltf => { westieCache = gltf; }, undefined, err => console.error(WESTIE_URL, err));
 }
 export function cloneWestie() {

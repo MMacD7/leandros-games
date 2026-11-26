@@ -7,6 +7,7 @@ for d, _, fs in os.walk(root):
     if rel.split(os.sep)[0] in ('screenshots', 'tools', '.git'): continue
     for f in fs:
         if f in ('sw.js', 'README.md', 'PROGRESS.md') or f.endswith('.txt'): continue
+        if 'textures/stomp' in rel.replace('\\', '/') and '1024' in f: continue
         files.append(os.path.normpath(os.path.join(rel, f)).replace(os.sep, '/'))
 files.sort()
 h = hashlib.sha1()
@@ -17,7 +18,7 @@ open(os.path.join(root, 'sw.js'), 'w').write(f"""/* Offline cache for Leandro's 
    Pages and code (html/js/css/manifest) are network-first with a cache fallback, so new versions show up right away when online
    and the game still works offline. Big assets (textures, sky, icons, vendored three.js) are cache-first; they are re-downloaded
    whenever this file's cache name changes. */
-const CACHE = 'rdi-v5-12-1';
+const CACHE = 'rdi-v5-13-0';
 const FILES = ['./',
   {lst}];
 const fresh = u => new Request(u, {{ cache: 'reload' }}); // bypass the HTTP cache when (re)installing

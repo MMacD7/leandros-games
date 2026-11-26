@@ -1,6 +1,7 @@
 // Boot, renderer, adaptive quality, screens (title / play / garage / pause / results), HUD and the main loop.
 import * as THREE from './vendor/three.bundle.min.js';
 import { HDRLoader } from './vendor/three.bundle.min.js';
+import { setCityDetail } from './stompCity.js';
 import { World, BASE, VOLC, ARENA } from './world.js';
 import { peakSky } from './peak.js';
 import { citySky } from './city.js';
@@ -15,6 +16,7 @@ import { DINOS, ROBOS, REALS, DRAGONS, WESTIES, SEA, UPGRADES, MAX_UP, loadSave,
 import { LION } from './lion.js';
 import { COSTUME } from './costume.js';
 import { preloadArt, setArtCamera } from './art.js';
+import { prepareLoaders, preloadCityMaps, preloadCityMapsLow } from './models.js';
 import { preloadLion, preloadTrex, preloadBrachio, preloadGiga, preloadSpino, preloadTrike, preloadCarno, preloadRaptor, preloadLeandro, preloadAnky, preloadStego, preloadAllo, preloadDilo, preloadPachy, preloadPara, preloadWestie } from './models.js';
 import { initAudio, audioCtx, setMuted, sfx, FART_KINDS, renderFart } from './audio.js';
 import { voice } from './voice.js';
@@ -38,6 +40,7 @@ const isIPhone = /iPhone|iPod/.test(ua);
 const isMobile = isIPad || isIPhone || /Android|Mobile/.test(ua);
 let startTier = isIPhone ? 2 : isIPad ? 1 : isMobile ? 1 : ((navigator.hardwareConcurrency || 4) >= 8 ? 3 : 2);
 const forced = params.has('q') ? Math.max(0, Math.min(3, +params.get('q'))) : null;
+const lockDpr = params.has('dpr') ? Math.min(2, Math.max(1, +params.get('dpr') || 1)) : null;
 let autoQ = forced === null && params.get('auto') !== '0';
 const targetFps = isIPad ? 40 : 52;
 let Q = { ...TIERS[forced ?? startTier] };
@@ -61,8 +64,7 @@ const sunDir = new THREE.Vector3(0.45, 0.62, 0.35).normalize();
 
 function applyQuality(q) {
   Q = { ...q };
-  const prCap = (isIPhone || isIPad) ? IOS_PR[Q.tier] : Q.pr;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, prCap));
+  renderer.setPixelRatio(pixelCap());
   sun.shadow.mapSize.set(Q.shadow, Q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   const c = sun.shadow.camera; c.left = c.bottom = -Q.shadowR; c.right = c.top = Q.shadowR; c.near = 1; c.far = 400; c.updateProjectionMatrix();
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
@@ -85,7 +87,7 @@ window.addEventListener('resize', resize); window.addEventListener('orientationc
 // ---------------- loading ----------------
 const assets = {};
 const mgr = new THREE.LoadingManager();
-preloadArt(mgr); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr); preloadPachy(mgr); preloadPara(mgr); preloadWestie(mgr);
+preloadArt(mgr); prepareLoaders(renderer, mgr); preloadCityMaps(); preloadLion(mgr); preloadTrex(mgr); preloadBrachio(mgr); preloadGiga(mgr); preloadSpino(mgr); preloadTrike(mgr); preloadCarno(mgr); preloadRaptor(mgr); preloadLeandro(mgr); preloadAnky(mgr); preloadStego(mgr); preloadAllo(mgr); preloadDilo(mgr); preloadPachy(mgr); preloadPara(mgr); preloadWestie(mgr);
 mgr.onProgress = (u, l, t) => { $('load-bar').style.width = (l / t * 85) + '%'; };
 const tl = new THREE.TextureLoader(mgr);
 function tex(path, srgb = true) { const t = tl.load(path); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; }
@@ -174,11 +176,24 @@ function applyEnv(lv) {
       const sky = citySky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
       ENV.city = { bg: sky, env, envI: 0.6, fog: new THREE.Color(0xd8906a), near: 70, far: 760, sunDir: new THREE.Vector3(-0.72, 0.3, 0.62).normalize(), sunC: 0xffb070, sunI: 3.6, hs: 0xffc8a0, hg: 0x4a3a40, hi: 0.7, exp: 1.12 };
     }
-    const sky = stompSky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
-    ENV.stomp = { bg: sky, env, envI: 0.28, fog: new THREE.Color(0xbfe6ff), near: 140, far: 980, sunDir: new THREE.Vector3(0.28, 0.9, 0.32).normalize(), sunC: 0xfff6ea, sunI: 3.3, hs: 0xd7eeff, hg: 0xc5d4df, hi: 0.62, exp: 1.02 };
+    const sky = stompSky(), pm = new THREE.PMREMGenerator(renderer);
+    const warm = document.createElement('canvas'); warm.width = 64; warm.height = 32;
+    const wg = warm.getContext('2d');
+    const wgr = wg.createLinearGradient(0, 0, 0, 32);
+    wgr.addColorStop(0, '#FFF6E8'); wgr.addColorStop(0.55, '#E7D3B8'); wgr.addColorStop(1, '#B89A6A');
+    wg.fillStyle = wgr; wg.fillRect(0, 0, 64, 32);
+    const warmTex = new THREE.CanvasTexture(warm); warmTex.mapping = THREE.EquirectangularReflectionMapping; warmTex.colorSpace = THREE.SRGBColorSpace;
+    const env = pm.fromEquirectangular(warmTex).texture; pm.dispose();
+    ENV.stomp = { bg: sky, env, envI: 0.25, fog: new THREE.Color(0xede6da), near: 120, far: 600, sunDir: new THREE.Vector3(0.45, 0.75, 0.35).normalize(), sunC: 0xfff2dc, sunI: 3.2, hs: 0xcfe6ff, hg: 0xb89a6a, hi: 0.85, exp: 1.0 };
   }
   const E = ENV[lv]; if (!E) return;
-  sun.castShadow = lv !== 'stomp';
+  sun.castShadow = true;
+  if (lv === 'stomp') { fill.color.set(0xffe6c8); fill.intensity = 0.5; }
+  else {
+    fill.color.set(0xd8ecff); fill.intensity = 1.45;
+    if (stompTexLow) { stompTexLow = false; setCityDetail(true); }
+    if (stompDprDrop) { stompDprDrop = false; renderer.setPixelRatio(pixelCap()); }
+  }
   scene.background = E.bg; scene.backgroundIntensity = 1; scene.environment = E.env; scene.environmentIntensity = E.envI; scene.fog.color.copy(E.fog); scene.fog.near = E.near; scene.fog.far = E.far;
   sunDir.copy(E.sunDir); sun.color.set(E.sunC); sun.intensity = E.sunI; hemi.color.set(E.hs); hemi.groundColor.set(E.hg); hemi.intensity = E.hi; renderer.toneMappingExposure = E.exp;
   gScene.environment = scene.environment;
@@ -709,7 +724,42 @@ $('g-ups').addEventListener('click', e => { const b = e.target.closest('button[d
 
 // ---------------- adaptive quality ----------------
 let fpsAcc = 0, fpsN = 0, fpsWarm = 0, goodWindows = 0, lastDrop = -1e9, measured = 60; const dropped = new Set();
-function fpsReset() { fpsAcc = 0; fpsN = 0; fpsWarm = 1.5; }
+let stompDprDrop = false, stompTexLow = false, dprAcc = 0, dprN = 0, dprHigh = 0, texWait = 0;
+function pixelCap() {
+  const dpr = window.devicePixelRatio || 1;
+  if (lockDpr) return lockDpr;
+  if (level === 'stomp') {
+    let cap = Math.min(dpr, 2);
+    if (stompDprDrop) cap = Math.min(cap, 1.5);
+    if (isIPad) cap = Math.max(1.5, cap);
+    return cap;
+  }
+  const prCap = (isIPhone || isIPad) ? IOS_PR[Q.tier] : Q.pr;
+  return Math.min(dpr, prCap);
+}
+function fpsReset() { fpsAcc = 0; fpsN = 0; fpsWarm = 1.5; dprAcc = 0; dprN = 0; }
+function stompAdapt(dt) {
+  if (lockDpr || level !== 'stomp') return;
+  dprAcc += dt; dprN++;
+  if (dprAcc < 3) return;
+  const fps = dprN / dprAcc; dprAcc = 0; dprN = 0;
+  if (fps < 50) {
+    dprHigh = 0;
+    if (!stompTexLow) {
+      preloadCityMapsLow();
+      if (setCityDetail(false)) { stompTexLow = true; texWait = 0; return; }
+      if (++texWait < 3) return;
+    }
+    if (!stompDprDrop) { stompDprDrop = true; renderer.setPixelRatio(pixelCap()); resize(); }
+  } else if (fps > 58) {
+    dprHigh += 3;
+    if (dprHigh >= 5) {
+      dprHigh = 0;
+      if (stompDprDrop) { stompDprDrop = false; renderer.setPixelRatio(pixelCap()); resize(); }
+      else if (stompTexLow) { stompTexLow = false; setCityDetail(true); }
+    }
+  } else dprHigh = 0;
+}
 function fpsTick(dt, now) {
   if (fpsWarm > 0) { fpsWarm -= dt; return; }
   fpsAcc += dt; fpsN++;
@@ -730,6 +780,7 @@ function loop(now) {
   let dt = (now - last) / 1000; last = now; if (dt > 0.1) dt = 0.1; if (dt <= 0) return;
   frames++;
   fpsTick(dt, now);
+  stompAdapt(dt);
   if (screen === 'garage') {
     titleT += dt; { const tall = gMech.def.kind === 'bronto' || gMech.def.kind === 'brachio'; gMech.obj.rotation.y = garageFrame && garageFrame.yaw != null ? garageFrame.yaw : GARAGE_YAW - (tall ? 0.45 : 0) + Math.sin(titleT * 0.35) * (tall ? 0.3 : 0.55); } gMech.animate(dt, 0, { jaw: gMech.roar > 0 ? 1 : 0, roar: gMech.roar > 0.3 ? Math.min(1, gMech.roar) : 0, flying: gMech.def.fly }); if (gMech.seatOnGround) { gMech.obj.position.y = 0; gMech.seatOnGround(() => 0); }
     if (!gMech.roarT || titleT > gMech.roarT) { gMech.roarT = titleT + 6 + Math.random() * 3; if (gMech.roarT > 7) gMech.roar = 1.6; }
@@ -805,8 +856,24 @@ function loop(now) {
     fx.update(dt, world, (M, p) => game.onMissileHit(M, p), scene.fog);
   }
   if (world.peak && screen !== 'pause') peakAmbience(dt);
-  // shadow camera follows the action
-  const P = game.player.pos; sun.target.position.set(P.x, P.y, P.z); sun.position.copy(P).addScaledVector(sunDir, 150);
+  // shadow camera follows the action. Stompolis uses one 2048 map, ±24 m, snapped to texels.
+  const P = game.player.pos;
+  if (level === 'stomp') {
+    const map = Q.tier === 0 ? 1024 : 2048;
+    if (sun.shadow.mapSize.x !== map) {
+      sun.shadow.mapSize.set(map, map);
+      if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    }
+    const texel = 48 / map;
+    const sx = Math.round(P.x / texel) * texel, sy = Math.round(P.y / texel) * texel, sz = Math.round(P.z / texel) * texel;
+    sun.target.position.set(sx, sy, sz);
+    sun.position.copy(sun.target.position).addScaledVector(sunDir, 80);
+    const c = sun.shadow.camera;
+    c.left = c.bottom = -24; c.right = c.top = 24; c.near = 1; c.far = 140;
+    c.updateProjectionMatrix();
+    sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+    sun.castShadow = true;
+  } else { sun.target.position.set(P.x, P.y, P.z); sun.position.copy(P).addScaledVector(sunDir, 150); }
   fill.position.copy(camera.position); fill.target.position.set(P.x, P.y + 1.5, P.z);
   const c1 = performance.now(); cpuMs += ((c1 - c0) - cpuMs) * 0.05;
   renderer.render(scene, camera);
