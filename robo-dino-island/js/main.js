@@ -785,7 +785,7 @@ function placeBlobs() {
     g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
     const map = new THREE.CanvasTexture(c);
     const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
-    const mat = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: THREE.MultiplyBlending, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const mat = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: THREE.MultiplyBlending, premultipliedAlpha: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     blobMesh = new THREE.InstancedMesh(geo, mat, 24); blobMesh.frustumCulled = false; blobMesh.count = 0; scene.add(blobMesh);
     blobDummy = new THREE.Object3D();
   }

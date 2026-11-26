@@ -360,7 +360,7 @@ body.farm .stink-btn { top: calc(var(--sat) + 78px); width: 96px; height: 96px; 
 body.farm .stink-btn b { font-size: 9px; line-height: 1; letter-spacing: -0.3px; max-width: 84px; }
 body.farm .stink-btn .dv-ic { font-size: 18px; }
 body.farm .david-btn { top: calc(var(--sat) + 186px); }
-body.farm #farmbar { left: auto; right: calc(var(--sar) + 12px); transform: none; top: calc(var(--sat) + 12px); max-width: calc(100vw - 140px); }
+body.farm #farmbar { left: 50%; right: auto; transform: translateX(-50%); top: calc(var(--sat) + 12px); max-width: min(520px, calc(100vw - 340px)); }
 body.farm .rb-btn { top: calc(var(--sat) + 236px); }
 body.farm .rb-btn b, body.farm .david-btn b, body.farm .stink-btn b { font-size: 11px; }
 body.farm .rb-btn .rb-ic, body.farm .david-btn .dv-ic, body.farm .stink-btn .st-ic { font-size: 26px; }

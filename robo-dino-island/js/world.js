@@ -220,10 +220,11 @@ vec3 lavaJ = vec3(2.2, 0.42, 0.05) * veinJ * heatJ * 0.7 * (0.85 + 0.15 * sin(uT
 cg = gl * vec3(0.20, 0.42, 0.28) * 1.15; cs *= vec3(1.02, 0.98, 0.86); cr *= vec3(0.6, 0.68, 0.74); cd = cs * vec3(0.74, 0.7, 0.62);
 #endif
 diffuseColor.rgb *= cg*sp.x + cs*sp.y + cr*sp.z + cd*sp.w;
-roughnessFactor = 0.92*sp.x + 0.88*sp.y + 0.90*sp.z + 0.85*sp.w;
 #ifdef CITY
 diffuseColor.rgb = cityGround(diffuseColor.rgb, vWP.xz, vWP.y);
 #endif`)
+        .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = 0.92*sp.x + 0.88*sp.y + 0.90*sp.z + 0.85*sp.w;`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 #ifdef PEAK
 totalEmissiveRadiance += lavaE;
@@ -307,7 +308,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
       transformed.x += sin(uTime*1.3 + ph) * 0.02 * sw * (1.0 + 0.5*sin(uTime*2.7+ph+transformed.z));
       transformed.z += cos(uTime*1.1 + ph) * 0.015 * sw;`);
       sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-totalEmissiveRadiance += diffuseColor.rgb * 0.22 * max(0.0, dot(-normalize(geometryNormal), normalize(vec3(0.45, 0.75, 0.35))));`);
+totalEmissiveRadiance += diffuseColor.rgb * 0.22 * max(0.0, dot(-normalize(normal), normalize(vec3(0.45, 0.75, 0.35))));`);
     }; };
     const cover = mat => { mat.alphaToCoverage = true; };
     const leafMat = new THREE.MeshStandardMaterial({ map: leaf, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 0.7, metalness: 0, color: 0x3ec85a, emissive: 0x0c4a16, emissiveIntensity: 0.18 });
