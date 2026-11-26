@@ -29,7 +29,7 @@ test('Stompolis loads, swing attaches, First Fling completes, pause stays clear'
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await ready(page);
   await expect(page.locator('#lv-stomp')).toHaveAttribute('aria-label', 'Play The Swing Boy');
-  await expect(page.locator('#ver')).toHaveText('v5.12.0');
+  await expect(page.locator('#ver')).toHaveText('v5.12.1');
   await page.evaluate(() => G.setLevel('stomp'));
   await page.evaluate(() => G.show('play'));
   await page.waitForTimeout(300);
@@ -175,5 +175,44 @@ test('a fling from three roofs lands, stays outside the towers, and rises', asyn
   console.log(report.rows.filter(r => r.end !== 'roof' || r.apex < 1 || r.inside).map(r => JSON.stringify(r)).join('\n'));
   expect(report.insideFrames).toBe(0);
   expect(report.lowApex / report.total).toBeLessThanOrEqual(0.1);
-  expect(report.pct).toBeGreaterThanOrEqual(80);
+  expect(report.pct).toBeGreaterThanOrEqual(95);
+});
+
+test('a touch tap on WRAP wraps David or shows a hint', async ({ page }) => {
+  test.setTimeout(120000);
+  await ready(page);
+  await page.evaluate(() => {
+    window.__hold = true;
+    const rot = document.getElementById('rotate');
+    if (rot && getComputedStyle(rot).display !== 'none') document.getElementById('rot-ok').click();
+    G.setLevel('stomp');
+    G.show('play');
+    const s = G.game.stomp, p = G.game.player;
+    s.reset();
+    s.freezeDavid = true;
+    s.david.x = p.pos.x + 70; s.david.z = p.pos.z; s.david.y = p.pos.y;
+    s.david.mesh.position.set(s.david.x, s.david.y, s.david.z);
+  });
+  await page.locator('#a-melee').tap();
+  const miss = await page.evaluate(() => {
+    G.sim(1 / 30);
+    const toast = document.getElementById('toast');
+    return { wrapped: G.game.stomp.david.wrapped, toast: toast.textContent, shown: toast.classList.contains('show') };
+  });
+  expect(miss.wrapped).toBe(false);
+  expect(miss.shown).toBe(true);
+  expect(miss.toast).toContain('WRAP');
+  await page.evaluate(() => {
+    const s = G.game.stomp, p = G.game.player;
+    p.pos.set(s.david.x + 6, s.david.y, s.david.z);
+    s.state = 'roof'; s.lastRoof = s.towers[0];
+  });
+  await page.locator('#a-melee').tap();
+  const hit = await page.evaluate(() => {
+    G.sim(1 / 30);
+    return { wrapped: G.game.stomp.david.wrapped, shout: document.getElementById('shout').textContent, bundle: !!(G.game.stomp.david.bundle && G.game.stomp.david.bundle.visible) };
+  });
+  expect(hit.wrapped).toBe(true);
+  expect(hit.bundle).toBe(true);
+  expect(hit.shout).toBe('NOOO DAVIDD!');
 });
