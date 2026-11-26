@@ -1071,7 +1071,7 @@ const LINES = { undies: 'DAVID, NOOO! Put your clothes back on!', mud: 'DAVID, N
   pie: 'DAVID, NOOO! No pie fights!', megafart: 'DAVID!!! Say excuse me!', footprints: 'DAVID, NOOO! Muddy feet everywhere!', tickle: 'DAVID! Stop tickling the {a}!', pogo: 'DAVID, NOOO! No fart-powered pogo sticks!', ropeswing: 'DAVID, NOOO! Not the rope swing!' };
 const TOASTS = { undies: '😜 Bad David ran around in his undies! 🩲', mud: '😜 Bad David jumped in the mud! SPLOOSH!', pigride: '😜 Bad David is riding a piggy BACKWARDS! 🐷', chickens: '😜 Bad David let the chickens out! 🐔🐔🐔',
   pie: '😜 Bad David threw a cream pie! 🥧', megafart: '😜 Bad David did a MEGA TOOT! 💨💨💨', footprints: '😜 Bad David is tracking mud everywhere! 👣', tickle: '😜 Bad David is tickling the {a} with a feather! 🪶', pogo: '😜 Bad David is on a FART-POWERED POGO STICK! 💨🦘', ropeswing: '😜 Bad David grabbed a rope swing! AAAH-AH-AAAH! 🌳' };
-function davidModel() {
+export function davidModel() {
   const M = mats(), g = new THREE.Group(); g.name = 'bad-david'; const body = new THREE.Group(); g.add(body);
   const SK = 0xf5cfa6, HR = 0x5a3015, Y = 0xffd23a, GR = 0x3aa655, SH = 0xd63a2a, mesh = (list, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(mergeGeometries(list), M.vc); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
   const hips = new THREE.Group(); hips.position.y = 0.6; body.add(hips);

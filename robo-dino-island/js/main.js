@@ -121,8 +121,8 @@ function boot() {
   ENV.jungle = { bg: skyTex, env: scene.environment, envI: 0.5, fog: fogC.clone(), near: 80, far: 1300, sunDir: sunDir.clone(), sunC: 0xfff6e4, sunI: 3.8, hs: 0xc8e6ff, hg: 0x6a8a4a, hi: 0.6, exp: 1.0 };
   fx = new FX(scene, assets, sfx);
   world = makeWorld(level); applyEnv(level);
-  input = new Input(document.body);
-  game = new Game({ renderer, scene, camera, world, fx, assets, save, input, hud, persist: () => persist(), quality: Q }); game.robos = robosOn; // v5.6 Robo Dinos ON/OFF
+  input = new Input(document.body); window.input = input;
+  game = new Game({ renderer, scene, camera, world, fx, assets, save, input, hud, persist: () => persist(), quality: Q }); game.robos = robosOn; game.onRbShow = () => { rbCd = RB_CD; }; // v5.6 Robo Dinos ON/OFF
   game.level = level; levelUI();
   game.startRoam();
   titleEnemies();
@@ -158,20 +158,29 @@ function applyEnv(lv) {
   }
   if (lv === 'farm' && !ENV.farm) { // v5.1 Farty Poop Farm: the island sky, but a brighter, sunnier, happier day
     const J = ENV.jungle; ENV.farm = { ...J, envI: 0.5, fog: J.fog.clone().lerp(new THREE.Color(0xd8ecff), 0.3), near: 90, far: 950, sunC: 0xfff4e0, sunI: 3.9, hs: 0xd0ecff, hg: 0x5a7a2a, hi: 0.38, exp: 1.05 }; }
+  if (lv === 'stomp' && !ENV.stomp) {
+    if (!ENV.city) {
+      const sky = citySky(), pm = new THREE.PMREMGenerator(renderer), env = pm.fromEquirectangular(sky).texture; pm.dispose();
+      ENV.city = { bg: sky, env, envI: 0.6, fog: new THREE.Color(0xd8906a), near: 70, far: 760, sunDir: new THREE.Vector3(-0.72, 0.3, 0.62).normalize(), sunC: 0xffb070, sunI: 3.6, hs: 0xffc8a0, hg: 0x4a3a40, hi: 0.7, exp: 1.12 };
+    }
+    const C = ENV.city; ENV.stomp = { ...C, fog: new THREE.Color(0xc98a9a), near: 80, far: 520, sunDir: new THREE.Vector3(-0.72, 0.18, 0.62).normalize(), sunC: 0xffb36b, sunI: 3.0, hs: 0xffc8a0, hg: 0x5a3a50, hi: 0.9, exp: 1.0 };
+  }
   const E = ENV[lv]; if (!E) return;
+  sun.castShadow = lv !== 'stomp';
   scene.background = E.bg; scene.backgroundIntensity = 1; scene.environment = E.env; scene.environmentIntensity = E.envI; scene.fog.color.copy(E.fog); scene.fog.near = E.near; scene.fog.far = E.far;
   sunDir.copy(E.sunDir); sun.color.set(E.sunC); sun.intensity = E.sunI; hemi.color.set(E.hs); hemi.groundColor.set(E.hg); hemi.intensity = E.hi; renderer.toneMappingExposure = E.exp;
   gScene.environment = scene.environment;
 }
 function levelUI() {
-  document.body.classList.toggle('peak', level === 'peak'); document.body.classList.toggle('city', level === 'city'); document.body.classList.toggle('ocean', level === 'ocean'); document.body.classList.toggle('farm', level === 'farm');
+  document.body.classList.toggle('peak', level === 'peak'); document.body.classList.toggle('city', level === 'city'); document.body.classList.toggle('ocean', level === 'ocean'); document.body.classList.toggle('farm', level === 'farm'); document.body.classList.toggle('stomp', level === 'stomp');
   document.querySelectorAll('.lv[data-lv]').forEach(b => { const on = b.dataset.lv === level; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-  const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : level === 'city' ? 'CITY SMASH' : level === 'ocean' ? 'DEEP SEA' : level === 'farm' ? 'FARTY POOP FARM' : 'ISLAND';
-  $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : level === 'city' ? '▶ Smash Mega City' : level === 'ocean' ? '▶ Dive into the Deep Sea' : level === 'farm' ? '▶ Go to the Farm 🚜' : '▶ Explore the Island';
+  const em = document.querySelector('#title .logo em'); if (em) em.textContent = level === 'peak' ? 'DRAGON PEAK' : level === 'city' ? 'CITY SMASH' : level === 'ocean' ? 'DEEP SEA' : level === 'farm' ? 'FARTY POOP FARM' : level === 'stomp' ? 'STOMPOLIS' : 'ISLAND';
+  const rbLab = document.querySelector('#b-rb b'); if (rbLab) rbLab.innerHTML = level === 'stomp' ? 'R&amp;B' : 'RICKY &amp;<br>BOBBY';
+  $('b-roam').textContent = level === 'peak' ? '▶ Explore Dragon Peak' : level === 'city' ? '▶ Smash Mega City' : level === 'ocean' ? '▶ Dive into the Deep Sea' : level === 'farm' ? '▶ Go to the Farm 🚜' : level === 'stomp' ? '▶ Swing Stompolis' : '▶ Explore the Island';
   $('citybar').classList.toggle('hidden', level !== 'city'); $('farmbar').classList.toggle('hidden', level !== 'farm');
 }
 function setLevel(lv) {
-  if (!['peak', 'city', 'ocean', 'farm'].includes(lv)) lv = 'jungle';
+  if (!['peak', 'city', 'ocean', 'farm', 'stomp'].includes(lv)) lv = 'jungle';
   if (lv === level && world === worlds[lv]) return;
   level = lv; world = makeWorld(lv); world.applyQuality(Q); applyEnv(lv);
   if (game.battle) game.battle = null;
@@ -183,8 +192,8 @@ function setLevel(lv) {
 }
 function travel(lv) {
   if (lv === level) return;
-  voice.say(lv === 'peak' ? 'Welcome to Dragon Peak!' : lv === 'city' ? 'Welcome to Mega City Smash!' : lv === 'ocean' ? 'Welcome to Deep Sea Showdown!' : lv === 'farm' ? 'Welcome to Farty Poop Farm!' : 'Welcome to Jungle Island!', { prio: 2, cd: 1500, replace: true });
-  const L = $('loading'); $('load-t').textContent = lv === 'peak' ? 'Flying to Dragon Peak… 🐉' : lv === 'city' ? 'Stomping into Mega City… 🏙️' : lv === 'ocean' ? 'Diving into the Deep Sea… 🌊🦈' : lv === 'farm' ? 'Driving the tractor to Farty Poop Farm… 🚜💩' : 'Sailing to Jungle Island… 🌴'; $('load-bar').style.width = '60%'; L.classList.remove('hidden');
+  voice.say(lv === 'peak' ? 'Welcome to Dragon Peak!' : lv === 'city' ? 'Welcome to Mega City Smash!' : lv === 'ocean' ? 'Welcome to Deep Sea Showdown!' : lv === 'farm' ? 'Welcome to Farty Poop Farm!' : lv === 'stomp' ? 'Welcome to Stompolis!' : 'Welcome to Jungle Island!', { prio: 2, cd: 1500, replace: true });
+  const L = $('loading'); $('load-t').textContent = lv === 'peak' ? 'Flying to Dragon Peak… 🐉' : lv === 'city' ? 'Stomping into Mega City… 🏙️' : lv === 'ocean' ? 'Diving into the Deep Sea… 🌊🦈' : lv === 'farm' ? 'Driving the tractor to Farty Poop Farm… 🚜💩' : lv === 'stomp' ? 'Swinging into Stompolis…' : 'Sailing to Jungle Island… 🌴'; $('load-bar').style.width = '60%'; L.classList.remove('hidden');
   setTimeout(() => { try { setLevel(lv); renderer.compile(scene, camera); } finally { $('load-bar').style.width = '100%'; setTimeout(() => L.classList.add('hidden'), 120); } }, 40);
 }
 // title: two rivals face off and roar at each other in front of the volcano
@@ -192,6 +201,7 @@ const TITLE = { x: 16, z: 181 };
 function titleEnemies() {
   game.clearEnemies();
   if (game.farm) { const p = game.player; p.place(TITLE.x - 2.6, TITLE.z, Math.PI / 2 - 0.35); game.farm.titlePose(TITLE.x, TITLE.z); titleRoarT = 99; return; } // v5.1: Leandro and his horse say hello
+  if (level === 'stomp' && game.stomp) { game.clearEnemies(); game.stomp.titlePose(); titleRoarT = 99; return; }
   const p = game.player, peak = level === 'peak', city = level === 'city', ocean = level === 'ocean';
   const rivalId = ocean ? (p.def.id === 'megalodon' ? 'shark' : 'megalodon') : peak ? (p.def.id === 'dfire' ? 'dstorm' : 'dfire') : city ? (p.def.id === 'megatrike' ? 'spinotitan' : 'megatrike') : p.def.real ? 'rex' : 'trex';
   p.place(TITLE.x - 7.5, TITLE.z, Math.PI / 2 - 0.25); if (p.fly) p.alt = ocean ? 2.2 : 1.2;
@@ -215,7 +225,7 @@ const hud = {
   roar() { document.body.classList.remove('roaring'); void document.body.offsetWidth; document.body.classList.add('roaring'); },
   actions(def) {
     const EL = { fire: 'FIRE<br>BALL', ice: 'ICE<br>SHARD', storm: 'ZAP' };
-    const L = def.farmKid ? { laser: '🌽<br>FEED', missile: '🐴<br>RIDE', melee: '💨<br>TOOT', boost: 'RUN' } : def.lion ? { laser: '🐾<br>PAW', missile: '😺<br>NUZZLE', melee: '⚡<br>WAR', boost: 'GALLOP' } : def.costume ? { laser: '🦷<br>CHOMP', missile: 'BIG<br>BITE', melee: '🦖<br>ROAR', boost: 'RUN' } : def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
+    const L = def.hoopster ? { laser: 'SWING', missile: 'ZIP', melee: 'WRAP', boost: 'RUN' } : def.farmKid ? { laser: '🌽<br>FEED', missile: '🐴<br>RIDE', melee: '💨<br>TOOT', boost: 'RUN' } : def.lion ? { laser: '🐾<br>PAW', missile: '😺<br>NUZZLE', melee: '⚡<br>WAR', boost: 'GALLOP' } : def.costume ? { laser: '🦷<br>CHOMP', missile: 'BIG<br>BITE', melee: '🦖<br>ROAR', boost: 'RUN' } : def.sea ? { laser: def.sting ? 'STING' : 'BITE', missile: def.specialName, melee: def.thirdName || 'SONAR<br>ROAR', boost: 'SWIM<br>FAST' } : def.westie ? { laser: 'BITE', missile: 'BARK<br>BLAST', melee: 'ZOOM<br>IES', boost: 'JUMP' } : def.dragon && def.real ? { laser: EL[def.element] || 'BLAST', missile: def.specialName, melee: 'ROAR', boost: 'CLIMB' }
       : def.real ? { laser: 'BITE', missile: def.specialName, melee: (save.up.fire ? '🔥 ' : '') + 'ROAR', boost: 'RUN' }
       : { laser: 'LASER', missile: 'MISSILE', melee: def.robodragon ? 'FLAME<br>JETS' : def.breath ? 'FIRE<br>BREATH' : def.quake ? 'QUAKE<br>SLAM' : def.goo ? 'GOO<br>SPRAY' : 'BITE<br>STOMP', boost: def.fly ? 'CLIMB' : 'BOOST' };
     document.body.classList.toggle('breath', !!def.breath);
@@ -236,7 +246,8 @@ const hud = {
 const ebarEls = [];
 function updateHUD(dt) {
   const p = game.player; if (!p) return;
-  { rbCd = Math.max(0, rbCd - dt); const b = $('b-rb'), W = game.westies, here = W && W.active && W.state !== 'fly';
+  { rbCd = Math.max(0, rbCd - dt); const b = $('b-rb'), W = game.westies, stompShow = !!(W && W.stompVisit);
+    const here = W && W.active && W.state !== 'fly' && !stompShow;
     $('rb-cd').style.setProperty('--p', (rbCd / RB_CD * 100).toFixed(1) + '%'); $('rb-t').textContent = here ? '' : rbCd > 0 ? Math.ceil(rbCd) + 's' : '';
     b.classList.toggle('cool', rbCd > 0 && !here); b.classList.toggle('here', !!here); }
   $('hp').style.width = (p.hp / p.maxHp * 100) + '%'; $('hp-t').textContent = Math.ceil(p.hp);
@@ -354,6 +365,7 @@ function syncMusic() {
   const b = game && game.battle;
   const pk = level === 'peak', ct = level === 'city', oc = level === 'ocean';
   if (level === 'farm') { music.play(screen === 'play' || screen === 'pause' || screen === 'levels' || screen === 'results' ? 'farm' : 'farmtitle'); if (screen === 'play' && music.setIntensity) music.setIntensity(0); return; } // v5.1 hoedown!
+  if (level === 'stomp') { music.play('stomp'); if (music.setIntensity) music.setIntensity(game && game.stomp && game.stomp.combo > 2 ? 1 : 0.15); return; }
   let t = screen === 'title' || screen === 'garage' || screen === 'loading' ? (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'title') : b ? (b.boss && b.boss.alive ? (oc ? 'oceanboss' : pk ? 'dragonboss' : ct ? 'cityboss' : 'boss') : (oc ? 'oceanbattle' : pk ? 'peakbattle' : ct ? 'citybattle' : 'battle')) : (oc ? 'ocean' : pk ? 'peak' : ct ? 'city' : 'roam');
   const hot = !b && level === 'jungle' && screen === 'play' && jungleHot();
   if (hot) t = 'battle';
@@ -372,17 +384,18 @@ function announceNewLevel() {
   if (voice.say('New level unlocked, Leandro! Farty Poop Farm!', { prio: 3, cd: 0 }) !== false) { try { localStorage.setItem(NEW_LV_KEY, '1'); } catch (e) { } if (screen === 'title') hud.toast('💩 NEW LEVEL: FARTY POOP FARM! 🐷'); }
 }
 for (const ev of ['touchend', 'click']) document.addEventListener(ev, () => { initAudio(); voice.prime(); announceNewLevel(); }, { once: true, capture: true });
-tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : 'Find energy cores ⚡ and wild dinos!'); });
+tap('b-roam', () => { hypeStart(); game.startRoam(); show('play'); hud.toast(level === 'farm' ? '🌽 Feed the hungry animals! 🐴 Ride the horse! 😜 Tap BAD DAVID!' : level === 'stomp' ? 'Hold SWING, let go to FLING, tap ZIP and WRAP!' : 'Find energy cores ⚡ and wild dinos!'); });
+tap('st-ok', () => { const w = $('stompwin'); if (w) w.classList.add('hidden'); show('levels'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
 tap('newcall', () => { garageFrom = 'title'; gTab = 'lions'; show('garage'); });
-tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean')); tap('lv-farm', () => travel('farm'));
+tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean')); tap('lv-farm', () => travel('farm')); tap('lv-stomp', () => travel('stomp'));
 // v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
 let levelsFrom = 'play';
 const openLevels = () => { levelsFrom = screen === 'pause' ? 'pause' : 'play'; show('levels'); };
 tap('b-map', openLevels); tap('p-map', openLevels);
 tap('lvd-close', () => show(levelsFrom === 'pause' ? 'pause' : 'play'));
-for (const lv of ['jungle', 'peak', 'city', 'ocean', 'farm']) tap('lvd-' + lv, () => { show('play'); if (lv !== level) travel(lv); });
+for (const lv of ['jungle', 'peak', 'city', 'ocean', 'farm', 'stomp']) tap('lvd-' + lv, () => { show('play'); if (lv !== level) travel(lv); });
 tap('b-pause', () => show('pause'));
 // 🐶 summon button: entrance + dance + fly away; tapping while they're here = more confetti. Short cooldown with a countdown ring.
 const RB_CD = 25; let rbCd = 0;
@@ -390,6 +403,11 @@ function summonRB() {
   initAudio(); voice.prime(); const W = game.westies; if (!W || screen !== 'play' || !game.player || !game.player.alive) return;
   if (W.active) { W.moreConfetti(); return; } // already here: just more confetti
   if (rbCd > 0) { sfx.deny(); hud.toast(`🐶 Ricky & Bobby are resting… ${Math.ceil(rbCd)}s`); return; }
+  if (level === 'stomp' && game.stomp) {
+    const s = game.stomp;
+    if (s.won || s.state === 'bubble') { sfx.deny(); return; }
+    if (s.state !== 'roof') { s.rbQueued = 6; sfx.ui(); return; }
+  }
   if (W.trigger('button', true)) { rbCd = RB_CD; sfx.ui(); }
 }
 $('b-rb').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); summonRB(); });
@@ -459,7 +477,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && scr
 // ---------------- garage ----------------
 const gScene = new THREE.Scene(), gCam = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
 const GARAGE_YAW = 1.5; // ~3/4 front view (camera sits at yaw 0.67)
-let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo', jungleDirty = false;
+let gIdx = 0, gMech = null, garageFrom = 'title', gTab = 'robo', gList = 'robo', jungleDirty = false, gHoopOn = false, gHoopMech = null;
 // v4.1: the new v4 creatures come first in each garage tab and wear a NEW! badge
 const NEW_IDS = new Set(['spinotitan', 'megatrike', 'raptorpack', 'brachiotank', 'lavaanky', 'tptero', 'ricky', 'bobby', 'shark', 'megalodon', 'stingray', 'octopus', 'jellyfish', 'turtle']); // v5 (+ v5.5 sea turtle)
 const newFirst = L => [...L.filter(d => NEW_IDS.has(d.id)), ...L.filter(d => !NEW_IDS.has(d.id))];
@@ -554,9 +572,23 @@ function refreshLions() {
   const costumeOn = !!save.jungleCostume;
   c.classList.toggle('on', costumeOn); c.setAttribute('aria-pressed', costumeOn ? 'true' : 'false');
   const cs = c.querySelector('.jg-state'); if (cs) cs.textContent = costumeOn ? '✓ On Jungle Island' : 'Tap to play';
+  const h = $('jg-hoopster'); if (!h) return;
+  h.classList.toggle('on', gHoopOn); h.setAttribute('aria-pressed', gHoopOn ? 'true' : 'false');
+  const hs = h.querySelector('.jg-state'); if (hs) hs.textContent = gHoopOn ? 'Previewing the suit' : 'Tap to preview';
+}
+function hoopMech() {
+  if (gHoopMech) return gHoopMech;
+  const R = new Rider(); R.hips.position.y = 0.7; R.attachSkin(); R.setHoopster(true);
+  gHoopMech = { def: { id: 'hoopster', name: 'The Swing Boy', kind: 'kid', real: true, hoopster: true, scale: 1 }, obj: R.obj, R, height: 1.75, fitR: 1.15, real: true, roar: 0, roarT: 0, animate(dt) { this.R.locomotion(0, dt); this.R.heroSwing(false); } };
+  return gHoopMech;
 }
 function setJunglePreview() {
   if (gMech) gScene.remove(gMech.obj);
+  if (gHoopOn) {
+    gMech = hoopMech(); gScene.add(gMech.obj);
+    gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
+    gRider.unmount(); return;
+  }
   if (save.jungleCostume) {
     gMech = gMechs.costume || (gMechs.costume = makeDino(COSTUME, assets, false)); gScene.add(gMech.obj);
     gMech.obj.position.set(0, 0, 0); gMech.obj.rotation.set(0, 0, 0); gMech.obj.scale.setScalar(1);
@@ -629,16 +661,21 @@ tap('t-dragon', () => { if (gList !== 'dragon') gIdx = 0; gTab = 'dragon'; refre
 tap('t-dogs', () => { if (gList !== 'dogs') gIdx = 0; gTab = 'dogs'; refreshGarage(); });
 tap('t-sea', () => { if (gList !== 'sea') gIdx = 0; gTab = 'sea'; refreshGarage(); });
 $('jg-lion').addEventListener('click', () => {
-  initAudio(); voice.prime(); const next = !(save.jungleLion && save.farmLion);
+  initAudio(); voice.prime(); gHoopOn = false; const next = !(save.jungleLion && save.farmLion);
   save.jungleLion = next; save.farmLion = next; jungleDirty = true; persist(); sfx.ui(); gTab = 'lions';
   if (next) voice.say("Let's go, Leandro!", { prio: 2, cd: 1500 });
   hud.toast(next ? '🦁 LIONS GO TO WAR! Jungle Island and Farty Poop Farm.' : '🦁 The lion is resting. Your dino, the horse and the tractor stay.');
   refreshGarage();
 });
 $('jg-costume').addEventListener('click', () => {
-  initAudio(); voice.prime(); save.jungleCostume = !save.jungleCostume; jungleDirty = true; persist(); sfx.ui(); gTab = 'lions';
+  initAudio(); voice.prime(); gHoopOn = false; save.jungleCostume = !save.jungleCostume; jungleDirty = true; persist(); sfx.ui(); gTab = 'lions';
   if (save.jungleCostume) voice.say('Rex costume!', { prio: 2, cd: 1500 });
   hud.toast(save.jungleCostume ? '🦖 Rex Costume on Jungle Island! The farm lion stays.' : '🦖 Rex Costume is off. Jungle Island uses the thunder lion again if he is on.');
+  refreshGarage();
+});
+$('jg-hoopster').addEventListener('click', () => {
+  initAudio(); voice.prime(); gHoopOn = !gHoopOn; gTab = 'lions'; sfx.ui();
+  hud.toast(gHoopOn ? 'The Swing Boy suit is the Stompolis look. Other levels keep the blue cap.' : 'Swing Boy preview off.');
   refreshGarage();
 });
 tap('g-back', () => { const sel = gPicked && DINOS.find(d => d.id === save.selected); const dirty = jungleDirty; jungleDirty = false; gPicked = false; if (sel && !sel.westie && !!sel.sea !== (level === 'ocean')) { // v5: sea creatures go to the Deep Sea, land dinos come back to land
@@ -738,12 +775,14 @@ function loop(now) {
     if (titleRoarT <= 0 && rival) { const who = titleWho++ % 2 ? rival : p; who.roar = 1.7; who.jaw = 1; titleRoarT = 3.6; fx.shake = Math.max(fx.shake, 0.35); fx.roarWave(game.mouthPos(who), who.forward(new THREE.Vector3()), who.def.scale, who.mech.mats.glowColor); sfx.bigRoar(who.real ? 0.85 : 1, 0.5, !who.real);
       if (who.real && !who.def.lion && !who.def.costume) game.mh.fieryRoar(who, false); else if (who.def.breath) game.mh.startBreath(who, 1.1); }
     game.mh.safe = true; for (const d of [p, ...game.enemies]) if (d.breathT > 0) game.mh.updateBreath(d, dt);
-    game.mh.updateTitle(dt); if (game.farm) { game.farm.update(dt, true); if (p.def.farmKid && p.mech.R.cheerT <= 0 && Math.random() < dt * 0.2) p.mech.R.cheerT = 1.4; }
-    const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
-    const fm = !!game.farm, a = Math.sin(titleT * 0.12) * 0.22, r = (fm ? (asp < 1 ? 13 : asp < 1.5 ? 9.5 : 8.5) : asp < 1 ? 28 : asp < 1.5 ? 17.5 : 15.5) + Math.sin(titleT * 0.2) * 1.0;
+    game.mh.updateTitle(dt); if (game.farm) { game.farm.update(dt, true); if (p.def.farmKid && !p.def.hoopster && p.mech.R.cheerT <= 0 && Math.random() < dt * 0.2) p.mech.R.cheerT = 1.4; }
+    if (game.stomp && level === 'stomp') game.stomp.update(dt);
+    const stompCam = level === 'stomp' && p.def && p.def.hoopster;
+    const W = window.innerWidth, H = window.innerHeight, asp = W / H, mid = stompCam ? new THREE.Vector3(p.pos.x, p.pos.y, p.pos.z) : new THREE.Vector3(TITLE.x, p.pos.y, TITLE.z);
+    const fm = !!game.farm, a = Math.sin(titleT * 0.12) * 0.22, r = (stompCam ? (asp < 1 ? 16 : 14) : fm ? (asp < 1 ? 13 : asp < 1.5 ? 9.5 : 8.5) : asp < 1 ? 28 : asp < 1.5 ? 17.5 : 15.5) + Math.sin(titleT * 0.2) * 1.0;
     camera.position.set(mid.x + Math.sin(a) * r, 0, mid.z + Math.cos(a) * r);
     camera.position.y = Math.max(mid.y + (fm ? 2.0 : 3.0), world.height(camera.position.x, camera.position.z) + (fm ? 2.0 : 3.0));
-    camera.lookAt(mid.x, mid.y + (fm ? (asp < 1 ? 6.6 : 5.6) : (asp < 1 ? 6.0 : 4.4) + 1.5), mid.z - 4);
+    camera.lookAt(mid.x, mid.y + (stompCam ? 2.2 : fm ? (asp < 1 ? 6.6 : 5.6) : (asp < 1 ? 6.0 : 4.4) + 1.5), mid.z - (stompCam ? 0 : 4));
     if (fx.shake > 0) camera.position.add(new THREE.Vector3((Math.random() - 0.5) * fx.shake, (Math.random() - 0.5) * fx.shake, 0));
     game.updatePickups(dt);
   } else if (screen === 'pause' || screen === 'results') { /* frozen world */ }
@@ -781,7 +820,7 @@ function oceanAmbience(dt) {
 function emitSmoke(dt) {
   if (world && world.farm) { smokeT -= dt; while (smokeT < 0) { smokeT += 0.22; const o = world.smokeOrigin; // v5.1: cosy farmhouse chimney smoke
     fx.smoke.spawn({ pos: new THREE.Vector3(o.x + (Math.random() - 0.5) * 0.6, o.y, o.z + (Math.random() - 0.5) * 0.6), vel: { x: 0.7, y: 2.2 + Math.random(), z: 0.2 }, size: 0.8, size1: 4.5, life: 4, r: 0.78, g: 0.78, b: 0.8, alpha: 0.5, alpha1: 0, drag: 0.1, rv: (Math.random() - 0.5) * 0.4, fadeIn: 0.1 }); } return; }
-  if (world && world.isCity) return; // no volcano in Mega City
+  if (world && (world.isCity || world.stomp)) return; // no volcano in Mega City or Stompolis
   if (world && world.ocean) { oceanAmbience(dt); return; } // Deep Sea: bubble columns from the vents
   smokeT -= dt;
   while (smokeT < 0) { smokeT += 0.1; const o = world.smokeOrigin; const g = 0.13 + Math.random() * 0.12;

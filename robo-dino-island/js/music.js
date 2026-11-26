@@ -141,6 +141,8 @@ const TRACKS = {
   oceanboss: { bpm: 168, muffle: 2800, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [37, 38, 36, 34], riff: RIFF_B, open: [0, 8], kick: 'blast', taiko: true, flavour: 'deep', ping: 80, layer: true, lead: LEAD_D.map(r => r.map(m => m > 0 ? m - 1 : m)), chord: true }) },
   farm: { bpm: 150, fn: (b, t, s, bar, d) => hoedown(b, t, s, bar, d) },
   farmtitle: { bpm: 146, fn: (b, t, s, bar, d) => hoedown(b, t, s, bar, d) },
+  // v5.12 Stompolis, "Stomp the Sky": original fast cartoon metal. No licensed song, no lyrics.
+  stomp: { bpm: 176, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [40, 43, 45, 38], riff: RIFF_B, open: [0, 4, 8, 12], kick: 'double', flavour: 'tribal', layer: true, lead: LEAD_A, chord: true }) },
   cityboss: { bpm: 170, fn: (b, t, s, bar, d) => metal(b, t, s, bar, d, { root: [45, 46, 44, 43], riff: RIFF_A, open: [0, 8], kick: 'blast', flavour: 'industrial', layer: true, lead: LEAD_A, chord: true }) },
 };
 

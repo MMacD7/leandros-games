@@ -7,6 +7,7 @@ import { rawHeightPeak, buildLavaSea, buildPeakVegetation, buildCastle, buildPea
 import { rawHeightCity, cityGroundGLSL, buildCity, updateCity } from './city.js';
 import { rawHeightOcean, oceanGLSL, buildOcean, updateOcean } from './ocean.js';
 import { rawHeightFarm, farmDirt, buildFarm, updateFarmWorld } from './farm.js';
+import { rawHeightStomp, buildStomp } from './stomp.js';
 
 export const S = 820, N = 256, R_ISLAND = 300;
 export const BASE = new THREE.Vector3(15, 0, 212);
@@ -70,9 +71,10 @@ function carveRiver(x, z, h) {
 export class World {
   constructor(scene, assets, quality, level = 'jungle') {
     this.scene = scene; this.assets = assets; this.q = quality; this.time = 0;
-    this.level = level; this.peak = level === 'peak'; this.lava = this.peak; this.isCity = level === 'city'; this.city = null; this.ocean = level === 'ocean'; this.farm = level === 'farm';
+    this.level = level; this.peak = level === 'peak'; this.lava = this.peak; this.isCity = level === 'city'; this.city = null; this.ocean = level === 'ocean'; this.farm = level === 'farm'; this.stomp = level === 'stomp';
     const big = level === 'jungle';
     this.span = big ? ISLAND_SPAN : S; this.segs = big ? 384 : N; this.islandR = big ? ISLAND_R : R_ISLAND; this.playR = big ? PLAY_R : 380;
+    if (this.stomp) { this.span = 280; this.segs = 40; this.islandR = 130; this.playR = 120; }
     this.root = new THREE.Group(); this.root.name = 'world-' + level; scene.add(this.root);
     this.colliders = []; this.grid = new Map(); this.braziers = []; this.flashT = 0;
     this.buildHeight();
@@ -82,9 +84,11 @@ export class World {
     if (this.isCity) { this.windU = { uTime: { value: 0 } }; this.lodSets = []; this.lodTimer = 0; buildCity(this); } // v5: Mega City Smash
     else if (this.ocean) { buildOcean(this); this.buildRuins(); } // v5: Deep Sea Showdown (sunken Atlantis ruins in the arena)
     else if (this.farm) { this.windU = { uTime: { value: 0 } }; this.lodSets = []; buildFarm(this); } // v5.1: Farty Poop Farm
+    else if (this.stomp) { this.windU = { uTime: { value: 0 } }; this.lodSets = []; buildStomp(this); } // v5.12: Stompolis, The Swing Boy
     else { if (this.peak) buildPeakVegetation(this); else this.buildVegetation();
       if (this.peak) buildCastle(this); else this.buildRuins(); }
     this.buildBase(); if (this.farm) { this.baseGroup.visible = false; this.beam = null; this.smokeOrigin = this.farmData.chimney.clone(); }
+    if (this.stomp && this.beam) this.beam.visible = false;
     this.buildGrass();
     if (this.peak) buildPeakExtras(this);
   }
@@ -93,7 +97,7 @@ export class World {
   // ---------- height field ----------
   buildHeight() {
     const n = this.segs + 1, span = this.span, segs = this.segs; this.H = new Float32Array(n * n); this.splat = new Float32Array(n * n * 4); this.dens = new Float32Array(n * n * 2);
-    const sample = this.peak ? rawHeightPeak : this.isCity ? rawHeightCity : this.ocean ? rawHeightOcean : this.farm ? rawHeightFarm : (x, z) => rawHeight(x, z, this.islandR);
+    const sample = this.peak ? rawHeightPeak : this.isCity ? rawHeightCity : this.ocean ? rawHeightOcean : this.farm ? rawHeightFarm : this.stomp ? rawHeightStomp : (x, z) => rawHeight(x, z, this.islandR);
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) this.H[j * n + i] = sample(-span / 2 + i * span / segs, -span / 2 + j * span / segs);
     const hm = new Uint16Array(n * n * 4); const toH = THREE.DataUtils.toHalfFloat;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
@@ -254,7 +258,7 @@ diffuseColor.a = mix(0.45, 0.94, smoothstep(0.0, 3.5, dep)) + foam*0.4;`)
     this.lavaGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.assets.glow, color: 0xff6a20, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8, fog: false }));
     this.lavaGlow.scale.set(this.islandR > 400 ? 90 : 60, this.islandR > 400 ? 58 : 40, 1); if (this.peak) this.lavaGlow.material.color.set(0xff4a10); this.lavaGlow.position.set(VOLC.x, this.craterY + 8, VOLC.z); this.root.add(this.lavaGlow);
     this.smokeOrigin = new THREE.Vector3(VOLC.x, this.craterY + 4, VOLC.z);
-    if (this.isCity || this.farm) { lava.visible = false; this.lavaGlow.visible = false; }
+    if (this.isCity || this.farm || this.stomp) { lava.visible = false; this.lavaGlow.visible = false; }
   }
 
   // ---------- colliders ----------
@@ -502,7 +506,7 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
 
   applyQuality(q) {
     this.q = q;
-    this.grass.geo.instanceCount = this.isCity ? 0 : Math.min(this.grass.max, Math.round(q.grass * (this.ocean ? 0.7 : 1)));
+    this.grass.geo.instanceCount = (this.isCity || this.stomp) ? 0 : Math.min(this.grass.max, Math.round(q.grass * (this.ocean ? 0.7 : 1)));
     this.flowers.geo.instanceCount = Math.min(this.flowers.max, Math.round(this.grass.geo.instanceCount * 0.45));
     const tile = Math.max(50, q.grassR * 2.05); this.grass.u.uTile.value = this.flowers.u.uTile.value = tile;
     this.grass.u.uRadius.value = this.flowers.u.uRadius.value = q.grassR;
@@ -587,7 +591,7 @@ vec4 diffuseColor = vec4(mix(vec3(0.02,0.07,0.01), tip, smoothstep(0.0, 1.0, vY)
     }
     this.lodTimer -= dt; if (this.lodTimer <= 0) { this.lodTimer = 0.4; this.updateLOD(cam, player); }
     this.baseRing.material.color.setHSL(0.52, 1, 0.5 + 0.15 * Math.sin(this.time * 3));
-    if (this.beam) { const d = Math.hypot(cam.x - BASE.x, cam.z - BASE.z); this.beam.material.opacity = 0.2 * smooth(40, 120, d); this.beam.visible = d > 40; }
+    if (this.beam && !this.stomp) { const d = Math.hypot(cam.x - BASE.x, cam.z - BASE.z); this.beam.material.opacity = 0.2 * smooth(40, 120, d); this.beam.visible = d > 40; }
     this.lavaGlow.material.opacity = 0.65 + 0.2 * Math.sin(this.time * 2.3) * Math.sin(this.time * 1.1);
   }
 }

@@ -14,6 +14,7 @@ import { Mayhem } from './mayhem.js';
 import { Rider, rideOpts } from './rider.js';
 import { applyRoid } from './roid3d.js';
 import { FarmLife, KidMech, KID } from './farm.js';
+import { StompLife, HOOP } from './stomp.js';
 import { JungleHype } from './hype.js';
 import { Personas } from './persona.js';
 import { LionMech, LION } from './lion.js';
@@ -169,11 +170,12 @@ export class Game {
     this.mh = new Mayhem(this);
     this.rider = new Rider(); this.rider.groundAt = (x, z) => Math.max(0, this.world.height(x, z));
     this.westies = new Westies(this);
-    this.bindFarm();
+    this.bindFarm(); this.bindStomp();
     this.eggs = new Eggs(this);
   }
   // v5.1 Farty Poop Farm: the living farm (animals, poop, horse, Bad David) belongs to the farm world
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
+  bindStomp() { const w = this.world; this.stomp = w && w.stomp ? (w.stompLife || (w.stompLife = new StompLife(this, w))) : null; }
   mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && p.def.costume) return; // Rex Costume already shows Leandro. The lion is a 3D cat, so Leandro sits on the seat.
     if (!(p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean))) return; // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
     if (p.def.lion && p.mech.seat) R.mountAt(p.mech.seat, { mech: p.mech, scale: 0.72, spread: 1.05, shinOut: 0.12, saddle: false });
@@ -187,7 +189,8 @@ export class Game {
     let def = DINOS.find(d => d.id === this.save.selected) || DINOS[0]; const oc = this.world && this.world.ocean, by = id => DINOS.find(d => d.id === id);
     if (oc && !def.sea && !def.westie) def = by(this.save.seaSel) || by('shark'); else if (!oc && def.sea) def = by(this.save.landSel) || by('rex'); // v5: sea creatures swim in the Deep Sea, land dinos stomp on land
     def = this.unrobo(def); // v5.6: Robo Dinos OFF → a regular dino
-    if (this.world && this.world.farm) { def = KID; if (this.farm) { if (this.farm.resetKid) this.farm.resetKid(); else { this.farm.riding = false; this.farm.kidSpeed = null; } } } // v5.1: on the farm you ARE Leandro
+    if (this.world && this.world.stomp) def = HOOP; // v5.12: on Stompolis you ARE The Swing Boy
+    else if (this.world && this.world.farm) { def = KID; if (this.farm) { if (this.farm.resetKid) this.farm.resetKid(); else { this.farm.riding = false; this.farm.kidSpeed = null; } } } // v5.1: on the farm you ARE Leandro
     else if (this.world && this.world.level === 'jungle' && this.save.jungleCostume) def = COSTUME; // v5.8: Rex Costume, Jungle Island only
     else if (this.world && this.world.level === 'jungle' && this.save.jungleLion) def = LION; // v5.7: lion ride is Jungle Island only
     const p = new Dino(this, def, false); this.player = p; if (def.farmKid) { p.mech.setRide(false); p.mech.mud = 0; } if (def.westie) setScuba(p.mech.w, oc); // Ricky / Bobby dive in scuba gear
@@ -218,7 +221,7 @@ export class Game {
       pickFrom = DINOS.filter(d => d.real === wantReal && !d.persona && !d.dragon && !d.westie && !ROID.includes(d.id) && !PEAK_ONLY.includes(d.id) && !(d.fly && this.mode === 'battle')); }
     const oc = this.level === 'ocean'; pickFrom = pickFrom.filter(d => !d.westie && (oc ? d.sea : !d.sea)); if (!pickFrom.length) pickFrom = DINOS.filter(d => d.real && !d.persona && !d.westie && !d.dragon && (oc ? d.sea : !d.sea));
     // v5.6 personality dinos wander the land levels while exploring (a lot more of them with Robo Dinos OFF)
-    if (!defId && this.mode === 'roam' && !oc && !(this.world && (this.world.farm || this.world.ocean)) && this.r() < (this.robos === false ? 0.35 : 0.12)) pickFrom = PERSONAS;
+    if (!defId && this.mode === 'roam' && !oc && !(this.world && (this.world.farm || this.world.ocean || this.world.stomp)) && this.r() < (this.robos === false ? 0.35 : 0.12)) pickFrom = PERSONAS;
     const def = this.unrobo(defId ? DINOS.find(d => d.id === defId) : pickFrom[(this.r() * pickFrom.length) | 0]);
     const e = new Dino(this, def, true, level); e.place(x, z, this.r() * 6.28); e.ai.home.set(x, 0, z); e.laserT = 1 + this.r(); e.missileT = 2 + this.r() * 3; e.meleeT = 2;
     this.enemies.push(e); if (def.persona) { e.persona = def.persona; this.personas.n.spawned++; } if (this.hype) this.hype.onSpawn(e);
@@ -252,7 +255,7 @@ export class Game {
     this.placePickups();
   }
   placePickups() {
-    this.pickups = []; if (this.world.farm) return; // v5.1: no robot parts lying around the farm
+    this.pickups = []; if (this.world.farm || this.world.stomp) return; // v5.1: no robot parts lying around the farm (or Stompolis)
     const big = this.world && this.world.playR > 400, nPick = big ? 140 : 90;
     const r = rng(this.world.peak ? 4321 : 1234);
     for (let i = 0; i < nPick; i++) {
@@ -264,14 +267,16 @@ export class Game {
   // switch level (Jungle Island <-> Dragon Peak)
   setWorld(w) {
     if (this.westies) this.westies.reset();
-    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); if (this.eggs) this.eggs.sync();
+    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); if (this.eggs) this.eggs.sync();
+    if (this.westies && !(w && w.stomp)) this.westies.leaveStomp();
   }
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
 
   // ---------- modes ----------
-  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); this.spawnT = 0.5; this.battle = null; }
+  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); if (this.stomp) this.stomp.reset(); this.spawnT = 0.5; this.battle = null; }
   startBattle() {
     if (this.world && this.world.farm) { this.hud.toast('🚜 No battles on the farm! Feed the animals instead 🐮'); return; }
+    if (this.world && this.world.stomp) { this.hud.toast('Swing, zip, wrap! No battles in Stompolis.'); return; }
     if (this.westies) { this.westies.reset(); if (this.r() < 0.3) this.later(2.5, () => this.westies.trigger('battle')); }
     this.mode = 'battle'; this.clearEnemies(); this.spawnPlayer(true);
     this.battle = { t: 90, wave: 0, kos: 0, bolts: 0, over: false, boss: null, bosses: 0 }; this.mh.resetArena(); this.nextWave();
@@ -972,7 +977,8 @@ export class Game {
       if (p.dashCD > 0) p.dashCD -= dt; if (p.shellT > 0) { p.shellT -= dt; } if (p.mech.shieldK !== undefined) p.mech.shieldK = p.shellT > 0 ? 1 : 0;
       if (p.def.sea && p.fly) { const v = (inp.btn.up ? 1 : 0) - (inp.btn.down ? 1 : 0) + (inp.pressed.up ? 0.5 : 0) - (inp.pressed.down ? 0.5 : 0); p.climb = clamp(v, -1, 1); p.alt = clamp(p.alt + v * 15 * dt, 0, 48); if (v) this.swimUD = (this.swimUD || 0) + 1; } // v5: free 3D swimming (▲/▼)
       else if (p.fly) { p.climb = p.boosting ? 1 : 0; p.alt = clamp(p.alt + (p.boosting ? 9 : -2.5) * dt, 5, 40); }
-      if (!this.updateAct(p, dt)) p.move(dt, mag > 0.05 ? dir.normalize() : dir, mag, p.boosting && !p.fly ? true : p.boosting);
+      if (p.def.hoopster && this.stomp) this.stomp.drive(p, dt, mag > 0.05 ? dir.normalize() : dir, mag, inp);
+      else if (!this.updateAct(p, dt)) p.move(dt, mag > 0.05 ? dir.normalize() : dir, mag, p.boosting && !p.fly ? true : p.boosting);
       // weapons
       p.laserT -= dt; p.missileT -= dt; p.meleeT -= dt;
       const fwd = new THREE.Vector3(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
@@ -984,7 +990,8 @@ export class Game {
       const taps = k => Math.min(4, +inp.pressed[k] || 0) || (inp.btn[k] && p[k + 'T'] <= 0 ? 1 : 0); // every tap counts (even several between two frames)
       const nL = taps('laser'), nM = taps('missile'), nB = taps('melee'), L = nL > 0, M = nM > 0, B = nB > 0;
       if (L) p.laserT = p.st.rate; if (M) p.missileT = REP; if (B) p.meleeT = REP;
-      if (p.def.farmKid) { if (this.farm) this.farm.controls(p, inp, nL, nM, nB); } // v5.1 farm: FEED / RIDE / TOOT / RUN
+      if (p.def.hoopster) { /* SWING / ZIP / WRAP are handled in StompLife.drive */ }
+      else if (p.def.farmKid) { if (this.farm) this.farm.controls(p, inp, nL, nM, nB); } // v5.1 farm: FEED / RIDE / TOOT / RUN
       else if (p.def.westie) { // v5: Ricky / Bobby: BITE, BARK BLAST, ZOOMIES (jump is on the 4th button)
         if (L) { if (p.act && p.act.type !== 'zoomies') p.act = null; this.bite(p, this.lock); }
         if (M) this.barkBlast(p);
@@ -1025,6 +1032,7 @@ export class Game {
       music.play(hot ? 'battle' : 'roam'); if (music.setIntensity) music.setIntensity(hot ? 1 : 0);
     }
     if (this.farm) this.farm.update(dt);
+    if (this.stomp) this.stomp.update(dt);
     if (p.shieldT > 0) { p.shieldT -= dt; if (Math.random() < 0.5) this.fx.glow.spawn({ pos: new THREE.Vector3(p.pos.x + (Math.random() - 0.5) * 5, p.pos.y + Math.random() * p.mech.height, p.pos.z + (Math.random() - 0.5) * 5), vel: { x: 0, y: 1.5, z: 0 }, size: 0.5, life: 0.6, r: 0.3, g: 1.8, b: 2.6, alpha: 1 }); }
     if (!p.alive && this.player !== p) return;
 
@@ -1048,7 +1056,7 @@ export class Game {
       if (d < m && d > 1e-3 && !(a.fly && a.alt > 4) && !(b.fly && b.alt > 4)) { const push = (m - d) / 2 / d; a.pos.x -= dx * push; a.pos.z -= dz * push; b.pos.x += dx * push; b.pos.z += dz * push; } }
 
     // spawning
-    if (this.mode === 'roam' && !this.farm) { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
+    if (this.mode === 'roam' && !this.farm && !(this.world && this.world.stomp)) { this.spawnT -= dt; const alive = this.enemies.filter(e => e.alive).length;
       if (this.spawnT <= 0 && alive < Math.min(this.maxEnemies(), this.quality.enemies)) { this.spawnT = this.hype && this.hype.on ? (alive < 4 ? 0.9 : 1.6) : 2.5; if (this.hype && this.hype.on) this.hype.n.quickSpawns++; // v5.4: shorter lulls on Jungle Island
         const [x, z, l] = this.roamSpawnPoint(); this.spawnEnemy(x, z, l); }
       this.stampT = (this.stampT ?? 70) - dt; if (this.stampT <= 0) { this.stampT = 75 + this.r() * 60; if (p.alive) this.stampede(); }
@@ -1233,10 +1241,43 @@ export class Game {
     const p = this.player, c = this.cam, h = p.mech.height;
     // auto-follow behind the dino while moving (unless the player is steering the camera)
     if (!inp.looking && p.speedNow > 1.5) { const want = p.yaw + Math.PI + (p.def.id === 'brachio' ? -0.62 : 0); c.yaw += angDiff(c.yaw, want) * Math.min(1, dt * 1.4); }
-    if (p.def.farmKid && !inp.looking) { c.pitch += (0.16 - c.pitch) * Math.min(1, dt * 2); if (p.speedNow < 0.35) c.yaw += angDiff(c.yaw, p.yaw + Math.PI + 0.44) * Math.min(1, dt * 1.4); }
-    if (p.def.farmKid) { const want = window.innerWidth > window.innerHeight ? 42 : 56; if (Math.abs(this.camera.fov - want) > 0.4) { this.camera.fov = want; this.camera.updateProjectionMatrix(); } }
+    if (p.def.hoopster && !inp.looking) {
+      const s = this.stomp, air = s && (s.state === 'swing' || s.state === 'air' || s.state === 'wall');
+      let wantPitch = air ? 0.34 : 0.38;
+      if (!air && s && s.lastRoof && Math.hypot(p.pos.x - s.lastRoof.x, p.pos.z - s.lastRoof.z) > s.lastRoof.r - 2.5) wantPitch = 0.50;
+      const k = 1 - Math.exp(-3 * dt);
+      let wantYaw = p.yaw + Math.PI;
+      if (s && s.hooked && s.anchor && s.anchor.roof) {
+        const roof = s.anchor.roof;
+        const out = Math.atan2(p.pos.x - roof.x, p.pos.z - roof.z);
+        const delta = angDiff(wantYaw, out);
+        wantYaw += Math.max(-0.35, Math.min(0.35, delta));
+      }
+      c.pitch += (wantPitch - c.pitch) * k; c.yaw += angDiff(c.yaw, wantYaw) * k;
+    }
+    else if (p.def.farmKid && !inp.looking) { c.pitch += (0.16 - c.pitch) * Math.min(1, dt * 2); if (p.speedNow < 0.35) c.yaw += angDiff(c.yaw, p.yaw + Math.PI + 0.44) * Math.min(1, dt * 1.4); }
+    if (p.def.hoopster) {
+      const portrait = window.innerHeight > window.innerWidth;
+      const s = this.stomp;
+      let chase = false;
+      if (portrait && s && !s.won && s.david && p) {
+        const c01 = v => Math.max(0, Math.min(1, v));
+        const dx = s.david.x - p.pos.x, dz = s.david.z - p.pos.z, dd = Math.hypot(dx, dz) || 1;
+        const ahead = (-dx * Math.sin(c.yaw) - dz * Math.cos(c.yaw)) / dd;
+        chase = 0.35 * c01((26 - dd) / 8) * c01((dd - 3) / 3) * c01((ahead - 0.2) / 0.5) > 0.02;
+      }
+      this._chase = chase;
+      const want = portrait ? (chase ? 56 : 62) : 54;
+      const next = this.camera.fov + (want - this.camera.fov) * (1 - Math.exp(-4 * dt));
+      if (Math.abs(next - this.camera.fov) > 0.02) { this.camera.fov = next; this.camera.updateProjectionMatrix(); }
+    }
+    else if (p.def.farmKid) { const want = window.innerWidth > window.innerHeight ? 42 : 56; if (Math.abs(this.camera.fov - want) > 0.4) { this.camera.fov = want; this.camera.updateProjectionMatrix(); } }
     if (p.def.id === 'brachio' && !inp.looking) c.pitch += (0.32 - c.pitch) * Math.min(1, dt * 2);
-    let dist = (p.def.farmKid ? 3.65 : 4 + h * 1.55) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.def.id === 'stegos' ? 5 : 0) + (p.def.id === 'allo' ? 4 : 0) + (p.def.id === 'dilo' ? 3 : 0) + (p.def.id === 'pachy' ? 3 : 0) + (p.def.id === 'para' ? 5 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
+    const hoopAir = p.def.hoopster && this.stomp && (this.stomp.state === 'swing' || this.stomp.state === 'air' || this.stomp.state === 'wall');
+    const hoopPortrait = p.def.hoopster && window.innerHeight > window.innerWidth;
+    const airDist = hoopPortrait ? 4.4 : 4.7;
+    const roofDist = hoopPortrait && this._chase ? 5.0 : 5.4;
+    let dist = (p.def.hoopster ? (hoopAir ? airDist : roofDist) : p.def.farmKid ? 3.65 : 4 + h * 1.55) + (p.def.lion ? 2.4 : 0) + (p.def.costume ? 2.2 : 0) + (p.def.kind === 'trex' ? 4 : 0) + (p.def.id === 'brachio' ? 6 : 0) + (p.def.id === 'giga' ? 5 : 0) + (p.def.id === 'spinos' ? 8 : 0) + (p.def.id === 'trice' ? 4 : 0) + (p.def.id === 'carno' ? 4 : 0) + (p.def.id === 'velo' ? 3 : 0) + (p.def.id === 'ankys' ? 4 : 0) + (p.def.id === 'stegos' ? 5 : 0) + (p.def.id === 'allo' ? 4 : 0) + (p.def.id === 'dilo' ? 3 : 0) + (p.def.id === 'pachy' ? 3 : 0) + (p.def.id === 'para' ? 5 : 0) + (p.fly ? (p.def.sea ? 3 + Math.max(0, 4 - h) : 4) : 0) + (p.boosting ? 1.5 : 0);
     // v4.3: Ricky & Bobby show: ease back + around so both dogs and the player share the frame, then restore
     const W = this.westies, st = W && W.active && W.stage; this.stageK = lerp(this.stageK || 0, st ? 1 : 0, Math.min(1, dt * 2.5));
     const sk = this.stageK > 0.002 && W && W.stage ? this.stageK : 0;
@@ -1247,19 +1288,38 @@ export class Game {
     if (CC) { CC.t += dt; const b = CC.b; ck = Math.min(1, CC.t / 0.45) * Math.min(1, Math.max(0, (CC.dur - CC.t) / 0.9)); if (CC.t >= CC.dur || !this.world.city) this.collapseCam = null;
       else { this.collapseShots++; if (CC.yaw === undefined) this.pickCollapseShot(CC, p, c);
         dist = lerp(dist, Math.max(dist, CC.dist), ck); if (!inp.looking) c.yaw += angDiff(c.yaw, CC.yaw) * Math.min(1, dt * 3) * ck; } }
-    const tgt = tmp.set(p.pos.x, p.pos.y + (p.def.farmKid ? h * 0.42 : h * 0.82) + (p.def.lion ? 0.35 : 0) + (p.def.costume ? 0.25 : 0) + (p.def.kind === 'trex' ? 0.45 : 0) + (p.def.id === 'brachio' ? 0.2 : 0) + (p.def.id === 'giga' ? 0.3 : 0) + (p.def.id === 'spinos' ? 0.35 : 0) + (p.def.id === 'trice' ? 0.15 : 0) + (p.def.id === 'carno' ? 0.2 : 0), p.pos.z);
+    const tgt = tmp.set(p.pos.x, p.pos.y + (p.def.hoopster ? (hoopAir ? 0.6 : 0.9) : p.def.farmKid ? h * 0.42 : h * 0.82) + (p.def.lion ? 0.35 : 0) + (p.def.costume ? 0.25 : 0) + (p.def.kind === 'trex' ? 0.45 : 0) + (p.def.id === 'brachio' ? 0.2 : 0) + (p.def.id === 'giga' ? 0.3 : 0) + (p.def.id === 'spinos' ? 0.35 : 0) + (p.def.id === 'trice' ? 0.15 : 0) + (p.def.id === 'carno' ? 0.2 : 0), p.pos.z);
     if (p.def.farmKid && p.mech.castleH) tgt.y += p.mech.castleH * 0.45; // v5.6.1 the camera rises a little with the big castle bounces, so Leandro stays in the picture
     if (CC && ck > 0) { const b = CC.b, gy = this.world.height(b.x, b.z); tgt.lerp(new THREE.Vector3((b.x + p.pos.x) / 2, gy + b.h * 0.45, (b.z + p.pos.z) / 2), ck); } // same aim point pickCollapseShot checked
     if (this.hype && (this.swoop || this.koCam)) dist = this.hype.camera(dt, dist, tgt, c, p, inp); // v5.4 KO punch-in + surprise / boss swoop
-    c.dist = lerp(c.dist, dist, Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : CC ? 4 : 3)));
+    c.dist = lerp(c.dist, dist, p.def.hoopster ? (1 - Math.exp(-3 * dt)) : Math.min(1, dt * (this.koCam ? 16 : this.swoop ? 5 : CC ? 4 : 3)));
     const pitch = CC && ck > 0 && CC.pitch !== undefined ? lerp(c.pitch, CC.pitch, ck) : c.pitch; // v5.6: the collapse shot rises above the rooftops
     const cp = new THREE.Vector3(tgt.x + Math.sin(c.yaw) * Math.cos(pitch) * c.dist, tgt.y + Math.sin(pitch) * c.dist, tgt.z + Math.cos(c.yaw) * Math.cos(pitch) * c.dist);
     const gh = Math.max(this.world.height(cp.x, cp.z), 0) + 1.2; if (cp.y < gh) cp.y = gh; if (this.world.ocean && cp.y > SURF - 2) cp.y = SURF - 2; // stay under the waves
+    if (p.def.hoopster && this.stomp) {
+      const s = this.stomp, air = s.state === 'swing' || s.state === 'air' || s.state === 'wall';
+      const lead = air ? 2.5 : 1.5; const vx = s.vel.x, vz = s.vel.z, vl = Math.hypot(vx, vz);
+      if (vl > 0.4) { tgt.x += vx / vl * lead; tgt.z += vz / vl * lead; }
+      if (air && s.hooked && s.anchor) { tgt.x = tgt.x * 0.85 + s.anchor.x * 0.15; tgt.z = tgt.z * 0.85 + s.anchor.z * 0.15; tgt.y = Math.min(p.pos.y + 2.2, tgt.y * 0.85 + Math.min(s.anchor.y, p.pos.y + 4) * 0.15); }
+      if (!s.won && s.david) {
+        const c01 = v => Math.max(0, Math.min(1, v));
+        const dx = s.david.x - p.pos.x, dz = s.david.z - p.pos.z, dd = Math.hypot(dx, dz) || 1;
+        const ahead = (-dx * Math.sin(c.yaw) - dz * Math.cos(c.yaw)) / dd; // 1 = David beyond the hero, away from the camera
+        const w = 0.35 * c01((26 - dd) / 8) * c01((dd - 3) / 3) * c01((ahead - 0.2) / 0.5);
+        tgt.x += (s.david.x - tgt.x) * w; tgt.z += (s.david.z - tgt.z) * w;
+        tgt.y += (Math.min(s.david.y + 0.6, p.pos.y + 1.6) - tgt.y) * w;
+      }
+      tgt.y = Math.min(tgt.y, p.pos.y + 2.4);
+    }
     if (this.snapCam) { c.pos.copy(cp); c.look.copy(tgt); this.snapCam = false; }
-    c.pos.lerp(cp, Math.min(1, dt * 8)); c.look.lerp(tgt, Math.min(1, dt * 12));
+    const spring = p.def.hoopster ? (1 - Math.exp(-6 * dt)) : Math.min(1, dt * 8);
+    const lookSpring = p.def.hoopster ? (1 - Math.exp(-9 * dt)) : Math.min(1, dt * 12);
+    c.pos.lerp(cp, spring); c.look.lerp(tgt, lookSpring);
     this.camera.position.copy(c.pos);
     const sh = this.fx.shake; if (sh > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh));
+    if (p.def.hoopster && this.stomp) this.stomp.keepCameraOut(this.camera);
     this.camera.lookAt(c.look);
     if (this.camHook) this.camHook(this.camera); // test/screenshot framing hook
+    if (p.def.hoopster && this.stomp) this.stomp.placeChevrons();
   }
 }

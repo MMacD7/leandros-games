@@ -245,7 +245,7 @@ export class Mayhem {
   }
   updateVolcano(dt, title) {
     const Vc = this.volc, W = this.world, fx = this.fx, cp = this.g.camera.position;
-    this.lavaTex.offset.y -= dt * 0.22; if (W.isCity || W.farm) return; // no volcano in the city (or on the farm)
+    this.lavaTex.offset.y -= dt * 0.22; if (W.isCity || W.farm || W.stomp) return; // no volcano in the city, on the farm, or in Stompolis
     const pulse = 0.5 + 0.15 * Math.sin(W.time * 3.1);
     for (const s of this.lavaGlows) s.material.opacity = pulse + Vc.glow * 0.3;
     if (Vc.on > 0) { Vc.on -= dt; Vc.glow = Math.min(1, Vc.glow + dt * 2);

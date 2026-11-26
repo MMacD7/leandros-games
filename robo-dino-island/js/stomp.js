@@ -1,0 +1,953 @@
+// v5.12 STOMPOLIS — The Swing Boy. He shoots one glowing Zip-Goo cable from his palm.
+// Buildings stay standing (this is not Mega City Smash). No webs, no web marks, no licensed music.
+import * as THREE from './vendor/three.bundle.min.js';
+import { sfx } from './audio.js';
+import { voice } from './voice.js';
+import { davidModel } from './farm.js';
+
+export const HOOP = { id: 'hoopster', name: 'The Swing Boy', kind: 'kid', farmKid: true, hoopster: true, real: true, hp: 100, speed: 6.5, bite: 0, biteRate: 0.3, special: 'none', specialName: 'ZIP', specialCD: 1, roar: 1, scale: 1, radius: 0.55, color: 0x1f8a45, accent: 0x3de8ff };
+
+export function rawHeightStomp() { return 1.6; }
+
+const TOWERS = [
+  { x: 0, z: 0, r: 6.4, h: 28, kind: 'pot', col: 0xf4e2c4 },
+  { x: 16, z: 3, r: 5.2, h: 34, kind: 'egg', col: 0x2f8f8a },
+  { x: 30, z: -8, r: 6.2, h: 44, kind: 'pot', col: 0xe36b58 },
+  { x: 46, z: 6, r: 5.4, h: 44, kind: 'crane', col: 0xf7e7cf },
+  { x: 12, z: -16, r: 5.8, h: 36, kind: 'egg', col: 0x3aa0a8 },
+  { x: 34, z: -22, r: 7.2, h: 76, kind: 'neck', col: 0xb8c4d2 },
+  { x: 52, z: -12, r: 5.6, h: 32, kind: 'dome', col: 0xe8b07a },
+  { x: -14, z: 8, r: 5.0, h: 40, kind: 'egg', col: 0x1f7a86 },
+  { x: -10, z: -12, r: 4.6, h: 38, kind: 'pot', col: 0xf6c7a8 },
+  { x: 8, z: 16, r: 5.5, h: 67, kind: 'egg', col: 0xd4554a },
+  { x: 22, z: 16, r: 4.4, h: 27, kind: 'pot', col: 0xf0e2c8 },
+  { x: -18, z: -2, r: 6.0, h: 60, kind: 'crane', col: 0x4aa3a0 },
+];
+
+const M = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: o.roughness ?? 0.72, metalness: o.metalness ?? 0.04, emissive: o.emissive || 0x000000, emissiveIntensity: o.em || 0 });
+
+function add(parent, geo, mat, x, y, z) {
+  const mesh = new THREE.Mesh(geo, mat); mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+function prop(mesh) {
+  mesh.userData.fadeProp = true;
+  if (mesh.material) { mesh.material.transparent = true; mesh.material.opacity = 1; }
+  return mesh;
+}
+
+function streetTex() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#4e463c'; g.fillRect(0, 0, 512, 512);
+  g.fillStyle = '#6d6256';
+  g.fillRect(0, 200, 512, 112); g.fillRect(196, 0, 120, 512);
+  g.fillStyle = '#d8d2c6';
+  g.fillRect(0, 248, 512, 6); g.fillRect(250, 0, 6, 512);
+  g.fillStyle = '#3f8a42';
+  g.fillRect(20, 20, 90, 70); g.fillRect(390, 400, 80, 70);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function windowTex() {
+  if (windowTex.cached) return windowTex.cached;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f6e2c4'; g.fillRect(0, 0, 256, 512);
+  const lit = document.createElement('canvas'); lit.width = 256; lit.height = 512;
+  const lg = lit.getContext('2d'); lg.fillStyle = '#000'; lg.fillRect(0, 0, 256, 512);
+  for (let row = 0; row < 8; row++) for (let col = 0; col < 4; col++) {
+    const x = 16 + col * 64, y = 20 + row * 62, on = Math.random() < 0.35;
+    g.fillStyle = '#f4f1e8'; g.beginPath(); g.roundRect(x - 4, y - 4, 44, 52, 8); g.fill();
+    g.fillStyle = on ? '#ffe6a8' : '#3a2238'; g.beginPath(); g.roundRect(x, y, 36, 44, 6); g.fill();
+    if (on) { lg.fillStyle = '#ffe6a8'; lg.beginPath(); lg.roundRect(x, y, 36, 44, 6); lg.fill(); }
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter;
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  const e = new THREE.CanvasTexture(lit); e.wrapS = e.wrapT = THREE.RepeatWrapping; e.anisotropy = 8;
+  if (THREE.SRGBColorSpace) e.colorSpace = THREE.SRGBColorSpace;
+  windowTex.cached = t; windowTex.emissive = e; return t;
+}
+export function buildStomp(W) {
+  const root = new THREE.Group(); root.name = 'stompolis'; W.root.add(root);
+  const street = new THREE.Mesh(new THREE.CircleGeometry(70, 40), new THREE.MeshStandardMaterial({ map: streetTex(), roughness: 0.92 }));
+  street.rotation.x = -Math.PI / 2; street.position.y = 1.5; street.receiveShadow = true; root.add(street);
+  const park = new THREE.Mesh(new THREE.RingGeometry(70, 140, 40), M(0x4f8a40, { roughness: 0.95 }));
+  park.rotation.x = -Math.PI / 2; park.position.y = 1.45; root.add(park);
+  const haze = new THREE.Mesh(new THREE.CircleGeometry(100, 28), new THREE.MeshBasicMaterial({ color: 0xc98a9a, transparent: true, opacity: 0.18, depthWrite: false }));
+  haze.rotation.x = -Math.PI / 2; haze.position.y = 3; root.add(haze);
+  buildStreetKit(root);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(380, 24, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, fog: false, depthWrite: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 c = mix(vec3(1.0,0.55,0.23), vec3(0.89,0.27,0.15), smoothstep(0.0,0.21,h)); c = mix(c, vec3(0.23,0.08,0.20), smoothstep(0.21,0.9,h)); gl_FragColor = vec4(c,1.0); }',
+  }));
+  sky.frustumCulled = false; root.add(sky);
+  const towers = TOWERS.map(t => buildTower(root, t));
+  const anchors = [];
+  towers.forEach(t => anchors.push(...t.anchors));
+  buildMonorail(root, anchors);
+  buildSkyline(root);
+  const dinos = [2, 4, 5, 7, 8, 9, 10].map(i => parkDino(root, towers[i]));
+  W.stompData = { root, towers, anchors, dinos };
+  if (W.water) W.water.visible = false;
+  if (W.baseGroup) W.baseGroup.visible = false;
+}
+function buildSkyline(root) {
+  const mat = M(0x8a5a78, { roughness: 0.8 });
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const mesh = new THREE.InstancedMesh(geo, mat, 18); mesh.castShadow = false; mesh.receiveShadow = false;
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
+  for (let i = 0; i < 18; i++) {
+    const a = i / 18 * Math.PI * 2, rad = 96 + (i % 3) * 8, h = 40 + (i % 5) * 10;
+    p.set(Math.cos(a) * rad, 1.6 + h / 2, Math.sin(a) * rad); s.set(6 + (i % 4), h, 6 + (i % 3));
+    mesh.setMatrixAt(i, m.compose(p, q, s));
+  }
+  root.add(mesh);
+  const far = new THREE.InstancedMesh(geo, M(0x7a4a6a, { roughness: 0.9 }), 14);
+  for (let i = 0; i < 14; i++) {
+    const a = i / 14 * Math.PI * 2 + 0.2, h = 48 + (i % 4) * 12;
+    p.set(Math.cos(a) * 180, 1.6 + h / 2, Math.sin(a) * 180); s.set(10, h, 8);
+    far.setMatrixAt(i, m.compose(p, q, s));
+  }
+  far.castShadow = false; root.add(far);
+}
+
+function stripeTex(a, b, stripes) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
+  const g = c.getContext('2d');
+  const w = 512 / stripes;
+  for (let i = 0; i < stripes; i++) { g.fillStyle = i % 2 ? b : a; g.fillRect(0, i * w, 512, w + 1); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter;
+  if (THREE.SRGBColorSpace) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function roofPark(g, t) {
+  const grass = stripeTex('#3ec85a', '#2f9a3c', Math.max(8, Math.round(t.r * 2 / 0.8)));
+  const disc = add(g, new THREE.CircleGeometry(t.r * 0.92, 28), new THREE.MeshStandardMaterial({ map: grass, roughness: 0.9 }), 0, t.h + 0.08, 0);
+  disc.rotation.x = -Math.PI / 2;
+  const path = add(g, new THREE.RingGeometry(t.r * 0.7 - 0.4, t.r * 0.7 + 0.4, 28), M(0xe8c65a), 0, t.h + 0.1, 0);
+  path.rotation.x = -Math.PI / 2;
+  const pad = add(g, new THREE.RingGeometry(1.35, 1.6, 24), M(0xffd23a), 0, t.h + 0.12, 0);
+  pad.rotation.x = -Math.PI / 2;
+  const edge = add(g, new THREE.RingGeometry(1.6, 1.78, 24), M(0x7a1420), 0, t.h + 0.11, 0);
+  edge.rotation.x = -Math.PI / 2;
+  const rail = M(0xf4f1e8);
+  const n = Math.max(10, Math.round(2 * Math.PI * t.r * 0.92 / 1.2));
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2;
+    add(g, new THREE.CylinderGeometry(0.04, 0.04, 0.9, 6), rail, Math.cos(a) * t.r * 0.92, t.h + 0.5, Math.sin(a) * t.r * 0.92);
+  }
+  const hoop = add(g, new THREE.TorusGeometry(t.r * 0.92, 0.035, 6, n), rail, 0, t.h + 0.92, 0);
+  hoop.rotation.x = Math.PI / 2;
+  prop(add(g, new THREE.BoxGeometry(1.2, 0.8, 0.8), M(0x8a9099), 2.2, t.h + 0.5, -1.4));
+  prop(add(g, new THREE.BoxGeometry(1.2, 0.8, 0.8), M(0x8a9099), -1.0, t.h + 0.5, 4.8));
+  for (const [x, z] of [[3.2, 2.2], [-1.2, -4.6], [0.4, -3.2]]) {
+    prop(add(g, new THREE.CylinderGeometry(0.35, 0.4, 0.45, 8), M(0xe8c65a), x, t.h + 0.3, z));
+    prop(add(g, new THREE.SphereGeometry(0.55, 8, 6), M(0x2f9a3c), x, t.h + 0.85, z));
+  }
+}
+function plankRoof(g, t) {
+  const map = stripeTex('#6b3a2e', '#7a4636', Math.max(6, Math.round(t.r * 2 / 0.3)));
+  const deck = add(g, new THREE.CircleGeometry(t.r * 0.96, 24), new THREE.MeshStandardMaterial({ map, roughness: 0.86 }), 0, t.h + 0.06, 0);
+  deck.rotation.x = -Math.PI / 2;
+}
+function buildTower(root, t) {
+  const g = new THREE.Group(); g.position.set(t.x, 0, t.z); root.add(g);
+  const wallMap = windowTex().clone(); wallMap.repeat.set(Math.max(1, Math.round(2 * Math.PI * t.r / 8)), Math.max(1, t.h / 19.2));
+  const glowMap = windowTex.emissive.clone(); glowMap.repeat.copy(wallMap.repeat);
+  const body = new THREE.MeshStandardMaterial({ map: wallMap, emissiveMap: glowMap, emissive: 0xffe6a8, emissiveIntensity: 0.6, color: t.col, roughness: 0.62, metalness: 0.04 });
+  const trim = M(0x8a9099, { roughness: 0.45, metalness: 0.2 });
+  if (t.kind === 'egg') {
+    const egg = add(g, new THREE.SphereGeometry(t.r, 20, 16), body, 0, t.h * 0.46, 0); egg.scale.set(1, t.h / (t.r * 1.65), 1);
+    add(g, new THREE.CylinderGeometry(t.r * 0.7, t.r * 0.82, 1.0, 16), trim, 0, t.h - 0.52, 0);
+  } else if (t.kind === 'dome') {
+    add(g, new THREE.CylinderGeometry(t.r, t.r * 0.92, t.h * 0.62, 20), body, 0, t.h * 0.31, 0);
+    add(g, new THREE.SphereGeometry(t.r * 0.9, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), M(0x2fb8a8), 0, t.h * 0.62, 0);
+  } else if (t.kind === 'neck') {
+    add(g, new THREE.CylinderGeometry(t.r * 0.42, t.r * 0.7, t.h * 0.72, 12), body, 0, t.h * 0.36, 0);
+    add(g, new THREE.BoxGeometry(2.4, 1.5, 2.0), M(0xb8c4d2), 0, t.h * 0.9, 0);
+    add(g, new THREE.SphereGeometry(0.22, 10, 8), M(0x0a141e), 0.45, t.h * 0.98, 0.7);
+    add(g, new THREE.SphereGeometry(0.22, 10, 8), M(0x0a141e), -0.45, t.h * 0.98, 0.7);
+  } else if (t.kind === 'crane') {
+    add(g, new THREE.CylinderGeometry(t.r * 0.7, t.r, t.h, 14), body, 0, t.h / 2, 0);
+    add(g, new THREE.BoxGeometry(t.r * 3.2, 0.7, 0.7), trim, t.r * 1.05, t.h + 2.1, 0);
+    const mastH = t.h * 0.32;
+    const mast = add(g, new THREE.BoxGeometry(0.45, mastH, 0.45), trim.clone(), t.r * 2.2, t.h * 0.5, 0);
+    mast.material.transparent = true;
+    mast.userData.fadeProp = true;
+    mast.userData.poleA = new THREE.Vector3(t.x + t.r * 2.2, t.h * 0.5 - mastH * 0.5, t.z);
+    mast.userData.poleB = new THREE.Vector3(t.x + t.r * 2.2, t.h * 0.5 + mastH * 0.5, t.z);
+  } else {
+    add(g, new THREE.CylinderGeometry(t.r * 0.76, t.r, t.h * 0.58, 16), body, 0, t.h * 0.29, 0);
+    add(g, new THREE.CylinderGeometry(t.r * 0.92, t.r * 0.68, t.h * 0.4, 16), body, 0, t.h * 0.76, 0);
+  }
+  for (const k of [0.42, 0.68]) {
+    const bal = add(g, new THREE.CylinderGeometry(t.r * 1.08, t.r * 1.08, 0.22, 16), trim, 0, t.h * k, 0);
+    bal.castShadow = false;
+  }
+  if (t.x === 0 && t.z === 0) roofPark(g, t);
+  else {
+    plankRoof(g, t);
+    const garden = add(g, new THREE.CylinderGeometry(t.r * 0.28, t.r * 0.28, 0.22, 12), M(0x3ec85a), t.r * 0.42, t.h + 0.28, t.r * 0.2);
+    garden.receiveShadow = true;
+  }
+  prop(add(g, new THREE.SphereGeometry(0.55, 8, 6), M(0x2f7a32), t.r * 0.35, t.h + 0.55, t.r * 0.2));
+  prop(add(g, new THREE.SphereGeometry(0.4, 8, 6), M(0x3d8a38), t.r * 0.1, t.h + 0.45, t.r * 0.6));
+  const anchors = [];
+  const poleMat = M(0xf4f1e8);
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 4; i++) {
+    const a = i / 4 * Math.PI * 2 + 0.3, c = Math.cos(a), s = Math.sin(a);
+    const x0 = c * t.r, z0 = s * t.r, y0 = t.h + 0.12;
+    const x1 = c * (t.r + 1.5), z1 = s * (t.r + 1.5), y1 = t.h + 7;
+    const len = Math.hypot(x1 - x0, y1 - y0, z1 - z0) || 0.1;
+    const pole = add(g, new THREE.CylinderGeometry(0.08, 0.08, len, 6), poleMat.clone(), (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    pole.quaternion.setFromUnitVectors(up, new THREE.Vector3(x1 - x0, y1 - y0, z1 - z0).normalize());
+    pole.material.transparent = true;
+    pole.userData.fadeProp = true;
+    pole.userData.poleA = new THREE.Vector3(t.x + x0, y0, t.z + z0);
+    pole.userData.poleB = new THREE.Vector3(t.x + x1, y1, t.z + z1);
+    anchors.push({ x: t.x + x1, y: y1, z: t.z + z1, roof: t });
+  }
+  if (t.kind === 'crane') anchors.push({ x: t.x + t.r + 1.5, y: t.h + 7, z: t.z, roof: t });
+  t.anchors = anchors;
+  return t;
+}
+
+function buildStreetKit(root) {
+  const lampG = new THREE.CylinderGeometry(0.08, 0.1, 4.5, 6);
+  const lamp = new THREE.InstancedMesh(lampG, M(0x8a9099, { metalness: 0.3 }), 24);
+  const tree = new THREE.InstancedMesh(new THREE.SphereGeometry(1.3, 8, 6), M(0x3ec85a), 16);
+  const car = new THREE.InstancedMesh(new THREE.BoxGeometry(4.2, 1.4, 1.8), M(0xffd23a), 8);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * Math.PI * 2;
+    p.set(Math.cos(a) * 40, 1.5 + 2.25, Math.sin(a) * 40);
+    lamp.setMatrixAt(i, m.compose(p, q, s));
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = i / 16 * Math.PI * 2 + 0.2;
+    p.set(Math.cos(a) * 58, 3.2, Math.sin(a) * 58);
+    tree.setMatrixAt(i, m.compose(p, q, s));
+  }
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * Math.PI * 2;
+    p.set(Math.cos(a) * 28, 2.3, Math.sin(a) * 28);
+    car.setMatrixAt(i, m.compose(p, q, s));
+  }
+  lamp.castShadow = tree.castShadow = car.castShadow = false;
+  root.add(lamp, tree, car);
+  root.userData.cars = { mesh: car, n: 8 };
+}
+function buildMonorail(root, anchors) {
+  const cx = 36, cz = -8, R = 36, y = 74, n = 64;
+  const rail = M(0x8aa0b4, { roughness: 0.4, metalness: 0.35 });
+  const carMat = M(0xffd23a, { roughness: 0.5 });
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2;
+    const x = cx + Math.cos(a0) * R, z = cz + Math.sin(a0) * R;
+    const x2 = cx + Math.cos(a1) * R, z2 = cz + Math.sin(a1) * R;
+    const beam = add(root, new THREE.BoxGeometry(Math.hypot(x2 - x, z2 - z) * 1.02, 0.45, 1.1), rail, (x + x2) / 2, y, (z + z2) / 2);
+    beam.rotation.y = Math.atan2(x2 - x, z2 - z) - Math.PI / 2;
+    if (i % 8 === 0) {
+      add(root, new THREE.CylinderGeometry(0.35, 0.45, y - 1.6, 8), rail, x, y / 2, z);
+      anchors.push({ x, y: y + 0.8, z, roof: null });
+    }
+  }
+  const cars = [];
+  for (let i = 0; i < 3; i++) {
+    const car = add(root, new THREE.BoxGeometry(3.2, 1.5, 1.6), carMat, cx + R, y + 1.2, cz);
+    cars.push(car);
+  }
+  root.userData.rail = { cars, cx, cz, R, y };
+}
+
+function parkDino(root, tower) {
+  const g = new THREE.Group(); g.position.set(tower.x, tower.h + 0.4, tower.z); root.add(g);
+  const steel = M(0xb8c4d2, { roughness: 0.48, metalness: 0.18 });
+  const joint = M(0x3de8ff, { roughness: 0.35, emissive: 0x0f6f66, em: 0.6 });
+  add(g, new THREE.BoxGeometry(2.4, 1.3, 1.2), steel, 0, 1.1, 0);
+  add(g, new THREE.SphereGeometry(0.7, 12, 10), steel, 0, 1.7, 0.9);
+  add(g, new THREE.SphereGeometry(0.12, 8, 6), M(0x0a141e), 0.22, 1.85, 1.35);
+  add(g, new THREE.SphereGeometry(0.12, 8, 6), M(0x0a141e), -0.22, 1.85, 1.35);
+  add(g, new THREE.CylinderGeometry(0.18, 0.22, 0.9, 6), joint, 0.7, 0.45, 0.35);
+  add(g, new THREE.CylinderGeometry(0.18, 0.22, 0.9, 6), joint, -0.7, 0.45, 0.35);
+  add(g, new THREE.BoxGeometry(0.35, 0.35, 1.3), steel, 0, 1.15, -1.1);
+  g.userData.bob = Math.random() * 6;
+  return g;
+}
+
+function stompDavid() {
+  const d = davidModel();
+  d.g.visible = true;
+  d.pie.visible = true;
+  const splat = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), M(0xfff6dc, { roughness: 0.4 }));
+  splat.scale.set(1.15, 0.72, 0.5); splat.position.set(0, 0.24, 0.22); splat.visible = false;
+  d.head.add(splat);
+  d.g.userData.pie = splat;
+  d.g.userData.handPie = d.pie;
+  d.g.userData.rig = d;
+  d.g.scale.setScalar(0.8);
+  const shoe = new THREE.Color(0x2e6bd8), red = new THREE.Color(0xb8322a);
+  d.g.traverse(o => {
+    const col = o.isMesh && o.geometry && o.geometry.attributes.color;
+    if (!col) return;
+    for (let i = 0; i < col.count; i++) {
+      if (Math.abs(col.getX(i) - shoe.r) < 0.06 && Math.abs(col.getY(i) - shoe.g) < 0.06 && Math.abs(col.getZ(i) - shoe.b) < 0.08) col.setXYZ(i, red.r, red.g, red.b);
+    }
+    col.needsUpdate = true;
+  });
+  return d.g;
+}
+
+function yarnBall() {
+  const g = new THREE.Group(); g.name = 'goo-wrap';
+  const yarn = new THREE.MeshStandardMaterial({ color: 0xd8ff6a, emissive: 0x39e8ff, emissiveIntensity: 0.55, roughness: 0.55 });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.95, 14, 12), yarn); ball.position.y = 1.05; g.add(ball);
+  const tape = new THREE.MeshStandardMaterial({ color: 0x3de8ff, emissive: 0x19e4ff, emissiveIntensity: 0.8, roughness: 0.4 });
+  for (const rot of [0.4, -0.6, 1.2]) {
+    const strip = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.07, 6, 14), tape);
+    strip.position.y = 1.05; strip.rotation.set(rot, rot * 0.4, 0.2); g.add(strip);
+  }
+  const eye = (x) => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), M(0xffffff, { roughness: 0.3 }));
+    e.position.set(x, 1.25, 0.78); g.add(e);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), M(0x16120e));
+    p.position.set(x, 1.24, 0.9); g.add(p);
+  };
+  eye(-0.2); eye(0.22);
+  return g;
+}
+
+export class StompLife {
+  constructor(game, world) {
+    this.g = game; this.W = world; this.data = world.stompData;
+    this.towers = this.data.towers; this.anchors = this.data.anchors;
+    this.state = 'roof'; this.anchor = null; this.hooked = false; this.won = false;
+    this.vel = new THREE.Vector3(); this.len = 12; this.combo = 0; this.comboT = 0;
+    this.step = 0; this.ctrl = { swing: 0, zip: 0, wrap: 0 };
+    this.sawSwing = false; this.sawFling = false; this.sawZip = false; this.wallT = 0;
+    this.promptEl = document.getElementById('stomp-prompt');
+    this.winEl = document.getElementById('stompwin');
+    this._v = new THREE.Vector3(); this._w = new THREE.Vector3();
+    this.makeCable();
+    this.makeChevrons();
+    this.david = { mesh: stompDavid(), x: 0, y: 0, z: 0, yaw: 0, wrapped: false, u: 0, bundle: null };
+    this.data.root.add(this.david.mesh);
+    this.bubble = new THREE.Mesh(new THREE.SphereGeometry(1.15, 16, 12), new THREE.MeshStandardMaterial({ color: 0xe9fff2, emissive: 0x19e4ff, emissiveIntensity: 0.7, transparent: true, opacity: 0.45, roughness: 0.2 }));
+    this.bubble.visible = false; this.data.root.add(this.bubble);
+    this.path = [1, 2, 3, 6, 5, 4].map(i => this.towers[i]);
+    this.reset();
+  }
+  makeCable() {
+    const tube = (radius, mat) => {
+      const tubular = 24, radial = 8, geo = new THREE.BufferGeometry();
+      const count = (tubular + 1) * (radial + 1);
+      const pos = new Float32Array(count * 3), uv = new Float32Array(count * 2), idx = [];
+      for (let i = 0; i <= tubular; i++) for (let j = 0; j <= radial; j++) {
+        const a = i * (radial + 1) + j; uv[a * 2] = j / radial; uv[a * 2 + 1] = i / tubular;
+        if (i < tubular && j < radial) { const b = a + radial + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      geo.setIndex(idx);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.frustumCulled = false; mesh.userData.tubular = tubular; mesh.userData.radial = radial; mesh.userData.radius = radius;
+      return mesh;
+    };
+    const basic = (color, opacity, add) => new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: opacity > 0.5, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending, toneMapped: false });
+    // Lime shell ~30% of the forearm. Core and the cyan glow scale with it.
+    const slim = 0.21;
+    this.cable = tube(0.045 * slim, basic(0xe9fff2, 1, false));
+    this.cableEdge = tube(0.10 * slim, basic(0xb6ff3a, 0.85, false));
+    this.cableGlow = tube(0.17 * slim, basic(0x3de8ff, 0.18, true));
+    const goo = new THREE.MeshStandardMaterial({ color: 0xb6ff3a, emissive: 0xb6ff3a, emissiveIntensity: 0.8, roughness: 0.35, toneMapped: false });
+    this.hookMesh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), goo);
+    this.hookMesh.scale.set(1.4, 0.35, 1.4);
+    this.drips = [0, 1, 2].map(i => {
+      const d = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), goo);
+      d.position.set((i - 1) * 0.08, -0.12, 0); this.hookMesh.add(d); return d;
+    });
+    this.cable.visible = this.cableEdge.visible = this.cableGlow.visible = this.hookMesh.visible = false;
+    this.curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3());
+    this.sag = 0.4;
+    this.data.root.add(this.cable, this.cableEdge, this.cableGlow, this.hookMesh);
+    this.shade = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), new THREE.MeshBasicMaterial({ color: 0x3a0a10, transparent: true, opacity: 0.35, depthWrite: false }));
+    this.shade.rotation.x = -Math.PI / 2; this.shade.frustumCulled = false; this.data.root.add(this.shade);
+  }
+  tubeMesh(radius, color) {
+    const tubular = 24, radial = 8, geo = new THREE.BufferGeometry();
+    const count = (tubular + 1) * (radial + 1);
+    const pos = new Float32Array(count * 3), uv = new Float32Array(count * 2), idx = [];
+    for (let i = 0; i <= tubular; i++) for (let j = 0; j <= radial; j++) {
+      const a = i * (radial + 1) + j; uv[a * 2] = j / radial; uv[a * 2 + 1] = i / tubular;
+      if (i < tubular && j < radial) { const b = a + radial + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, toneMapped: false }));
+    mesh.frustumCulled = false; mesh.userData.tubular = tubular; mesh.userData.radial = radial; mesh.userData.radius = radius;
+    return mesh;
+  }
+  strandPair() {
+    const goo = this.tubeMesh(0.05 * 0.21, 0xc6ff4a), core = this.tubeMesh(0.02 * 0.21, 0xe9fff2);
+    goo.visible = core.visible = false; this.data.root.add(goo, core); return { goo, core };
+  }
+  poseStrand(mesh, a, b) {
+    const c = mesh.userData.curve || (mesh.userData.curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()));
+    const prev = this.curve; this.curve = c;
+    c.v0.set(a.x, a.y, a.z); c.v2.set(b.x, b.y, b.z); c.v1.set((a.x + b.x) * 0.5, (a.y + b.y) * 0.5, (a.z + b.z) * 0.5);
+    this.writeTube(mesh, 0.05); this.curve = prev;
+  }
+  makeChevrons() {
+    this.chevrons = this.anchors.map(() => {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 4), new THREE.MeshStandardMaterial({ color: 0x3de8ff, emissive: 0x19e4ff, emissiveIntensity: 1.2, roughness: 0.3, transparent: true }));
+      c.visible = false; this.data.root.add(c); return c;
+    });
+  }
+  reset() {
+    this.state = 'roof'; this.anchor = null; this.hooked = false; this.won = false; this.step = 0;
+    this.sawSwing = this.sawFling = this.sawZip = false; this.combo = 0; this.vel.set(0, 0, 0);
+    this.david.wrapped = false; this.david.u = 0; if (this.david.bundle) this.david.bundle.visible = false;
+    if (this.david.mesh.userData.pie) this.david.mesh.userData.pie.visible = false;
+    if (this.david.mesh.userData.handPie) this.david.mesh.userData.handPie.visible = true;
+    this.bubble.visible = false; this.cable.visible = this.cableEdge.visible = this.cableGlow.visible = this.hookMesh.visible = false;
+    if (this.winEl) this.winEl.classList.add('hidden');
+    const start = this.towers[0];
+    this.lastRoof = start;
+    const p = this.g.player;
+    if (p) {
+      p.pos.set(start.x, start.h, start.z); p.yaw = Math.atan2(this.towers[1].x - start.x, this.towers[1].z - start.z); p.speedNow = 0; p.alive = true;
+      const R = p.mech && p.mech.R; if (R) { R.attachSkin(); R.setHoopster(true); }
+    }
+    this.placeDavid(0);
+    this.sayStep();
+    this.rbQueued = 0;
+    if (this.g.westies && this.g.westies.active && this.g.world && this.g.world.stomp) this.g.westies.end();
+    if (this.g.cam) { this.g.cam.pitch = 0.28; this.g.cam.dist = 6.0; }
+    if (this.g.snapCam !== undefined) this.g.snapCam = true;
+    const toast = document.getElementById('toast'); if (toast) { toast.textContent = ''; toast.classList.remove('show'); }
+    const shout = document.getElementById('shout'); if (shout) { shout.textContent = ''; shout.classList.remove('show'); }
+  }
+  insideTower(x, y, z) {
+    for (const t of this.towers) {
+      if (y < t.h + 2.2 && Math.hypot(x - t.x, z - t.z) < t.r + 0.8) return t;
+    }
+    return null;
+  }
+  keepCameraOut(cam) {
+    const p = this.g.player; if (!p) return;
+    const look = this._look || (this._look = new THREE.Vector3());
+    look.set(p.pos.x, p.pos.y + 0.9, p.pos.z);
+    const cp = cam.position;
+    const dir = this._camDir || (this._camDir = new THREE.Vector3());
+    dir.copy(cp).sub(look);
+    let len = dir.length(); if (len < 0.4) return;
+    dir.multiplyScalar(1 / len);
+    let lift = 0;
+    for (const t of this.towers) {
+      const ox = look.x - t.x, oz = look.z - t.z;
+      const a = dir.x * dir.x + dir.z * dir.z; if (a < 1e-6) continue;
+      const b = 2 * (ox * dir.x + oz * dir.z);
+      const rad = t.r + 0.8;
+      const c = ox * ox + oz * oz - rad * rad;
+      const disc = b * b - 4 * a * c; if (disc < 0) continue;
+      const hit = (-b - Math.sqrt(disc)) / (2 * a);
+      if (hit < 0.3 || hit > len) continue;
+      const yHit = look.y + dir.y * hit;
+      if (yHit > t.h + 1.2) continue;
+      if (t.h - look.y < 8) lift = Math.max(lift, t.h + 1.5);
+      else len = Math.max(4.0, hit - 0.4);
+    }
+    cp.copy(look).addScaledVector(dir, len);
+    if (lift) cp.y = Math.max(cp.y, lift);
+  }
+  titlePose() {
+    this.reset();
+    const p = this.g.player; if (!p) return;
+    p.yaw = Math.atan2(this.towers[1].x, this.towers[1].z);
+  }
+  placeDavid(u) {
+    const path = this.path, n = path.length, f = ((u % n) + n) % n, i = Math.floor(f), k = f - i;
+    const prev = path[(i - 1 + n) % n], a = path[i], b = path[(i + 1) % n];
+    const rim = (from, toward) => {
+      const dx = toward.x - from.x, dz = toward.z - from.z, gap = Math.hypot(dx, dz) || 1;
+      return { x: from.x + dx / gap * from.r * 0.7, z: from.z + dz / gap * from.r * 0.7 };
+    };
+    const entry = rim(a, prev), exit = rim(a, b), land = rim(b, a);
+    const run = Math.hypot(exit.x - entry.x, exit.z - entry.z);
+    const hop = Math.hypot(land.x - exit.x, land.z - exit.z) || 1;
+    const runShare = run / (run + hop);
+    this.david.gap = run + hop;
+    if (k < runShare) {
+      const s = k / Math.max(0.001, runShare);
+      this.david.x = entry.x + (exit.x - entry.x) * s;
+      this.david.z = entry.z + (exit.z - entry.z) * s;
+      this.david.y = a.h;
+      this.david.hop = false;
+      this.david.yaw = Math.atan2(exit.x - entry.x, exit.z - entry.z);
+    } else {
+      const s = (k - runShare) / Math.max(0.001, 1 - runShare);
+      const H = 3 + 0.15 * hop;
+      this.david.x = exit.x + (land.x - exit.x) * s;
+      this.david.z = exit.z + (land.z - exit.z) * s;
+      this.david.y = a.h + (b.h - a.h) * s + 4 * H * s * (1 - s);
+      this.david.hop = true;
+      this.david.yaw = Math.atan2(land.x - exit.x, land.z - exit.z);
+    }
+    this.david.mesh.position.set(this.david.x, this.david.y, this.david.z);
+    this.david.mesh.rotation.y = this.david.yaw;
+  }
+  sayStep() {
+    const lines = [
+      'FIRST FLING — hold SWING',
+      'Let go of SWING to FLING!',
+      'Tap ZIP to zip up the Zip-Goo',
+      'Catch Bad David — tap WRAP!',
+    ];
+    if (this.promptEl) this.promptEl.textContent = lines[Math.min(this.step, 3)] + (this.combo > 1 ? '   ZIP x' + this.combo : '');
+  }
+  roofAt(x, z, y) {
+    let best = null;
+    for (const t of this.towers) {
+      if (Math.hypot(x - t.x, z - t.z) > t.r - 0.15) continue;
+      if (y < t.h - 1.4 || y > t.h + 2.4) continue;
+      if (!best || t.h > best.h) best = t;
+    }
+    return best;
+  }
+  bestAnchor(wide) {
+    const p = this.g.player; if (!p) return null;
+    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+    let best = null, score = 1e9;
+    for (const a of this.anchors) {
+      const dx = a.x - p.pos.x, dy = a.y - (p.pos.y + 1.2), dz = a.z - p.pos.z;
+      const dist = Math.hypot(dx, dy, dz), flat = Math.hypot(dx, dz);
+      if (a.roof && Math.hypot(p.pos.x - a.roof.x, p.pos.z - a.roof.z) < a.roof.r + 0.5 && p.pos.y > a.roof.h - 4) continue;
+      if (dy < 3 || flat < 8 || dist > (wide ? 84 : 64)) continue;
+      const dot = (dx * fx + dz * fz) / Math.max(0.001, flat);
+      if (dot < (wide ? -0.45 : 0)) continue;
+      if (dist < score) { score = dist; best = a; }
+    }
+    return best;
+  }
+  hook(a) {
+    const p = this.g.player;
+    this.anchor = a; this.hooked = true; this.state = 'swing'; this.zipping = false; this.hookT = this.g.world.time;
+    this.len = Math.max(6, Math.hypot(a.x - p.pos.x, a.y - p.pos.y, a.z - p.pos.z));
+    this.sawSwing = true; if (this.step === 0) { this.step = 1; this.sayStep(); }
+    sfx.whoosh && sfx.whoosh(0.7);
+  }
+  fling() {
+    const a = this.anchor, p = this.g.player;
+    this.hooked = false; this.anchor = null; this.state = 'air'; this.zipping = false;
+    if (a && a.roof && p) {
+      const R = a.roof, y = p.pos.y;
+      const apex = Math.max(y, R.h) + 1.5;
+      const vy = Math.sqrt(2 * 20 * Math.max(0.05, apex - y));
+      const T = vy / 20 + Math.sqrt(2 * Math.max(0, apex - R.h) / 20);
+      const dx = R.x - p.pos.x, dz = R.z - p.pos.z, flat = Math.hypot(dx, dz) || 1;
+      const vh = Math.min(20, flat / Math.max(0.05, T));
+      this.vel.set(dx / flat * vh, vy, dz / flat * vh);
+    } else this.vel.y = Math.max(this.vel.y + 2.4, 6);
+    this.sawFling = true; this.combo = Math.min(12, this.combo + 1); this.comboT = 1.6;
+    if (this.step === 1) { this.step = 2; }
+    this.sayStep(); sfx.whoosh && sfx.whoosh(1);
+  }
+  drive(p, dt, dir, mag, inp) {
+    if (this.won) { p.speedNow = 0; return; }
+    const hold = !!(inp && inp.btn && inp.btn.laser);
+    const zip = !!(inp && inp.pressed && inp.pressed.missile);
+    const wrap = !!(inp && inp.pressed && inp.pressed.melee);
+    if (inp && inp.pressed && inp.pressed.laser) this.ctrl.swing++;
+    if (zip) this.ctrl.zip++;
+    if (wrap) this.ctrl.wrap++;
+    if (wrap) this.tryWrap();
+    if (zip) this.onZip();
+    const wish = mag > 0.08 ? dir : this._v.set(0, 0, 0);
+    if (this.state === 'bubble') { this.stepBubble(p, dt); return; }
+    if (this.state === 'swing') {
+      if (!hold && !this.zipping) { this.fling(); this.stepAir(p, dt, wish, mag); return; }
+      this.stepSwing(p, dt, wish, mag); return;
+    }
+    if (hold) { const a = this.bestAnchor(false); if (a) { this.hook(a); this.stepSwing(p, dt, wish, mag); return; } }
+    if (this.state === 'wall') { this.stepWall(p, dt, wish, mag); return; }
+    if (this.state === 'roof') this.stepRoof(p, dt, wish, mag);
+    else this.stepAir(p, dt, wish, mag);
+  }
+  onZip() {
+    if (this.won) return;
+    if (!this.anchor) { const a = this.bestAnchor(true); if (!a) return; this.hook(a); }
+    this.zipping = true; this.sawZip = true; if (this.step === 2) { this.step = 3; this.sayStep(); }
+    sfx.whoosh && sfx.whoosh(0.85);
+  }
+  stepSwing(p, dt, wish, mag) {
+    const a = this.anchor; if (!a) { this.state = 'air'; return; }
+    this.vel.y -= 16 * dt;
+    if (mag > 0.08) { this.vel.x += wish.x * 16 * dt; this.vel.z += wish.z * 16 * dt; }
+    if (this.zipping) {
+      const dx = a.x - p.pos.x, dy = (a.y - 1.1) - p.pos.y, dz = a.z - p.pos.z, d = Math.hypot(dx, dy, dz) || 1;
+      this.vel.set(dx / d * 26, dy / d * 26, dz / d * 26);
+      if (d < 2.4) { this.landAt(p, a); return; }
+      p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
+      p.speedNow = 16;
+      if (this.vel.lengthSq() > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
+      return;
+    }
+    p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
+    let dx = p.pos.x - a.x, dy = p.pos.y - a.y, dz = p.pos.z - a.z;
+    const dist = Math.hypot(dx, dy, dz) || 1; dx /= dist; dy /= dist; dz /= dist;
+    const vr = this.vel.x * dx + this.vel.y * dy + this.vel.z * dz;
+    this.vel.x -= vr * dx; this.vel.y -= vr * dy; this.vel.z -= vr * dz;
+    p.pos.set(a.x + dx * this.len, a.y + dy * this.len, a.z + dz * this.len);
+    const r0 = this.roofAt(p.pos.x, p.pos.z, p.pos.y + 1.5);
+    if (r0 && p.pos.y < r0.h) {
+      p.pos.y = r0.h;
+      if (this.vel.y < 0) this.vel.y = 0;
+    }
+    const deck = a.roof ? a.roof.h : p.pos.y;
+    const minLen = Math.max(3.5, a.y - (deck + 1.2));
+    if (this.len > minLen) this.len = Math.max(minLen, this.len - 8 * dt);
+    if (p.pos.y > a.y - 0.8) p.pos.y = a.y - 0.8;
+    const sp = this.vel.length(); if (sp > 24) this.vel.multiplyScalar(24 / sp);
+    if (this.vel.lengthSq() > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
+    p.speedNow = Math.min(8, sp);
+    this.keepOutside(p);
+  }
+  keepOutside(p) {
+    for (const t of this.towers) {
+      let dx = p.pos.x - t.x, dz = p.pos.z - t.z, d = Math.hypot(dx, dz);
+      if (d < t.r + 0.15 && p.pos.y < t.h - 0.05) {
+        if (this.state === 'swing' && this.anchor && this.anchor.roof === t && p.pos.y < t.h) { this.zipping = true; this.easyPull = (this.easyPull || 0) + 1; }
+        if (d < 0.05) { dx = 1; dz = 0; d = 1; }
+        const k = (t.r + 0.65) / d, nx = dx / d, nz = dz / d;
+        p.pos.x = t.x + dx * k; p.pos.z = t.z + dz * k;
+        const vn = this.vel.x * nx + this.vel.z * nz;
+        if (vn < 0) { this.vel.x -= vn * nx; this.vel.z -= vn * nz; }
+      }
+    }
+  }
+  landAt(p, a) {
+    const roof = a.roof || this.towers.reduce((b, t) => !b || Math.hypot(t.x - a.x, t.z - a.z) < Math.hypot(b.x - a.x, b.z - a.z) ? t : b, null);
+    p.pos.set(roof.x, roof.h, roof.z); this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false; this.anchor = null; this.zipping = false;
+    this.lastRoof = roof; p.speedNow = 0; sfx.boing && sfx.boing(0.6, 0.8);
+  }
+  stepRoof(p, dt, wish, mag) {
+    const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y + 0.4) || this.lastRoof;
+    const spd = 6.8 * mag;
+    if (mag > 0.08) {
+      const nx = p.pos.x + wish.x * spd * dt, nz = p.pos.z + wish.z * spd * dt;
+      if (Math.hypot(nx - roof.x, nz - roof.z) > roof.r - 0.2) {
+        this.state = 'air'; this.vel.set(wish.x * Math.max(5, spd), 3.4, wish.z * Math.max(5, spd)); p.yaw = Math.atan2(wish.x, wish.z);
+      } else { p.pos.x = nx; p.pos.z = nz; p.yaw = Math.atan2(wish.x, wish.z); }
+    }
+    p.pos.y = roof.h; this.lastRoof = roof; p.speedNow = spd;
+  }
+  stepAir(p, dt, wish, mag) {
+    this.vel.y -= 20 * dt;
+    if (mag > 0.08) { this.vel.x += wish.x * 6 * dt; this.vel.z += wish.z * 6 * dt; }
+    p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
+    const sp = this.vel.length(); if (sp > 26) this.vel.multiplyScalar(26 / sp);
+    const wall = this.nearWall(p);
+    if (wall && mag > 0.35) {
+      const rx = wall.x - p.pos.x, rz = wall.z - p.pos.z, rd = Math.hypot(rx, rz) || 1;
+      if ((wish.x * rx + wish.z * rz) / rd > 0.25) { this.state = 'wall'; this.wall = wall; this.wallT = 0.7; this.sawWall = true; return; }
+    }
+    let caught = null;
+    for (const t of this.towers) {
+      const d = Math.hypot(p.pos.x - t.x, p.pos.z - t.z);
+      if (d < t.r + 0.85 && p.pos.y >= t.h - 0.15 && p.pos.y <= t.h + 3.4 && this.vel.y <= 0.4) caught = !caught || t.h > caught.h ? t : caught;
+    }
+    if (caught) {
+      p.pos.y = caught.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = caught; p.speedNow = 0; return;
+    }
+    const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y);
+    if (roof && this.vel.y <= 0 && p.pos.y <= roof.h + 0.35) {
+      p.pos.y = roof.h; this.vel.set(0, 0, 0); this.state = 'roof'; this.lastRoof = roof; p.speedNow = 0; return;
+    }
+    this.keepOutside(p);
+    const roofLine = this.lastRoof ? this.lastRoof.h : 20;
+    const overDeck = this.roofAt(p.pos.x, p.pos.z, p.pos.y + 1.5);
+    if (!overDeck && ((this.vel.y < -2 && p.pos.y < roofLine - 5) || p.pos.y < 8)) this.startBubble(p);
+    else p.speedNow = Math.min(8, sp);
+    if (this.vel.lengthSq() > 0.4) p.yaw = Math.atan2(this.vel.x, this.vel.z);
+  }
+  nearWall(p) {
+    for (const t of this.towers) {
+      const d = Math.hypot(p.pos.x - t.x, p.pos.z - t.z);
+      if (d < t.r + 1.15 && d > t.r * 0.55 && p.pos.y > 3 && p.pos.y < t.h - 0.6) return t;
+    }
+    return null;
+  }
+  stepWall(p, dt, wish, mag) {
+    const w = this.wall; this.wallT -= dt;
+    const rx = p.pos.x - w.x, rz = p.pos.z - w.z, rd = Math.hypot(rx, rz) || 1;
+    let tx = -rz / rd, tz = rx / rd;
+    if (mag > 0.1 && wish.x * tx + wish.z * tz < 0) { tx = -tx; tz = -tz; }
+    p.pos.x = w.x + rx / rd * (w.r + 0.45) + tx * 7 * dt;
+    p.pos.z = w.z + rz / rd * (w.r + 0.45) + tz * 7 * dt;
+    p.pos.y += 3.2 * dt; p.yaw = Math.atan2(tx, tz); p.speedNow = 7;
+    if (this.wallT <= 0) { this.state = 'air'; this.vel.set(tx * 8, 5, tz * 8); }
+  }
+  startBubble(p) {
+    this.state = 'bubble'; this.bubbleT = 0; this.hooked = false; this.anchor = null; this.zipping = false;
+    this.bubbleFrom = p.pos.clone();
+    const roof = this.lastRoof || this.towers[0];
+    this.bubbleTo = new THREE.Vector3(roof.x, roof.h, roof.z);
+    this.bubble.visible = true; sfx.boing && sfx.boing(0.8, 1.1);
+    if (this.g.hud) this.g.hud.toast('Whoops! A soft puff pops you back up.');
+  }
+  stepBubble(p, dt) {
+    this.bubbleT += dt; const u = Math.min(1, this.bubbleT / 0.9), e = u * u * (3 - 2 * u);
+    p.pos.lerpVectors(this.bubbleFrom, this.bubbleTo, e); p.speedNow = 0; this.vel.set(0, 0, 0);
+    this.bubble.position.copy(p.pos); this.bubble.position.y += 1;
+    if (u >= 1) { this.state = 'roof'; this.bubble.visible = false; this.lastRoof = this.towers.find(t => t.x === this.bubbleTo.x && t.z === this.bubbleTo.z) || this.lastRoof; p.pos.copy(this.bubbleTo); }
+  }
+  tryWrap() {
+    if (this.won || this.david.wrapped) return false;
+    const p = this.g.player; if (!p) return false;
+    const dx = this.david.x - p.pos.x, dz = this.david.z - p.pos.z, dy = this.david.y - p.pos.y;
+    if (Math.hypot(dx, dz) > 6.8 || Math.abs(dy) > 5) return false;
+    this.david.wrapped = true; this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false;
+    if (!this.david.bundle) { this.david.bundle = yarnBall(); this.david.mesh.add(this.david.bundle); }
+    this.david.bundle.visible = true;
+    if (this.david.mesh.userData.pie) this.david.mesh.userData.pie.visible = true;
+    if (this.david.mesh.userData.handPie) this.david.mesh.userData.handPie.visible = false;
+    sfx.pie && sfx.pie(1);
+    if (this.g.hud) {
+      this.g.hud.shout('NOOO DAVIDD!', 2.0);
+      this.g.later(2.0, () => { if (this.david.wrapped) this.g.hud.shout('THATS NOT FUNNY DAVID!!', 2.4); });
+      this.g.later(2.4, () => this.showWin());
+    } else this.showWin();
+    voice.say('Nooo, David!', { prio: 2, cd: 0, rate: 1.1, pitch: 1.05 });
+    return true;
+  }
+  showWin() {
+    this.won = true; this.step = 4;
+    if (this.chevrons) this.chevrons.forEach(c => { c.visible = false; });
+    if (this.winEl) this.winEl.classList.remove('hidden');
+    if (this.promptEl) this.promptEl.textContent = 'Pie returned!';
+    sfx.tada && sfx.tada(0.9);
+  }
+  wrist(p) {
+    const R = p.mech && p.mech.R; const out = this._w;
+    const bone = R && R.bone && R.bone('RightHand');
+    if (bone) {
+      bone.getWorldPosition(out);
+      const q = this._handQ || (this._handQ = new THREE.Quaternion());
+      bone.getWorldQuaternion(q);
+      const palm = this._palm || (this._palm = new THREE.Vector3());
+      palm.set(0, 0.07, 0.02).applyQuaternion(q);
+      return out.add(palm);
+    }
+    if (R && R.arms && R.arms[1] && R.arms[1].hand) return R.arms[1].hand.getWorldPosition(out);
+    return out.set(p.pos.x, p.pos.y + 1.3, p.pos.z);
+  }
+  writeTube(mesh, wobble) {
+    const pos = mesh.geometry.attributes.position;
+    const tubular = mesh.userData.tubular, radial = mesh.userData.radial;
+    const P = this._tp || (this._tp = new THREE.Vector3());
+    const T = this._tt || (this._tt = new THREE.Vector3());
+    const N = this._tn || (this._tn = new THREE.Vector3());
+    const B = this._tb || (this._tb = new THREE.Vector3());
+    const up = this._tu || (this._tu = new THREE.Vector3());
+    for (let i = 0; i <= tubular; i++) {
+      const u = i / tubular;
+      this.curve.getPoint(u, P);
+      this.curve.getPoint(Math.min(1, u + 0.01), T);
+      T.sub(P); if (T.lengthSq() < 1e-8) T.set(0, 1, 0); else T.normalize();
+      up.set(Math.abs(T.y) > 0.92 ? 1 : 0, Math.abs(T.y) > 0.92 ? 0 : 1, 0);
+      N.crossVectors(T, up).normalize(); B.crossVectors(T, N);
+      const r = mesh.userData.radius * (1 + wobble * Math.sin(18 * u - this.g.world.time * 10));
+      for (let j = 0; j <= radial; j++) {
+        const ang = j / radial * Math.PI * 2, idx = i * (radial + 1) + j;
+        pos.setXYZ(idx, P.x + (Math.cos(ang) * N.x + Math.sin(ang) * B.x) * r, P.y + (Math.cos(ang) * N.y + Math.sin(ang) * B.y) * r, P.z + (Math.cos(ang) * N.z + Math.sin(ang) * B.z) * r);
+      }
+    }
+    pos.needsUpdate = true; mesh.geometry.computeVertexNormals();
+  }
+  poseCable(p) {
+    const on = this.hooked && this.anchor;
+    this.cable.visible = this.cableEdge.visible = this.cableGlow.visible = this.hookMesh.visible = !!on;
+    if (!on) return;
+    const w = this.wrist(p), a = this.anchor;
+    const len = Math.max(0.3, Math.hypot(a.x - w.x, a.y - w.y, a.z - w.z));
+    const since = this.g.world.time - (this.hookT || 0);
+    const slack = since < 0.12 || this.zipping || this.state !== 'swing';
+    const want = slack ? Math.min(2, Math.max(0.3, 0.08 * len)) : 0.02 * len;
+    this.sag += (want - (this.sag || 0)) * (1 - Math.exp(-12 * (this._dt || 0.016)));
+    this.curve.v0.set(w.x, w.y, w.z);
+    this.curve.v2.set(a.x, a.y, a.z);
+    this.curve.v1.set((w.x + a.x) * 0.5, (w.y + a.y) * 0.5 - this.sag, (w.z + a.z) * 0.5);
+    this.writeTube(this.cable, 0.12); this.writeTube(this.cableEdge, 0.12); this.writeTube(this.cableGlow, 0.08);
+    this.hookMesh.position.set(a.x, a.y - 0.05, a.z);
+  }
+  markDavid(p) {
+    const mark = document.getElementById('david-mark'), arrow = document.getElementById('david-arrow');
+    if (!mark || !arrow) return;
+    if (!p || this.won || this.david.wrapped) { mark.classList.add('hidden'); arrow.classList.add('hidden'); return; }
+    const v = this._mv || (this._mv = new THREE.Vector3());
+    v.set(this.david.x, this.david.y + 1.35, this.david.z).project(this.g.camera);
+    const x = (v.x * 0.5 + 0.5) * window.innerWidth, y = (-v.y * 0.5 + 0.5) * window.innerHeight;
+    const on = v.z < 1 && x > 12 && x < innerWidth - 12 && y > 12 && y < innerHeight - 12;
+    mark.classList.toggle('hidden', !on); arrow.classList.toggle('hidden', on);
+    if (on) {
+      let top = y;
+      const avoid = [];
+      if (this.promptEl) { const r = this.promptEl.getBoundingClientRect(); if (r.width > 2 && r.height > 2) avoid.push(r); }
+      const toast = document.getElementById('toast');
+      if (toast && toast.classList.contains('show')) { const r = toast.getBoundingClientRect(); if (r.width > 2 && r.height > 2) avoid.push(r); }
+      const rb = document.getElementById('b-rb');
+      if (rb) { const rs = getComputedStyle(rb), r = rb.getBoundingClientRect(); if (rs.display !== 'none' && r.width > 2 && r.height > 2) avoid.push(r); }
+      for (const rect of avoid) {
+        const l = x - 20, rgt = x + 20, tp = top - 48, bt = top - 8;
+        if (rgt > rect.left - 8 && l < rect.right + 8 && bt > rect.top - 8 && tp < rect.bottom + 8) top = rect.bottom + 8 + 48;
+      }
+      if (top - 48 < 60 && (x < 130 || x > innerWidth - 90)) top = 60 + 48;
+      mark.style.left = x + 'px'; mark.style.top = top + 'px';
+    } else {
+      const cx = innerWidth * 0.5, cy = innerHeight * 0.5, ang = Math.atan2(y - cy, x - cx), pad = 86;
+      arrow.style.left = Math.min(innerWidth - pad, Math.max(pad, cx + Math.cos(ang) * (cx - pad))) + 'px';
+      arrow.style.top = Math.min(innerHeight - pad, Math.max(pad, cy + Math.sin(ang) * (cy - pad))) + 'px';
+      arrow.style.transform = 'rotate(' + (ang * 180 / Math.PI + 90) + 'deg)';
+    }
+    const dim = document.getElementById('shout')?.classList.contains('show');
+    mark.style.opacity = arrow.style.opacity = dim ? '0.35' : '';
+  }
+  placeChevrons() {
+    const cam = this.g.camera;
+    const html = document.getElementById('chev-html');
+    if (html) html.classList.add('hidden');
+    if (!cam || !this.chevrons) return;
+    this.chevrons.forEach(c => { c.visible = false; });
+    if (this.won) return;
+    const fov = cam.fov * Math.PI / 180;
+    const show = (a, dim) => {
+      if (!a) return;
+      const i = this.anchors.indexOf(a); const c = this.chevrons[i]; if (!c) return;
+      const cd = Math.hypot(a.x - cam.position.x, a.y - cam.position.y, a.z - cam.position.z);
+      if (cd < 4) return;
+      const shout = document.getElementById('shout')?.classList.contains('show');
+      c.visible = true; c.material.opacity = shout ? 0.35 : dim ? 0.5 : 1;
+      c.rotation.x = Math.PI;
+      c.scale.setScalar(Math.min(3, cd * 2 * Math.tan(fov / 2) * 24 / Math.max(1, window.innerHeight) / 0.4));
+      c.position.set(a.x, a.y + 0.75, a.z);
+    };
+    const best = this.bestAnchor(false);
+    show(best, false);
+    const alt = this.bestAnchor(true);
+    if (alt && alt !== best) show(alt, true);
+    const vis = this.chevrons.find(c => c.visible && c.material.opacity > 0.6) || this.chevrons.find(c => c.visible);
+    if (!vis || !html) return;
+    const floors = [];
+    if (this.promptEl) { const r = this.promptEl.getBoundingClientRect(); if (r.height > 2) floors.push(r.bottom); }
+    const toast = document.getElementById('toast');
+    if (toast && toast.classList.contains('show')) { const r = toast.getBoundingClientRect(); if (r.height > 2) floors.push(r.bottom); }
+    const rb = document.getElementById('b-rb');
+    let rbRect = null;
+    if (rb && getComputedStyle(rb).display !== 'none') { const r = rb.getBoundingClientRect(); if (r.width > 2) rbRect = r; }
+    const floor = floors.length ? Math.max(...floors) : 0;
+    const ndc = vis.position.clone().project(cam);
+    const sx = (ndc.x * 0.5 + 0.5) * window.innerWidth, sy = (-ndc.y * 0.5 + 0.5) * window.innerHeight;
+    let avoidY = floor;
+    if (rbRect && sx > rbRect.left - 8 && sx < rbRect.right + 8) avoidY = Math.max(avoidY, rbRect.bottom);
+    if (sy < avoidY + 8) {
+      vis.visible = false;
+      html.classList.remove('hidden');
+      html.style.left = sx + 'px';
+      html.style.top = (avoidY + 8) + 'px';
+      html.style.opacity = document.getElementById('shout')?.classList.contains('show') ? '0.35' : '';
+    }
+  }
+  fadeProps(p) {
+    if (!p || !this.data || !this.data.root) return;
+    const cam = this.g.camera.position, chest = this._chest || (this._chest = new THREE.Vector3());
+    chest.set(p.pos.x, p.pos.y + 0.7, p.pos.z);
+    const ab = this._ab || (this._ab = new THREE.Vector3()), wp = this._wp || (this._wp = new THREE.Vector3());
+    ab.copy(chest).sub(cam); const ab2 = ab.lengthSq() || 1;
+    if (!this._fadeProps) {
+      this._fadeProps = [];
+      this.data.root.traverse(o => { if (o.userData && o.userData.fadeProp && o.material) this._fadeProps.push(o); });
+    }
+    for (const o of this._fadeProps) {
+      if (o.userData.poleA && o.userData.poleB) {
+        const A = o.userData.poleA, B = o.userData.poleB;
+        const abx = B.x - A.x, aby = B.y - A.y, abz = B.z - A.z;
+        const ab2s = abx * abx + aby * aby + abz * abz || 1;
+        const u = Math.max(0, Math.min(1, ((cam.x - A.x) * abx + (cam.y - A.y) * aby + (cam.z - A.z) * abz) / ab2s));
+        const d = Math.hypot(cam.x - (A.x + abx * u), cam.y - (A.y + aby * u), cam.z - (A.z + abz * u));
+        if (d < 0.6) { o.visible = false; continue; }
+        o.visible = true;
+        o.material.opacity = d < 1.5 ? 0.2 : 1;
+        o.material.depthWrite = d >= 1.5;
+        continue;
+      }
+      o.visible = true;
+      o.getWorldPosition(wp);
+      const t = Math.max(0, Math.min(1, wp.clone().sub(cam).dot(ab) / ab2));
+      const d = wp.distanceTo(cam.clone().addScaledVector(ab, t));
+      o.material.opacity = d < 0.9 ? 0.25 : 1;
+    }
+  }
+  placeShade(p) {
+    if (!this.shade) return;
+    if (!p) { this.shade.visible = false; return; }
+    const roof = this.roofAt(p.pos.x, p.pos.z, p.pos.y + 1.2) || (this.lastRoof && Math.hypot(p.pos.x - this.lastRoof.x, p.pos.z - this.lastRoof.z) < this.lastRoof.r + 1.2 ? this.lastRoof : null);
+    if (!roof || p.pos.y - roof.h > 12) { this.shade.visible = false; return; }
+    this.shade.visible = true;
+    this.shade.position.set(p.pos.x, roof.h + 0.07, p.pos.z);
+  }
+  update(dt) {
+    this._dt = dt;
+    if (this.rbQueued > 0) {
+      if (this.won) this.rbQueued = 0;
+      else if (this.state === 'roof') {
+        this.rbQueued = 0;
+        const W = this.g.westies;
+        if (W && !W.active && W.trigger('button', true) && this.g.onRbShow) this.g.onRbShow();
+      } else { this.rbQueued -= dt; if (this.rbQueued <= 0) this.rbQueued = 0; }
+    }
+    const p = this.g.player;
+    if (!this.david.wrapped) {
+      let dist = 99;
+      if (p) dist = Math.hypot(this.david.x - p.pos.x, this.david.z - p.pos.z);
+      let sp = this.step < 1 ? 0 : dist < 6 ? 6.5 : dist > 12 ? 0 : dist > 10 ? 1.3 : 3.5;
+      if (sp === 0 && this.david.hop) sp = 3.5;
+      this.david.u += dt * sp / Math.max(6, this.david.gap || 12);
+      this.placeDavid(this.david.u);
+      const t = this.g.world.time;
+      const rig = this.david.mesh.userData.rig;
+      const taunt = dist > 12 && !this.david.hop;
+      if (taunt) this.tauntT = Math.min(0.8, (this.tauntT || 0) + dt); else this.tauntT = Math.max(0, (this.tauntT || 0) - dt);
+      if (rig && rig.legs) {
+        if (this.david.hop) rig.legs.forEach(leg => { leg.hip.rotation.x = -1; leg.knee.rotation.x = 1.2; });
+        else rig.legs.forEach((leg, i) => { const s = Math.sin(12 * t + i * Math.PI); leg.hip.rotation.x = 0.7 * s; leg.knee.rotation.x = Math.max(0, -0.9 * s); });
+        if (rig.arms) rig.arms.forEach((arm, i) => { arm.sh.rotation.x = this.tauntT > 0.05 ? -2.2 : 0.5 * Math.sin(12 * t + i * Math.PI + Math.PI); });
+      }
+      if (this.tauntT > 0.05 && p) this.david.mesh.rotation.y = Math.atan2(p.pos.x - this.david.x, p.pos.z - this.david.z);
+      this.david.mesh.position.y = this.david.y + (this.david.hop ? 0 : Math.sin(t * 24) * 0.05);
+      this.markDavid(p);
+    } else this.markDavid(null);
+    const rail = this.data.root.userData.rail;
+    if (rail) rail.cars.forEach((car, i) => {
+      const a = this.g.world.time * 0.35 + i * 2.1;
+      car.position.set(rail.cx + Math.cos(a) * rail.R, rail.y + 1.15, rail.cz + Math.sin(a) * rail.R);
+      car.rotation.y = a + Math.PI / 2;
+    });
+    this.data.dinos.forEach(d => {
+      if (d.userData.baseY == null) d.userData.baseY = d.position.y;
+      d.position.y = d.userData.baseY + Math.sin(this.g.world.time * 1.4 + d.userData.bob) * 0.12;
+    });
+    if (p) {
+      const R = p.mech && p.mech.R; if (R) { if (!R._hoopster) { R.attachSkin(); R.setHoopster(true); } const shooting = this.hooked && this.anchor; R.heroSwing(this.state === 'swing' || this.state === 'air' || this.state === 'wall'); if (shooting) R.aimShoot(this.anchor); if (R.pulseCuffs) R.pulseCuffs(!!shooting, this.g.world.time); }
+      this.poseCable(p);
+      this.fadeProps(p);
+      this.placeShade(p);
+    } else if (this.shade) this.shade.visible = false;
+    if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0 && this.promptEl && !this.won) this.sayStep(); }
+  }
+}

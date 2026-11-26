@@ -10,7 +10,7 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { sfx } from './audio.js';
 import { voice } from './voice.js';
-import { buildWestie } from './westie.js';
+import { buildWestie, setAccent, STOMP_BOBBY_ACCENT } from './westie.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const DOG_S = 1; // mesh shoulder is the v5.10.4 size (60% of v5.10.3). Farm, ocean, city and peak keep this.
@@ -76,6 +76,7 @@ export class Westies {
   trigger(reason = 'roam', force = false) {
     const g = this.g, P = g.player; if (!P || this.active) return false;
     if (!force && this.clock - this.lastEnd < (reason === 'victory' ? 60 : 110)) return false;
+    if (g.world && g.world.stomp) return this.stompShow();
     // v5: if the player IS Ricky (or Bobby), only the other dog shows up
     for (const d of this.dogs) d.off = !!(P.def.westie && d.name.toLowerCase() === P.def.id);
     this.reason = reason; this.count++; this.introduced = false; this.barkQ = []; this.danced = 0; this.flew = false; this.log.push(reason); this.target = null; this.helped = 0;
@@ -148,13 +149,21 @@ export class Westies {
     for (const e of g.enemies) { if (!e.alive || e === P) continue; const dd = e.pos.distanceTo(P.pos) + (e.boss ? 400 : 0); if (dd < bd && dd < 90 + (e.boss ? 400 : 0)) { bd = dd; best = e; } }
     return best;
   }
-  ground(p) { const h = this.g.world.height(p.x, p.z); return this.g.world.ocean ? h : Math.max(h, this.g.world.lava ? 0.2 : -0.3); }
+  ground(p) {
+    const g = this.g;
+    if (g.world && g.world.stomp && g.stomp) {
+      const roof = this.stompRoof || g.stomp.roofAt(p.x, p.z, (p.y || 0) + 1.2) || g.stomp.lastRoof;
+      if (roof) return roof.h;
+    }
+    const h = g.world.height(p.x, p.z); return g.world.ocean ? h : Math.max(h, g.world.lava ? 0.2 : -0.3);
+  }
   danger() { const g = this.g; for (const e of g.enemies) { if (!e.alive) continue; for (const d of this.dogs) if (e.pos.distanceTo(d.pos) < 6 + e.radius) return true; } return false; }
   intro() {
     const g = this.g; this.introduced = true;
-    if (g.farm) { // v5.3 (Mike's exact words, updated in v5.6.2 to say POOP): ONE big bouncy line on the farm, nothing else before or after it
-      const line = "Look it's Ricky and Bobby, they are going to POOP!"; this.farmShouts = (this.farmShouts || 0) + 1;
-      if (g.hud.shout) g.hud.shout(line, 4.2); else g.hud.banner(line, 4, true); sfx.cheer && sfx.cheer(1);
+    if (g.farm || (g.world && g.world.stomp)) { // ONE big bouncy line. The words are POOP_LINE on the farm and on Stompolis.
+      const line = POOP_LINE; this.farmShouts = (this.farmShouts || 0) + 1;
+      const dur = g.world && g.world.stomp && !g.farm ? 3.4 : 4.2;
+      if (g.hud.shout) g.hud.shout(line, dur); else g.hud.banner(line, 4, true); sfx.cheer && sfx.cheer(1);
       voice.say("Look, it's Ricky and Bobby, they are going to poop!", { prio: 3, cd: 0, pitch: 1.1, rate: 1.0, replace: true }); return; }
     const solo = this.activeDogs().length === 1 ? this.activeDogs()[0].name : null;
     g.hud.banner(solo ? '🐶 ' + solo + '! 🐶' : '🐶 RICKY & BOBBY! 🐶', 4, true); document.getElementById('banner').classList.add('rb'); // banner sits high so it doesn't cover the dogs
@@ -184,9 +193,18 @@ export class Westies {
   flyAway() { this.state = 'fly'; this.t = 0; this.flew = true; for (const s of this.spots) s.visible = false; sfx.cheer && sfx.cheer(0.7);
     const a = this.activeDogs(), bye = this.sea ? ' 🫧' : ' ✨'; this.g.hud.toast(a.length === 1 ? '🐾 Bye ' + (a[0].name === 'RICKY' ? 'Ricky' : 'Bobby') + '!' + bye : '🐾 Bye Ricky! Bye Bobby!' + bye);
     if (this.sea) { this.floated = (this.floated || 0) + 1; sfx.bubbles && sfx.bubbles(1, 12); }
-    this.fartExit = !!this.g.farm; if (this.fartExit) { this.fartExits = (this.fartExits || 0) + 1; sfx.fart && sfx.fart('trumpet', 0.9); this.g.later && this.g.later(0.5, () => sfx.fart && sfx.fart('stutter', 0.7)); this.g.hud.toast('💨🚀 Ricky & Bobby FART-ROCKETED away! 😂'); }
+    this.fartExit = !!(this.g.farm || (this.g.world && this.g.world.stomp)); if (this.fartExit) { this.fartExits = (this.fartExits || 0) + 1; sfx.fart && sfx.fart('trumpet', 0.9); this.g.later && this.g.later(0.5, () => sfx.fart && sfx.fart('stutter', 0.7)); this.g.hud.toast('💨🚀 Ricky & Bobby FART-ROCKETED away! 😂'); }
     this.dogs.forEach((d, i) => { d.vy = 2 + i * 0.6; d.alt = d.alt || 0; }); this.stage = null; }
-  end() { this.state = 'off'; this.lastEnd = this.clock; this.helper = false; this.stage = null; this.target = null; this.farmIntro = 0; if (this.g.world) this.g.world.grassHoles = null; for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; d.goalAlt = undefined; if (d.cape) d.cape.scale.setScalar(1); } for (const s of this.spots) s.visible = false; }
+  end() {
+    this.state = 'off'; this.lastEnd = this.clock; this.helper = false; this.stage = null; this.target = null; this.farmIntro = 0;
+    this.paintFur(false);
+    this.rings(true);
+    this.stompVisit = false; this.stompRoof = null; this._fit = false;
+    this.hideStompBits();
+    if (this.g.world) this.g.world.grassHoles = null;
+    for (const d of this.dogs) { d.root.visible = false; d.alt = 0; d.vy = 0; d.poopT = 0; d.goalAlt = undefined; if (d.cape) d.cape.scale.setScalar(1); }
+    for (const s of this.spots) s.visible = false;
+  }
   // Ricky and Bobby live on Jungle Island: they trot beside Leandro (on foot or on a dino) and never get in the way.
   companions(dt) {
     const g = this.g, P = g.player;
@@ -255,11 +273,241 @@ export class Westies {
     }
     return true;
   }
+  stompShow() {
+    const g = this.g, P = g.player, st = g.stomp;
+    if (!P || !st) return false;
+    const roof = st.roofAt(P.pos.x, P.pos.z, P.pos.y + 0.4) || st.lastRoof;
+    if (!roof) return false;
+    for (const d of this.dogs) d.off = !!(P.def && P.def.westie && d.name.toLowerCase() === P.def.id);
+    this.reason = 'button'; this.count++; this.introduced = false; this.barkQ = []; this.helper = false; this.stage = null; this.sea = false;
+    this.stompVisit = true; this.stompRoof = roof; this._landed = false; this._gagged = false; this._fit = false; this._hudFit = false; this.S = 3.8; this.fartExit = false;
+    this.paintFur(true);
+    if (STOMP_BOBBY_ACCENT) { setAccent(this.dogs[1], STOMP_BOBBY_ACCENT); this.stompAccent = true; }
+    const fwd = new THREE.Vector3();
+    if (g.camera) g.camera.getWorldDirection(fwd);
+    fwd.y = 0;
+    if (fwd.lengthSq() < 1e-4) fwd.set(-Math.sin(P.yaw), 0, -Math.cos(P.yaw)); else fwd.normalize();
+    const side = new THREE.Vector3(-fwd.z, 0, fwd.x), lim = Math.max(0.6, roof.r - 1);
+    const fwdD = 0.6;
+    const props = [];
+    if (st.data && st.data.root) {
+      st.data.root.updateMatrixWorld(true);
+      const wp = new THREE.Vector3();
+      st.data.root.traverse(o => {
+        if (!o.userData || !o.userData.fadeProp || o.userData.poleA) return;
+        o.getWorldPosition(wp);
+        if (Math.hypot(wp.x - roof.x, wp.z - roof.z) < roof.r + 1) props.push(wp.clone());
+      });
+    }
+    this._fwd = fwd; this._side = side; this._roofProps = props; this._roofLim = lim;
+    this.dogs.forEach((d, i) => {
+      const s = i ? 1 : -1;
+      let x = P.pos.x + fwd.x * fwdD + side.x * s * 1.2, z = P.pos.z + fwd.z * fwdD + side.z * s * 1.2;
+      for (let n = 0; n < 5; n++) for (const pr of props) {
+        const ddx = x - pr.x, ddz = z - pr.z, dd = Math.hypot(ddx, ddz);
+        if (dd < 1.05 && dd > 0.01) { x += ddx / dd * (1.05 - dd); z += ddz / dd * (1.05 - dd); }
+      }
+      const dx = x - roof.x, dz = z - roof.z, dist = Math.hypot(dx, dz);
+      if (dist > lim && dist > 0) { x = roof.x + dx / dist * lim; z = roof.z + dz / dist * lim; }
+      d.goal = V(x, roof.h, z); d.pos.set(x, roof.h, z); d.alt = 8; d.vy = 0; d.bark = 0; d.hop = 0; d.spin = 0; d.poopT = 0; d.pooped = false; d.boing = 0;
+      d.yaw = Math.atan2(g.camera.position.x - x, g.camera.position.z - z);
+      d.stageY = null; d.root.scale.setScalar(this.S * (d.mul || 1)); d.root.visible = !d.off; d.root.position.set(x, roof.h + 8, z);
+      setScuba(d, false);
+    });
+    this.ensureStrands();
+    this.rings(false);
+    this.state = 'enter'; this.t = 0;
+    return true;
+  }
+  ensureStrands() {
+    const st = this.g.stomp; if (!st) return;
+    if (!(this.strands && this.strands[0].goo.parent === st.data.root)) this.strands = this.dogs.map(() => st.strandPair());
+    if (this.poops) return;
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const gx = c.getContext('2d'); gx.clearRect(0, 0, 128, 128); gx.font = '96px serif'; gx.textAlign = 'center'; gx.textBaseline = 'middle'; gx.fillText('💩', 64, 72);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+    this.poops = this.dogs.map(() => { const s = new THREE.Sprite(mat); s.visible = false; s.center.set(0.5, 0.5); this.g.scene.add(s); return s; });
+  }
+  rings(on) {
+    for (const d of this.dogs) {
+      if (d.collar) d.collar.visible = on;
+      if (d.band) d.band.visible = on;
+      if (d.disc) d.disc.visible = on;
+    }
+  }
+  hideStompBits() {
+    if (this.strands) for (const s of this.strands) { s.goo.visible = false; s.core.visible = false; }
+    if (this.poops) for (const s of this.poops) s.visible = false;
+    if (this.shades) for (const s of this.shades) s.visible = false;
+  }
+  paintFur(on) {
+    for (const d of this.dogs) {
+      const mats = d.torso ? (Array.isArray(d.torso.material) ? d.torso.material : [d.torso.material]) : [];
+      if (on) {
+        if (!d._fur0) d._fur0 = mats.map(m => ({ em: m.emissive ? m.emissive.clone() : null, ei: m.emissiveIntensity, col: m.color ? m.color.clone() : null }));
+        for (const m of mats) {
+          if (m.color) m.color.lerp(new THREE.Color(0xf4f1e8), 0.92);
+          if (m.emissive) { m.emissive.set(0xf4f1e8); m.emissiveIntensity = 0.8; }
+        }
+      } else if (d._fur0) {
+        mats.forEach((m, i) => { const s = d._fur0[i]; if (!s) return; if (m.emissive && s.em) { m.emissive.copy(s.em); m.emissiveIntensity = s.ei; } if (m.color && s.col) m.color.copy(s.col); });
+        d._fur0 = null;
+      }
+    }
+  }
+  dogShade(i) {
+    if (!this.shades) {
+      this.shades = this.dogs.map(() => {
+        const m = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), new THREE.MeshBasicMaterial({ color: 0x3a0a10, transparent: true, opacity: 0.35, depthWrite: false }));
+        m.rotation.x = -Math.PI / 2; m.visible = false; m.frustumCulled = false; this.g.scene.add(m); return m;
+      });
+    }
+    return this.shades[i];
+  }
+  fitStompDogs() { this._fit = true; this.S = 3.8; this.stompFit = { S: 3.8 }; }
+  poseStompDog(d, i, dt, T, flap) {
+    const knee = b => b && b.children.find(c => c.isBone);
+    if (d.poopT > 0) {
+      d.poopT -= dt;
+      d.body.position.y = 0; d.body.rotation.x = 0.2; d.body.rotation.z = 0;
+      d.legs[0].rotation.x = 0.35; d.legs[1].rotation.x = 0.35; d.legs[2].rotation.x = -1.05; d.legs[3].rotation.x = -1.05;
+      const lk = knee(d.legs[2]), rk = knee(d.legs[3]); if (lk) lk.rotation.x = 1.15; if (rk) rk.rotation.x = 1.15;
+      d.tail.rotation.z = 0.15; d.head.rotation.x = -0.15; d.jaw.rotation.x = 0.1;
+      if (!d.pooped && d.poopT < 0.85) {
+        d.pooped = true; sfx.fart && sfx.fart('tiny', 0.8);
+        const p = d.root.position;
+        for (let k = 0; k < 3; k++) {
+          const a = k / 3 * Math.PI * 2;
+          this.g.fx.glow.spawn({ pos: { x: p.x + Math.cos(a) * 0.12, y: p.y + 0.35, z: p.z + Math.sin(a) * 0.12 }, vel: { x: Math.cos(a) * 0.25, y: 0.55, z: Math.sin(a) * 0.25 }, size: 0.16, life: 0.7, r: 0.78, g: 1, b: 0.29, alpha: 0.35, grav: -0.2 });
+        }
+        if (this.poops && this.poops[i]) { this.poops[i].visible = true; this.poops[i].userData.age = 0; }
+      }
+    } else if (T >= 3.4) {
+      d.body.position.y = Math.abs(Math.sin(T * 10 + i)) * 0.04; d.body.rotation.x = 0; d.body.rotation.z = Math.sin(T * 14 + i) * 0.08;
+      const sw = Math.sin(T * 8 + i);
+      d.legs.forEach((leg, n) => { leg.rotation.x = sw * (n < 2 ? 0.3 : -0.3); const k = knee(leg); if (k) k.rotation.x = 0; });
+      d.tail.rotation.z = Math.sin(this.clock * 28 + i) * 0.7; d.head.rotation.x = -0.1; d.jaw.rotation.x = 0.05;
+    } else {
+      d.body.position.y = 0; d.body.rotation.x = flap ? -0.2 : 0; d.body.rotation.z = 0;
+      const sw = Math.sin(this.clock * 16 + i);
+      d.legs.forEach((leg, n) => { leg.rotation.x = sw * 0.45 * (n % 2 ? -1 : 1); const k = knee(leg); if (k) k.rotation.x = Math.max(0, -leg.rotation.x); });
+      d.tail.rotation.z = Math.sin(this.clock * 18 + i) * 0.4; d.head.rotation.x = 0; d.jaw.rotation.x = 0;
+    }
+    d.bark = Math.max(0, (d.bark || 0) - dt);
+    if (d.bark > 0 && !(d.poopT > 0)) { d.head.rotation.x = -0.25 * Math.sin(d.bark / 0.3 * Math.PI); d.jaw.rotation.x = 0.35; }
+    if (d.cape) { d.cape.scale.setScalar(1); d.cape.rotation.x = 0.35 + (flap ? Math.sin(this.clock * 18 + i) * 0.06 : 0); }
+    if (d.tag) { d.tag.visible = true; const w = 0.55; d.tag.scale.set(w / Math.max(0.25, this.S), (w * 0.25) / Math.max(0.25, this.S), 1); }
+  }
+  posePoop(d, i, dt) {
+    const s = this.poops && this.poops[i]; if (!s || !s.visible) return;
+    s.userData.age = (s.userData.age || 0) + dt;
+    if (s.userData.age > 1) { s.visible = false; return; }
+    const age = s.userData.age, pop = age < 0.16 ? (age / 0.16) * 1.2 : age < 0.3 ? 1.2 - (age - 0.16) / 0.14 * 0.2 : 1;
+    s.scale.set(0.35 * pop, 0.35 * pop, 1);
+    const head = d.head.getWorldPosition(this._hp || (this._hp = new THREE.Vector3()));
+    s.position.set(d.pos.x, Math.max(d.root.position.y + 0.9, head.y + 0.2), d.pos.z);
+  }
+  stompFly(dt) {
+    const g = this.g, T = this.t, roof = this.stompRoof;
+    this.dogs.forEach((d, i) => {
+      if (d.off) return;
+      d.vy = (d.vy || 0) + dt * (16 + i * 4); d.alt += d.vy * dt;
+      d.root.position.set(d.pos.x, (roof ? roof.h : d.pos.y) + d.alt, d.pos.z);
+      d.root.rotation.y = d.yaw + Math.sin(T * 3 + i) * 0.3;
+      d.root.scale.setScalar(this.S * (d.mul || 1) * Math.max(0.05, 1 - Math.max(0, d.alt - 12) / 18));
+      d.body.rotation.x = -0.4; d.tail.rotation.z = Math.sin(this.clock * 40 + i) * 0.6;
+      if (d.cape) d.cape.rotation.x = 1.0 + Math.sin(this.clock * 30 + i) * 0.45;
+      if (this.fartExit && Math.random() < 0.35) g.fx.glow.spawn({ pos: { x: d.pos.x, y: d.root.position.y, z: d.pos.z }, vel: { x: 0, y: -1.2, z: 0 }, size: 0.2, life: 0.45, r: 0.78, g: 1, b: 0.29, alpha: 0.35, grav: 0 });
+    });
+    this.hideStompBits();
+    if (T > 0.8 || this.activeDogs().every(d => d.alt > 30)) this.end();
+  }
+  stompStep(dt) {
+    const g = this.g, st = g.stomp, roof = this.stompRoof;
+    if (!st || !roof) { this.end(); return; }
+    if (!this._fit) this.fitStompDogs();
+    if (this.state === 'fly') { this.t += dt; this.stompFly(dt); return; }
+    this.t += dt; const T = this.t, drop = Math.min(1, T / 0.7), alt = drop >= 1 ? 0 : (1 - drop * drop) * 8;
+    if (drop >= 1 && !this._landed) {
+      this._landed = true; sfx.boing && sfx.boing(0.9, 1.05);
+      this.dogs.forEach((d, i) => { if (!d.off) { d.boing = 0.32; this.woof(i, 2); } });
+    }
+    if (!this._hudFit && T > 0.5 && g.camera && g.player) { this._hudFit = true; this.fitDogWindows(); }
+    if (T >= 0.8 && !this.introduced) this.intro();
+    if (T >= 1.2 && !this._gagged) { this._gagged = true; this.dogs.forEach(d => { if (!d.off) { d.poopT = 1.4; d.pooped = false; } }); }
+    const showGoo = T < 1.05;
+    this.dogs.forEach((d, i) => {
+      if (d.off) { d.root.visible = false; return; }
+      d.alt = alt; d.pos.set(d.goal.x, roof.h, d.goal.z);
+      const cam = g.camera.position; d.yaw = Math.atan2(cam.x - d.pos.x, cam.z - d.pos.z);
+      d.root.position.set(d.pos.x, d.pos.y + alt, d.pos.z); d.root.rotation.y = d.yaw;
+      const sc = this.S * (d.mul || 1);
+      if (d.boing > 0) { d.boing -= dt; const q = Math.sin(Math.min(1, 1 - Math.max(0, d.boing) / 0.32) * Math.PI); d.root.scale.set(sc * (1 + 0.16 * q), sc * (1 - 0.2 * q), sc * (1 + 0.16 * q)); }
+      else d.root.scale.setScalar(sc);
+      this.poseStompDog(d, i, dt, T, alt > 0.2 || T >= 3.4);
+      if (this.strands) {
+        const pair = this.strands[i]; pair.goo.visible = pair.core.visible = showGoo;
+        if (showGoo) {
+          const top = { x: d.goal.x, y: roof.h + 8, z: d.goal.z }, bot = { x: d.goal.x, y: roof.h + 0.15, z: d.goal.z };
+          st.poseStrand(pair.goo, top, bot); st.poseStrand(pair.core, top, bot);
+        }
+      }
+      this.posePoop(d, i, dt);
+      if (alt < 0.2) { const sh = this.dogShade(i); sh.visible = true; sh.position.set(d.pos.x, roof.h + 0.08, d.pos.z); }
+      else { const sh = this.shades && this.shades[i]; if (sh) sh.visible = false; }
+    });
+    if (T >= 4.2) this.flyAway();
+  }
+  fitDogWindows() {
+    const g = this.g, cam = g.camera, P = g.player, side = this._side, roof = this.stompRoof;
+    if (!cam || !P || !side || !roof) return;
+    cam.updateMatrixWorld();
+    const portrait = window.innerHeight > window.innerWidth;
+    const wins = [[0.20, 0.45], portrait ? [0.62, 0.74] : [0.66, 0.82]];
+    const hq = new THREE.Vector3(P.pos.x, P.pos.y + 0.9, P.pos.z).project(cam);
+    const hsx = hq.x * 0.5 + 0.5;
+    const hud = [];
+    for (const id of ['b-rb', 'a-melee', 'joy-base']) {
+      const el = document.getElementById(id); if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || getComputedStyle(el).display === 'none') continue;
+      hud.push({ l: r.left / innerWidth, rt: r.right / innerWidth, t: r.top / innerHeight, b: r.bottom / innerHeight });
+    }
+    const props = this._roofProps || [], lim = this._roofLim || roof.r - 1, fwd = this._fwd || side;
+    this.dogs.forEach((d, i) => {
+      if (d.off || !d.goal) return;
+      const [lo, hi] = wins[i];
+      let best = null;
+      for (let f = 0.2; f <= 2.6; f += 0.3) {
+        for (let k = -8; k <= 8; k += 0.2) {
+          let x = P.pos.x + fwd.x * f + side.x * k, z = P.pos.z + fwd.z * f + side.z * k;
+          const dx = x - roof.x, dz = z - roof.z, dist = Math.hypot(dx, dz);
+          if (dist > lim && dist > 0) { x = roof.x + dx / dist * lim; z = roof.z + dz / dist * lim; }
+          if (props.some(pr => Math.hypot(x - pr.x, z - pr.z) < 1.05)) continue;
+          const mid = new THREE.Vector3(x, roof.h + 0.5, z).project(cam);
+          const sx = mid.x * 0.5 + 0.5, sy = -mid.y * 0.5 + 0.5;
+          if (mid.z > 1 || sx < 0.04 || sx > 0.96 || sy < 0.08 || sy > 0.92) continue;
+          if (sx < lo || sx > hi || Math.abs(sx - hsx) < 0.09) continue;
+          const feet = new THREE.Vector3(x, roof.h + 0.05, z).project(cam);
+          const fy = -feet.y * 0.5 + 0.5;
+          if (hud.some(h => sx > h.l - 0.02 && sx < h.rt + 0.02 && fy > h.t - 0.02 && fy < h.b + 0.02)) continue;
+          const score = Math.abs(sx - (lo + hi) * 0.5) + f * 0.05;
+          if (!best || score < best.score) best = { x, z, score };
+        }
+      }
+      if (best) { d.goal.x = best.x; d.goal.z = best.z; d.pos.x = best.x; d.pos.z = best.z; }
+    });
+  }
   update(dt) {
     this.clock += dt; const g = this.g;
+    const onStomp = !!(g.world && g.world.stomp);
+    if (onStomp && !this.stompAccent && STOMP_BOBBY_ACCENT) { setAccent(this.dogs[1], STOMP_BOBBY_ACCENT); this.stompAccent = true; }
+    if (!onStomp && this.stompAccent) { setAccent(this.dogs[1], 0x2a6ad8); this.stompAccent = false; }
+    if (this.stompVisit) { this.stompStep(dt); return; }
     if (!this.active) { // on the jungle they follow along; other worlds still get the occasional surprise visit
       const pals = this.companions(dt);
-      if (!pals && g.mode === 'roam' && !g.battle && g.player && g.player.alive) { this.cool -= dt; if (this.cool <= 0) { this.cool = 150 + Math.random() * 150; this.trigger('roam'); } }
+      if (!pals && g.mode === 'roam' && !g.battle && g.player && g.player.alive && !(g.world && g.world.stomp)) { this.cool -= dt; if (this.cool <= 0) { this.cool = 150 + Math.random() * 150; this.trigger('roam'); } }
       return;
     }
     this.t += dt; const T = this.t, DANCE = 5;
@@ -401,5 +649,8 @@ export class Westies {
   sockMesh() { if (!this.sock) { this.sock = new THREE.Mesh(mergeGeometries([new THREE.CylinderGeometry(0.09, 0.08, 0.7, 8).translate(0, 0, 0), new THREE.CylinderGeometry(0.095, 0.095, 0.1, 8).translate(0, 0.32, 0), new THREE.SphereGeometry(0.1, 8, 6).translate(0.06, -0.36, 0)]), new THREE.MeshStandardMaterial({ color: 0xff6a9a, roughness: 0.8 }));
       this.sock.scale.setScalar(this.S); this.sock.visible = false; this.g.scene.add(this.sock); } return this.sock; }
   // used when the level changes / the game resets
-  reset() { if (this.active) this.end(); if (this.sock) this.sock.visible = false; }
+  leaveStomp() {
+    if (this.stompAccent) { setAccent(this.dogs[1], 0x2a6ad8); this.stompAccent = false; }
+  }
+  reset() { if (this.active) this.end(); else this.hideStompBits(); if (this.sock) this.sock.visible = false; }
 }

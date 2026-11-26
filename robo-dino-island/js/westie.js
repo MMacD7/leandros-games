@@ -4,18 +4,39 @@
 import * as THREE from './vendor/three.bundle.min.js';
 import { cloneWestie } from './models.js';
 
-function nameTag(label, color) {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
-  const g = c.getContext('2d');
-  g.clearRect(0, 0, 512, 128);
+// '#2FB8A8' recolours Bobby's cape, fins, collar and tag on Stompolis only. null would leave his usual blue.
+export const STOMP_BOBBY_ACCENT = '#2FB8A8';
+
+function paintTag(tag, label, color) {
+  const canvas = tag.material.map.image;
+  const g = canvas.getContext('2d');
+  g.clearRect(0, 0, canvas.width, canvas.height);
   g.fillStyle = color; g.beginPath(); g.roundRect(12, 16, 488, 96, 28); g.fill();
   g.lineWidth = 8; g.strokeStyle = '#fff4e0'; g.stroke();
   g.fillStyle = '#fff'; g.font = 'bold 64px ui-rounded, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(label, 256, 64);
+  tag.material.map.needsUpdate = true;
+  tag.userData.label = label; tag.userData.color = color;
+}
+
+function nameTag(label, color) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
   sp.scale.set(0.42, 0.105, 1); sp.visible = false; sp.name = 'name-tag'; sp.center.set(0.5, 0);
+  paintTag(sp, label, color);
   return sp;
+}
+
+export function setAccent(w, hex) {
+  const color = new THREE.Color(hex);
+  const paint = (mat) => { if (!mat) return; mat.color.copy(color); if (mat.emissive) mat.emissive.copy(color); };
+  paint(w.acc);
+  paint(w.finM);
+  if (w.cape) paint(w.cape.material);
+  if (w.collar) paint(w.collar.material);
+  if (w.disc && w.disc.material) w.disc.material.color.set(color.getHex() === 0x2a6ad8 ? 0xd8e8ff : 0xf4f1e8);
+  if (w.tag) paintTag(w.tag, w.tag.userData.label || '', '#' + color.getHexString().toUpperCase());
 }
 
 export function buildWestie(name, accent) {
@@ -39,10 +60,10 @@ export function buildWestie(name, accent) {
   skin.material = Array.isArray(skin.material) ? skin.material.map(m => m.clone()) : skin.material.clone();
   const who = name === 'bobby' ? 'Bobby' : 'Ricky';
   const collarColor = name === 'bobby' ? 0x2a6ad8 : 0xd82a2a;
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.025, 8, 22), new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.4, emissive: collarColor, emissiveIntensity: 0.45 }));
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.012, 8, 22), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.55 }));
-  const disc = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8), new THREE.MeshStandardMaterial({ color: name === 'bobby' ? 0xd8e8ff : 0xffd23a, metalness: 0.45, roughness: 0.4 }));
-  collar.rotation.x = band.rotation.x = 1.15; collar.position.set(0, 0.2, 0.08); band.position.copy(collar.position); disc.position.set(0, 0.12, 0.14);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.054, 0.008, 8, 22), new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.4, emissive: collarColor, emissiveIntensity: 0.15 }));
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.006, 8, 22), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.55 }));
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshStandardMaterial({ color: name === 'bobby' ? 0xd8e8ff : 0xffd23a, metalness: 0.45, roughness: 0.4 }));
+  collar.rotation.x = band.rotation.x = 1.15; collar.position.set(0, 0.12, 0.048); band.position.copy(collar.position); disc.position.set(0, 0.072, 0.084);
   body.add(band); body.add(collar); body.add(disc);
   const tag = nameTag(who, name === 'bobby' ? '#2A6AD8' : '#D82A2A'); tag.position.set(0, 0.42, 0); tag.userData.label = who; root.add(tag);
   const white = skin.material;
@@ -64,6 +85,6 @@ export function buildWestie(name, accent) {
   for (const l of legs) { const fin = add(l, new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.1), finM)); fin.position.set(0, -0.12, 0.04); }
   for (const m of scuba) m.visible = false;
   skin.userData.westieSkin = true;
-  return { root, body, head, jaw, tail, legs, cape, collar, torso: skin, scuba, scubaOn: false, tag, mul: name === 'bobby' ? 0.92 : 1, white, acc };
+  return { root, body, head, jaw, tail, legs, cape, collar, band, disc, finM, torso: skin, scuba, scubaOn: false, tag, mul: name === 'bobby' ? 0.92 : 1, white, acc };
 }
 

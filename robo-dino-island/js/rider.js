@@ -145,6 +145,162 @@ export class Rider {
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.renderOrder = 3; } });
     return g;
   }
+  // Stompolis only. The real Leandro mesh, recoloured, plus a mask. No emblem, no cape, no backpack.
+  setHoopster(on) {
+    if (!this.attachSkin()) return;
+    if (on) this.paintSuit();
+    if (!this._lenses) this._lenses = this.makeLenses();
+    for (const m of this._lenses) m.visible = !!on;
+    if (this.cap) this.cap.visible = !on;
+    this.setBands(!!on);
+    this._hoopster = !!on;
+  }
+  paintSuit() {
+    let mesh = null;
+    this.avatar.traverse(o => { if (o.isSkinnedMesh && !mesh) mesh = o; });
+    if (!mesh || mesh.userData.suited) return;
+    const src = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    const mat = src.clone();
+    mat.color.setHex(0xffffff); mat.roughness = 0.5; mat.metalness = 0; mat.normalMap = null;
+    const compile = (sh, depth) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBind;');
+      if (sh.vertexShader.includes('#include <begin_vertex>')) sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvBind = position;');
+      else sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', 'vBind = position;\n#include <project_vertex>');
+      const hide = 'if ((vBind.y > 0.36 && abs(vBind.x) < 0.42) || (vBind.y > 0.29 && vBind.z > 0.02 && abs(vBind.x) < 0.42)) discard;';
+      if (depth) {
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vBind;');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + hide);
+      } else sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>
+varying vec3 vBind;
+const vec3 SUIT = vec3(0.1946, 0.0070, 0.0144);
+const vec3 SEAM = vec3(0.0685, 0.0030, 0.0061);
+const vec3 INK = vec3(0.0056, 0.0056, 0.0070);
+const vec3 CHALK = vec3(0.905, 0.896, 0.888);
+float lineAA(float d, float hw) { float aa = fwidth(d) * 1.2 + 1e-5; return 1.0 - smoothstep(hw - aa, hw + aa, d); }
+vec3 stripes(vec2 p, float ang, float pitch, vec3 base) {
+  float u = p.x * cos(ang) + p.y * sin(ang);
+  float f = fract(u / pitch) * pitch;
+  float w = lineAA(abs(f - 0.020), 0.0095);
+  float k = lineAA(abs(f - 0.042), 0.0095);
+  return mix(mix(base, CHALK, w), INK, k);
+}
+vec3 hoopSuit(vec3 p, float lum) {
+  if (p.y < -0.78) return SEAM;
+  if (p.y > -0.345 && p.y < -0.285 && abs(p.x) < 0.30) return CHALK;
+  if (p.y > -0.60 && p.y < -0.285 && abs(p.x) < 0.30 && lum > 0.80) return CHALK;
+  if (p.y > 0.22 && abs(p.x) < 0.42) return SUIT;
+  if (abs(p.x) > 0.27 && p.y > -0.2 && p.y < 0.72) return stripes(p.xy, p.x > 0.0 ? 2.20 : 0.94, 0.12, SUIT);
+  if (p.y > -0.30 && abs(p.x) < 0.30) return stripes(p.xy, 0.62, 0.12, SUIT);
+  if (p.y < -0.60) return stripes(p.xy, p.x > 0.0 ? -0.30 : 0.30, 0.12, SUIT);
+  return SUIT;
+}`)
+        .replace('#include <map_fragment>', `#include <map_fragment>
+float suitLum = 1.0;
+#ifdef USE_MAP
+  suitLum = dot(texture2D(map, vMapUv).rgb, vec3(0.2126, 0.7152, 0.0722));
+#endif
+${hide}
+diffuseColor.rgb = hoopSuit(vBind, suitLum);
+float trunkMask = 0.0;
+if ((vBind.y > -0.345 && vBind.y < -0.285 && abs(vBind.x) < 0.30) || (vBind.y > -0.60 && vBind.y < -0.285 && abs(vBind.x) < 0.30 && suitLum > 0.80)) trunkMask = 1.0;
+totalEmissiveRadiance += CHALK * 0.35 * trunkMask;`);
+    };
+    mat.onBeforeCompile = (sh) => compile(sh, false);
+    mat.customProgramCacheKey = () => 'swingboy-suit-v4';
+    const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    depth.onBeforeCompile = (sh) => compile(sh, true);
+    depth.customProgramCacheKey = () => 'swingboy-suit-v3-depth';
+    mesh.material = mat; mesh.customDepthMaterial = depth; mesh.userData.suited = true;
+  }
+  makeLenses() {
+    const parts = [];
+    const head = this.bone('Head'); if (!head) return parts;
+    const maskM = new THREE.MeshStandardMaterial({ color: 0x7a1420, roughness: 0.46, metalness: 0 });
+    const rimM = new THREE.MeshStandardMaterial({ color: 0x4a0a12, roughness: 0.5, metalness: 0 });
+    const lensM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.45, roughness: 0.3, metalness: 0 });
+    const root = new THREE.Group();
+    const rest = this.restQ[head.name];
+    if (rest) root.quaternion.copy(rest).invert();
+    head.add(root); parts.push(root);
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), maskM);
+    hood.scale.set(0.168, 0.184, 0.168); hood.position.set(0, 0.1545, -0.0015);
+    hood.castShadow = true; hood.userData.suit = true; root.add(hood);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.088, 0.07, 24, 1, true), maskM);
+    collar.position.set(0, -0.005, 0); collar.userData.suit = true; root.add(collar);
+    for (const x of [-0.057, 0.046]) {
+      const pivot = new THREE.Group();
+      pivot.position.set(0, 0.1545, -0.0015);
+      pivot.rotation.set(-Math.asin((0.1145 - 0.1545) / 0.184), Math.asin(x / 0.168), 0, 'YXZ');
+      const rim = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), rimM);
+      rim.scale.set(0.0475, 0.036, 0.008); rim.position.z = 0.167;
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), lensM);
+      lens.scale.set(0.041, 0.031, 0.010); lens.position.z = 0.170;
+      pivot.add(rim, lens); root.add(pivot);
+    }
+    root.userData.suit = true;
+    return parts;
+  }
+  // Knees tucked, one arm reaching, while the Zip-Goo line is out. Roof running keeps the normal walk.
+  heroSwing(on) {
+    if (!this._hoopster) return;
+    if (!on) return;
+    this.bendBone('Spine', 0.35, 0, 0);
+    this.bendBone('Spine1', 0.16, 0, 0);
+    this.bendBone('RightArm', -0.35, 0.1, -2.1);
+    this.bendBone('RightForeArm', -0.15, 0, 0);
+    this.bendBone('RightHand', -0.25, 0, 0);
+    this.bendBone('LeftArm', 0.9, 0, 1.35);
+    this.bendBone('LeftForeArm', -0.4, 0, 0);
+    this.bendBone('LeftUpLeg', -1.05, 0, 0.12);
+    this.bendBone('RightUpLeg', -0.75, 0, -0.08);
+    this.bendBone('LeftLeg', 1.15, 0, 0);
+    this.bendBone('RightLeg', 0.85, 0, 0);
+    this.bendBone('Head', -0.15, 0, 0);
+  }
+  // Point the right arm at the anchor so the Zip-Goo leaves the palm.
+  aimShoot(target) {
+    const arm = this.bone('RightArm');
+    if (!arm || !target || !arm.parent) return;
+    this.bendBone('RightForeArm', -0.12, 0, 0);
+    this.bendBone('RightHand', -0.3, 0, 0);
+    const rest = this.restQ[arm.name];
+    if (!rest) return;
+    arm.parent.updateWorldMatrix(true, false);
+    const parentQ = this._aimPQ || (this._aimPQ = new THREE.Quaternion());
+    parentQ.setFromRotationMatrix(arm.parent.matrixWorld);
+    const basis = this._aimBasis || (this._aimBasis = new THREE.Quaternion());
+    basis.copy(parentQ).multiply(rest);
+    const origin = this._aimO || (this._aimO = new THREE.Vector3());
+    arm.getWorldPosition(origin);
+    const want = this._aimW || (this._aimW = new THREE.Vector3());
+    want.set(target.x - origin.x, target.y - origin.y, target.z - origin.z);
+    if (want.lengthSq() < 1e-4) return;
+    want.normalize().applyQuaternion(basis.invert());
+    const delta = this._aimD || (this._aimD = new THREE.Quaternion());
+    delta.setFromUnitVectors(this._aimAxis || (this._aimAxis = new THREE.Vector3(0, 1, 0)), want);
+    arm.quaternion.copy(rest).multiply(delta);
+  }
+  // Slim Zip-Goo cuffs. Lime on the left wrist, aqua on the right. No emblem.
+  setBands(on) {
+    if (this._bands) { for (const m of this._bands) m.visible = !!on; if (!on && this._halos) for (const h of this._halos) h.visible = false; return; }
+    if (!on) return;
+    const cuff = (color, glow) => {
+      const mat = new THREE.MeshStandardMaterial({ color, emissive: glow, emissiveIntensity: 1.6, roughness: 0.35, metalness: 0, side: THREE.DoubleSide, toneMapped: false });
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.05, 20, 1, true), mat);
+      const halo = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.07, 16, 1, true), new THREE.MeshBasicMaterial({ color: glow, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+      mesh.add(halo); mesh.userData.halo = halo; return mesh;
+    };
+    const put = (obj, mesh) => { if (!obj) return; mesh.position.y = -0.025; mesh.name = 'zip-band'; mesh.userData.suit = true; obj.add(mesh); (this._bands = this._bands || []).push(mesh); (this._halos = this._halos || []).push(mesh.userData.halo); };
+    const rh = this.bone('RightHand'), lh = this.bone('LeftHand');
+    if (rh || lh) { put(lh, cuff(0xc6ff4a, 0x8dff20)); put(rh, cuff(0x7df4ff, 0x19e4ff)); }
+    else if (this.arms && this.arms[0]) { put(this.arms[0].hand, cuff(0xc6ff4a, 0x8dff20)); put(this.arms[1].hand, cuff(0x7df4ff, 0x19e4ff)); }
+  }
+  pulseCuffs(on, time) {
+    if (!this._halos) return;
+    const o = on ? 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(time * 4 * Math.PI)) : 0.3;
+    for (const h of this._halos) { h.visible = true; h.material.opacity = o; }
+  }
   alignAvatar() {
     if (!this.avatar || !this._hipRest) return;
     this.avatar.position.set(-this._hipRest.x, this.hips.position.y - this._hipRest.y, -this._hipRest.z);

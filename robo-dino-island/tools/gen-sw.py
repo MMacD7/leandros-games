@@ -17,13 +17,13 @@ open(os.path.join(root, 'sw.js'), 'w').write(f"""/* Offline cache for Leandro's 
    Pages and code (html/js/css/manifest) are network-first with a cache fallback, so new versions show up right away when online
    and the game still works offline. Big assets (textures, sky, icons, vendored three.js) are cache-first; they are re-downloaded
    whenever this file's cache name changes. */
-const CACHE = 'robo-dino-island-{ver}';
+const CACHE = 'rdi-v5-12-0';
 const FILES = ['./',
   {lst}];
 const fresh = u => new Request(u, {{ cache: 'reload' }}); // bypass the HTTP cache when (re)installing
 self.addEventListener('install', e => {{ e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(fresh))).then(() => self.skipWaiting())); }});
 self.addEventListener('activate', e => {{ e.waitUntil(caches.keys().then(async ks => {{
-  const old = ks.filter(k => k !== CACHE && k.startsWith('robo-dino-island-')); await Promise.all(old.map(k => caches.delete(k)));
+  const old = ks.filter(k => k !== CACHE && (k.startsWith('robo-dino-island-') || k.startsWith('rdi-v'))); await Promise.all(old.map(k => caches.delete(k)));
   await self.clients.claim();
   // upgrading from an older build: reload open game windows once so they run the new version (older pages had no auto-reload)
   if (old.length) for (const c of await self.clients.matchAll({{ type: 'window' }})) {{ try {{ c.navigate(c.url); }} catch (err) {{ }} }}
