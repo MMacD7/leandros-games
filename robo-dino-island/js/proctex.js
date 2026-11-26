@@ -222,3 +222,98 @@ export function bioTexture() {
   g.beginPath(); g.moveTo(0, 168); g.lineTo(N, 150); g.stroke();
   const t = tex(c, true, true); t.anisotropy = 4; _bio = t; return t;
 }
+
+// v5.16 fish scales: overlapping crescent rows, half a scale offset, 16 across. Cached like scaleTextures().
+let _fishScale = null;
+export function fishScaleTextures() {
+  if (_fishScale) return _fishScale;
+  const N = 256, across = 16, cell = N / across;
+  const H = new Float32Array(N * N);
+  const rad = cell * 0.72;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const row = Math.floor(y / cell);
+    const off = (row & 1) ? cell * 0.5 : 0;
+    const lx = (x + off) % N;
+    const cx = (Math.floor(lx / cell) + 0.5) * cell;
+    const cy = row * cell + cell * 0.72;
+    let dx = lx - cx; if (dx > cell) dx -= cell;
+    const dy = y - cy;
+    const d = Math.hypot(dx, dy * 1.08);
+    let h = 0.22;
+    if (d < rad) {
+      const edge = Math.abs(d - rad * 0.9);
+      const rim = Math.max(0, 1 - edge / (cell * 0.11));
+      const inner = Math.max(0, 1 - d / (rad * 0.62));
+      h = 0.28 + rim * 0.72 - inner * 0.34;
+    }
+    H[y * N + x] = h;
+  }
+  const [c1, g1] = canvas(N, N), [c2, g2] = canvas(N, N);
+  const A = g1.createImageData(N, N), Nm = g2.createImageData(N, N), a = A.data, n = Nm.data;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x, h = H[i];
+    const hx = H[y * N + ((x + 1) % N)] - H[y * N + ((x + N - 1) % N)];
+    const hy = H[((y + 1) % N) * N + x] - H[((y + N - 1) % N) * N + x];
+    let nx = -hx * 2.5, ny = -hy * 2.5, nz = 1, l = Math.hypot(nx, ny, nz) || 1;
+    n[i * 4] = (nx / l * 0.5 + 0.5) * 255; n[i * 4 + 1] = (ny / l * 0.5 + 0.5) * 255; n[i * 4 + 2] = (nz / l * 0.5 + 0.5) * 255; n[i * 4 + 3] = 255;
+    const rim = Math.max(0, Math.min(1, (h - 0.55) / 0.4));
+    const dark = Math.max(0, Math.min(1, (0.4 - h) / 0.25));
+    const v = Math.max(0, Math.min(255, 232 + rim * 23 - dark * 36));
+    a[i * 4] = a[i * 4 + 1] = a[i * 4 + 2] = v; a[i * 4 + 3] = 255;
+  }
+  g1.putImageData(A, 0, 0); g2.putImageData(Nm, 0, 0);
+  const map = tex(c1, true, true), normal = tex(c2, false, true);
+  map.anisotropy = normal.anisotropy = 8;
+  _fishScale = { map, normal }; return _fishScale;
+}
+
+// fine shark-skin bump plus a raised lateral line on each flank (u = 0.25 and 0.75)
+let _skinDetail = null;
+export function skinDetailTexture() {
+  if (_skinDetail) return _skinDetail;
+  const N = 256, H = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const nse = Math.sin(x * 0.85) * Math.sin(y * 1.7) * 0.08 + Math.sin(x * 2.3 + y * 1.1) * 0.04;
+    const u = x / N;
+    const flank = Math.min(Math.abs(u - 0.25), Math.abs(u - 0.75)) * N;
+    const line = flank < 2.2 ? (1 - flank / 2.2) * 0.85 : 0;
+    H[y * N + x] = 0.45 + nse + line;
+  }
+  const [c, g] = canvas(N, N), img = g.createImageData(N, N), d = img.data;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x;
+    const hx = H[y * N + ((x + 1) % N)] - H[y * N + ((x + N - 1) % N)];
+    const hy = H[((y + 1) % N) * N + x] - H[((y + N - 1) % N) * N + x];
+    let nx = -hx * 3.2, ny = -hy * 3.2, nz = 1, l = Math.hypot(nx, ny, nz) || 1;
+    d[i * 4] = (nx / l * 0.5 + 0.5) * 255; d[i * 4 + 1] = (ny / l * 0.5 + 0.5) * 255; d[i * 4 + 2] = (nz / l * 0.5 + 0.5) * 255; d[i * 4 + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const normal = tex(c, false, true); normal.anisotropy = 8;
+  _skinDetail = normal; return normal;
+}
+
+// radial fin rays: 1 px light lines from the base, opaque at the base, 70% at the tips, soft rim
+let _finRay = null;
+export function finRayTexture() {
+  if (_finRay) return _finRay;
+  const W = 256, H = 128, [cM, gM] = canvas(W, H), [cA, gA] = canvas(W, H);
+  const mapI = gM.createImageData(W, H), alpI = gA.createImageData(W, H), md = mapI.data, ad = alpI.data;
+  const rays = 14;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const u = x / (W - 1), v = y / (H - 1);
+    const ang = Math.atan2((u - 0.5) * 2.1, v + 0.04);
+    const slot = (ang / Math.PI + 0.5) * rays;
+    const dist = Math.abs(slot - Math.round(slot));
+    const line = dist < 0.045 ? 1 : dist < 0.09 ? (0.09 - dist) / 0.045 : 0;
+    const rim = Math.max(0, Math.min(1, (v - 0.9) / 0.1)) * 0.85 + (u < 0.04 || u > 0.96 ? 0.35 : 0);
+    const lit = Math.max(0, Math.min(255, 214 + line * 41 + rim * 30));
+    const i = (y * W + x) * 4;
+    md[i] = md[i + 1] = md[i + 2] = lit; md[i + 3] = 255;
+    const a = Math.max(0, Math.min(255, (1 - v * 0.3) * 255));
+    ad[i] = ad[i + 1] = ad[i + 2] = a; ad[i + 3] = 255;
+  }
+  gM.putImageData(mapI, 0, 0); gA.putImageData(alpI, 0, 0);
+  const map = tex(cM, true, true), alpha = tex(cA, false, true);
+  map.anisotropy = alpha.anisotropy = 8;
+  _finRay = { map, alpha }; return _finRay;
+}

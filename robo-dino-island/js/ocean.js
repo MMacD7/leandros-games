@@ -7,7 +7,9 @@ import * as THREE from './vendor/three.bundle.min.js';
 import { mergeGeometries } from './vendor/three.bundle.min.js';
 import { fbm, noise2, rng, smooth, clamp, lerp } from './noise.js';
 import { BASE, ARENA, VOLC, TITLE, triplanar } from './world.js';
-import { SeaBeast } from './sea.js';
+import { SeaBeast, fin } from './sea.js';
+import { fishScaleTextures } from './proctex.js';
+import { GOLDFISH } from './data.js';
 
 export const SURF = 66; // the water surface (seen from below)
 // (lazy: world.js and ocean.js import each other, so the shared constants are only read at run time)
@@ -75,6 +77,78 @@ function plankTex() { const c = document.createElement('canvas'); c.width = 128;
   for (let y = 0; y < 128; y += 16) { const v = 70 + r() * 40 | 0; g.fillStyle = `rgb(${v + 20},${v},${v - 25})`; g.fillRect(0, y, 128, 16); g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(0, y, 128, 2); g.fillRect((r() * 128) | 0, y, 2, 16); }
   for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(40,90,70,${r() * 0.25})`; g.fillRect(r() * 128, r() * 128, 2 + r() * 8, 1 + r() * 3); } // algae
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; }
+
+// Reef tang (deep body, 0.9 m) and clownfish (stubby, 0.6 m). One geometry each, instanced.
+function latheFish(length, rx, ry, rings, radial, bulge, colorAt) {
+  const pos = [], uv = [], col = [], idx = [];
+  for (let i = 0; i < rings; i++) {
+    const t = i / (rings - 1), z = length * (0.5 - t), bell = Math.sin(Math.PI * t);
+    let rX = 0.02 + bell * rx, rY = 0.02 + bell * ry;
+    if (i === bulge) { rX *= 1.06; rY *= 1.06; }
+    for (let j = 0; j < radial; j++) {
+      const a = j / radial * Math.PI * 2, x = Math.cos(a) * rX, y = Math.sin(a) * rY;
+      pos.push(x, y, z); uv.push(j / radial, t);
+      const c = colorAt(t, a, y, rY);
+      col.push(c[0], c[1], c[2]);
+    }
+  }
+  for (let i = 0; i < rings - 1; i++) for (let j = 0; j < radial; j++) {
+    const a = i * radial + j, b = i * radial + (j + 1) % radial, c = a + radial, d = b + radial;
+    idx.push(a, c, b, b, c, d);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function paintFin(geo, body, edge) {
+  const p = geo.attributes.position, uv = geo.attributes.uv, a = new Float32Array(p.count * 3);
+  const B = new THREE.Color(body), E = new THREE.Color(edge);
+  for (let i = 0; i < p.count; i++) { const c = uv && uv.getY(i) > 0.82 ? E : B; a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(a, 3));
+  return geo;
+}
+function bendTail(geo, sign) {
+  const p = geo.attributes.position, out = new Float32Array(p.count * 3);
+  let zH = -1e9, zT = 1e9;
+  for (let i = 0; i < p.count; i++) { const z = p.getZ(i); if (z > zH) zH = z; if (z < zT) zT = z; }
+  const len = Math.max(1e-4, zH - zT), z0 = zH - 0.55 * len;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    if (z >= z0) { out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z; continue; }
+    const u = (z0 - z) / (z0 - zT), ang = sign * 0.35 * u * u, c = Math.cos(ang), s = Math.sin(ang), zz = z - z0;
+    out[i * 3] = x * c + zz * s; out[i * 3 + 1] = y; out[i * 3 + 2] = -x * s + zz * c + z0;
+  }
+  return new THREE.Float32BufferAttribute(out, 3);
+}
+function withMorph(geo) {
+  geo.morphAttributes.position = [bendTail(geo, 1), bendTail(geo, -1)];
+  geo.morphTargetsRelative = false;
+  return geo;
+}
+const _fishCol = new THREE.Color();
+function tangColor(t, a, y, rY) {
+  let k = y >= 0 ? 1 : 0.75;
+  if (t < 0.26 && y > rY * 0.15) k = Math.min(1, k + 0.22);
+  return [k, k, k];
+}
+function clownColor(t, a, y) {
+  const bands = [0.3, 0.5, 0.68];
+  for (const b of bands) { const d = Math.abs(t - b); if (d < 0.045) return d > 0.03 ? [0.102, 0.102, 0.102] : [0.957, 0.945, 0.91]; }
+  return [1, 0.478, 0.094];
+}
+function schoolFish(kind) {
+  const tang = kind === 'tang';
+  const body = latheFish(tang ? 0.9 : 0.6, tang ? 0.1 : 0.13, tang ? 0.24 : 0.16, tang ? 8 : 8, tang ? 10 : 9, 2, tang ? tangColor : clownColor);
+  const lobe = (ang) => { const g = paintFin(fin(tang ? 0.16 : 0.12, tang ? 0.22 : 0.14, 0.05, 0.015, 3), tang ? 0xffffff : 0xff7a18, tang ? 0xffd23a : 0x1a1a1a); g.translate(0, ang > 0 ? 0.02 : -0.02, tang ? -0.42 : -0.28); g.rotateX(ang); return g.index ? g.toNonIndexed() : g; };
+  const dorsal = paintFin(fin(tang ? 0.2 : 0.14, tang ? 0.28 : 0.16, 0.06, 0.015, 3), tang ? 0xffffff : 0xff7a18, tang ? 0xffd23a : 0x1a1a1a); dorsal.translate(0, tang ? 0.16 : 0.1, tang ? 0.05 : 0);
+  const anal = paintFin(fin(tang ? 0.12 : 0.1, tang ? 0.16 : 0.1, 0.04, 0.012, 3).scale(1, -1, 1), tang ? 0xffffff : 0xff7a18, tang ? 0xffd23a : 0x1a1a1a); anal.translate(0, tang ? -0.14 : -0.08, 0);
+  const pec = (s) => { const g = paintFin(fin(0.1, tang ? 0.16 : 0.1, 0.04, 0.012, 3), tang ? 0xffffff : 0xff7a18, tang ? 0xffd23a : 0x1a1a1a); g.translate(s * (tang ? 0.1 : 0.12), -0.02, tang ? 0.12 : 0.06); g.rotateZ(-s * 1.2); return g.index ? g.toNonIndexed() : g; };
+  const parts = [body.toNonIndexed(), lobe(0.35), lobe(-0.35), dorsal.index ? dorsal.toNonIndexed() : dorsal, anal.index ? anal.toNonIndexed() : anal, pec(1), pec(-1)];
+  return withMorph(mergeGeometries(parts));
+}
 
 export function buildOcean(w) {
   const A = w.assets, r = rng(321), root = w.root; w.windU = { uTime: { value: 0 } }; w.lodSets = []; w.lodTimer = 0; w.drawCap = 300; w.vents = [];
@@ -152,22 +226,27 @@ export function buildOcean(w) {
   const NS = 700, sp = new Float32Array(NS * 3); w.snowBase = new Float32Array(NS * 3); for (let i = 0; i < NS * 3; i++) w.snowBase[i] = r() * 70;
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
   w.snow = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xe0f8ff, size: 0.16, transparent: true, opacity: 0.45, depthWrite: false, sizeAttenuation: true })); w.snow.frustumCulled = false; root.add(w.snow);
-  // ---- fish schools ----
-  // The old schools orbited the world origin (the player starts at the base, ~200 m north) and sat at a
-  // fixed world Y, so on the sandy sea floor they were either missing or floating up in the fog. They now
-  // patrol the swimming band a few metres above the sand, around the base, the shallows and the arena.
-  const body = new THREE.SphereGeometry(0.35, 8, 6).scale(0.5, 0.85, 1.55).toNonIndexed();
-  const tail = new THREE.ConeGeometry(0.28, 0.5, 5).rotateX(Math.PI / 2).scale(0.35, 1, 1).translate(0, 0, -0.7).toNonIndexed();
-  const finG = new THREE.ConeGeometry(0.16, 0.38, 4).rotateZ(Math.PI / 2).translate(0, 0.28, 0.05).toNonIndexed();
-  const fishG = mergeGeometries([body, tail, finG]); fishG.scale(2.7, 2.7, 2.7);
-  const NF = 40, NSch = 5;
-  const fishMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.42, metalness: 0.02, emissive: 0x123044, emissiveIntensity: 0.55 });
-  w.fish = new THREE.InstancedMesh(fishG, fishMat, NF * NSch); w.fish.frustumCulled = false; w.fish.count = 0; root.add(w.fish);
-  const FC = [0xfff2c4, 0xffd040, 0x7ec8ff, 0xff7040, 0xd8fff4].map(c => new THREE.Color(c)); for (let i = 0; i < NF * NSch; i++) w.fish.setColorAt(i, FC[Math.floor(i / NF)].clone().offsetHSL((r() - 0.5) * 0.04, 0, (r() - 0.5) * 0.08));
-  if (w.fish.instanceColor) w.fish.instanceColor.needsUpdate = true;
-  const hubs = [null, TITLE, ARENA, { x: (BASE.x + ARENA.x) * 0.5, z: (BASE.z + ARENA.z) * 0.45 }, { x: ARENA.x - 48, z: ARENA.z + 36 }];
-  w.schools = []; for (let s = 0; s < NSch; s++) { const h = hubs[s], withPlayer = s === 0; w.schools.push({ withPlayer, cx: h ? h.x + (r() - 0.5) * 28 : BASE.x, cz: h ? h.z + (r() - 0.5) * 28 : BASE.z, R: withPlayer ? 5.5 : 12 + r() * 14, lift: withPlayer ? 2.6 : 3.5 + r() * 5.5, sp: (0.18 + r() * 0.1) * (r() < 0.5 ? 1 : -1), off: Array.from({ length: NF }, () => [(r() - 0.5) * (withPlayer ? 5 : 8), (r() - 0.5) * 1.8, (r() - 0.5) * (withPlayer ? 5 : 8), r() * 6, withPlayer ? 1.15 + r() * 0.45 : 0.9 + r() * 0.45]) }); }
-  w.fishM = new THREE.Matrix4(); w.fishQ = new THREE.Quaternion(); w.fishE = new THREE.Euler();
+  // ---- reef tangs + clownfish. Two instanced meshes, 5 schools × 40. School 0 (clownfish) swims with the player.
+  const NF = 40;
+  const scales = fishScaleTextures();
+  const fishMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: scales.map, normalMap: scales.normal, normalScale: new THREE.Vector2(0.8, 0.8), roughness: 0.32, metalness: 0.15, envMapIntensity: 1.3 });
+  const tangG = schoolFish('tang'), clownG = schoolFish('clown');
+  w.fishTang = new THREE.InstancedMesh(tangG, fishMat, NF * 4); w.fishClown = new THREE.InstancedMesh(clownG, fishMat, NF);
+  for (const m of [w.fishTang, w.fishClown]) { m.frustumCulled = false; root.add(m); }
+  const tangTint = [0xffd23a, 0xff5a7a, 0xff4fd8, 0x2ed88a];
+  for (let s = 0; s < 4; s++) for (let i = 0; i < NF; i++) {
+    const col = new THREE.Color(tangTint[s]);
+    if (s === 0) col.lerp(new THREE.Color(0xffa822), i / NF);
+    w.fishTang.setColorAt(s * NF + i, col);
+  }
+  for (let i = 0; i < NF; i++) { const k = 1 + (r() - 0.5) * 0.08; w.fishClown.setColorAt(i, _fishCol.setRGB(k, k, k)); }
+  w.fishTang.instanceColor.needsUpdate = w.fishClown.instanceColor.needsUpdate = true;
+  const hubs = [null, { x: BASE.x + 5, z: BASE.z - 14 }, TITLE, ARENA, { x: (BASE.x + ARENA.x) * 0.5, z: (BASE.z + ARENA.z) * 0.45 }];
+  w.schools = []; for (let s = 0; s < 5; s++) { const h = hubs[s], withPlayer = s === 0; w.schools.push({ withPlayer, clown: withPlayer, cx: h ? h.x + (r() - 0.5) * 24 : BASE.x, cz: h ? h.z + (r() - 0.5) * 24 : BASE.z, R: withPlayer ? 5.5 : 11 + r() * 10, lift: withPlayer ? 2.4 : 3.2 + r() * 4, sp: (0.22 + r() * 0.1) * (r() < 0.5 ? 1 : -1), off: Array.from({ length: NF }, () => [(r() - 0.5) * (withPlayer ? 4.5 : 7), (r() - 0.5) * 1.4, (r() - 0.5) * (withPlayer ? 4.5 : 7), r() * 6, 0.85 + r() * 0.35]) }); }
+  w.fishM = new THREE.Matrix4(); w.fishQ = new THREE.Quaternion(); w.fishE = new THREE.Euler(); w.fishDummy = { morphTargetInfluences: [0, 0] }; w.sparkT = 0; w.fishSeen = [];
+  const gf = new SeaBeast(GOLDFISH); gf.obj.traverse(o => { if (o.isMesh) o.castShadow = false; }); root.add(gf.obj);
+  const g0 = w.height(BASE.x + 4, BASE.z - 16); gf.obj.position.set(BASE.x + 4, g0 + 8, BASE.z - 16);
+  w.goldfish = { m: gf, mode: 'orbit', orbitT: 8, loop: 0 };
   // v5.5 friendly sea turtles gliding around (scenery, not enemies)
   const TC = [[0x5a8a3a, 0x3a2a12, 0xd8b060], [0x7a6a3a, 0x2a1a0a, 0xe0c080], [0x4a7a6a, 0x1a2a22, 0xb8d0a0], [0x8a7a4a, 0x3a2410, 0xf0d090]];
   w.turtles = []; for (let i = 0; i < 4; i++) { const c = TC[i], m = new SeaBeast({ id: 'turtle-amb' + i, kind: 'turtle', scale: 0.7 + r() * 0.35, back: c[0], shell: c[1], rim: c[2], belly: 0xf0e2b0, accent: 0x6aff9a, skin: 0x7a9a5a });
@@ -227,13 +306,60 @@ export function updateOcean(w, dt, cam) {
   // v5.5 ambient turtles: slow circles with a gentle bob (only animated near the camera)
   for (const T of w.turtles || []) { T.a += dt * T.sp; const x = T.cx + Math.cos(T.a) * T.R, z = T.cz + Math.sin(T.a) * T.R, y = Math.max(w.height(x, z), 0) + T.y + Math.sin(t * 0.7 + T.R) * 1.2, near = Math.hypot(x - cam.x, z - cam.z) < 160;
     T.m.obj.visible = near; if (!near) continue; T.m.obj.position.set(x, y, z); T.m.obj.rotation.y = Math.atan2(-Math.sin(T.a) * T.sp, Math.cos(T.a) * T.sp); T.m.animate(dt, 5, { turn: T.sp > 0 ? 0.3 : -0.3 }); }
-  // fish schools (only the ones near the camera get updated)
-  if (w.fish) { let n = 0; const M = w.fishM, Q = w.fishQ, E = w.fishE, p = _fishP, s = _fishS;
+  // reef tangs (schools 1–4) and the clownfish school that stays with the swimmer
+  if (w.fishTang) {
+    let nt = 0, nc = 0; const M = w.fishM, Q = w.fishQ, E = w.fishE, p = _fishP, s = _fishS, dummy = w.fishDummy;
+    w.fishSeen.length = 0;
     for (const S of w.schools) { const a = t * S.sp; let ox = S.cx, oz = S.cz;
       if (S.withPlayer && w.swimX != null) { const dx = cam.x - w.swimX, dz = cam.z - w.swimZ, len = Math.hypot(dx, dz) || 1; ox = w.swimX + dx / len * 5; oz = w.swimZ + dz / len * 5; }
-      const cx = ox + Math.cos(a) * S.R, cz = oz + Math.sin(a) * S.R; if (Math.hypot(cx - cam.x, cz - cam.z) > 170) continue;
+      const cx = ox + Math.cos(a) * S.R, cz = oz + Math.sin(a) * S.R;
       const sand = w.height(cx, cz), fy = sand + (S.lift || 5);
       const head = Math.atan2(-Math.sin(a) * S.sp, Math.cos(a) * S.sp);
-      for (const o of S.off) { const sc = o[4] || 1; p.set(cx + o[0] + Math.sin(t * 1.3 + o[3]) * 0.8, Math.min(SURF - 6, Math.max(sand + 1.6, fy + o[1] + Math.sin(t * 2 + o[3]) * 0.35)), cz + o[2] + Math.cos(t * 1.1 + o[3]) * 0.8); s.set(sc, sc, sc); E.set(Math.sin(t * 2.2 + o[3]) * 0.12, head + Math.sin(t * 6 + o[3]) * 0.18, Math.sin(t * 3 + o[3]) * 0.2); Q.setFromEuler(E); M.compose(p, Q, s); w.fish.setMatrixAt(n++, M); } }
-    w.fish.count = n; w.fish.instanceMatrix.needsUpdate = true; }
+      const mesh = S.clown ? w.fishClown : w.fishTang;
+      for (const o of S.off) { const sc = (o[4] || 1) * 1.3; p.set(cx + o[0] + Math.sin(t * 1.3 + o[3]) * 0.6, Math.min(SURF - 6, Math.max(sand + 1.4, fy + o[1] + Math.sin(t * 2 + o[3]) * 0.25)), cz + o[2] + Math.cos(t * 1.1 + o[3]) * 0.6);
+        const sway = Math.sin(t * 9 + o[3]), wob = Math.sin(t * 6 + o[3]) * 0.09, wobRate = Math.cos(t * 6 + o[3]) * 0.54;
+        const roll = -(S.sp + wobRate) * 0.6;
+        s.set(sc, sc, sc); E.set(Math.sin(t * 2.2 + o[3]) * 0.08, head + wob, roll); Q.setFromEuler(E); M.compose(p, Q, s);
+        const n = S.clown ? nc++ : nt++; mesh.setMatrixAt(n, M);
+        dummy.morphTargetInfluences[0] = Math.max(0, sway); dummy.morphTargetInfluences[1] = Math.max(0, -sway); mesh.setMorphAt(n, dummy);
+        if (w.fishSeen.length < 24) w.fishSeen.push(p.x, p.y, p.z); }
+    }
+    w.fishTang.instanceMatrix.needsUpdate = w.fishClown.instanceMatrix.needsUpdate = true;
+    if (w.fishTang.morphTexture) w.fishTang.morphTexture.needsUpdate = true;
+    if (w.fishClown.morphTexture) w.fishClown.morphTexture.needsUpdate = true;
+    w.sparkT = (w.sparkT || 0) + dt;
+    const fx = w.game && w.game.fx;
+    if (fx && w.sparkT > 0.34 && w.fishSeen.length) { w.sparkT = 0; const i = ((Math.random() * (w.fishSeen.length / 3)) | 0) * 3;
+      fx.glow.spawn({ pos: { x: w.fishSeen[i], y: w.fishSeen[i + 1], z: w.fishSeen[i + 2] }, vel: { x: 0, y: 0.3, z: 0 }, size: 0.6, size1: 0, life: 0.25, r: 1.6, g: 1.5, b: 1.2, alpha: 1 }); }
+  }
+  updateGoldfish(w, dt, cam);
+}
+
+function updateGoldfish(w, dt, cam) {
+  const G = w.goldfish; if (!G) return;
+  const m = G.m, t = w.time, px = w.swimX != null ? w.swimX : BASE.x, pz = w.swimZ != null ? w.swimZ : BASE.z;
+  const here = m.obj.position, dist = Math.hypot(here.x - px, here.z - pz);
+  if (G.mode !== 'orbit' && dist < 30) { G.mode = 'orbit'; G.orbitT = 8; }
+  let x, z, yaw;
+  if (G.mode === 'orbit') {
+    G.orbitT -= dt; const ang = t * 0.7;
+    x = px + Math.cos(ang) * 14; z = pz + Math.sin(ang) * 14; yaw = ang + Math.PI / 2;
+    if (G.orbitT <= 0) G.mode = 'patrol';
+  } else {
+    const mx = (BASE.x + ARENA.x) * 0.5, mz = (BASE.z + ARENA.z) * 0.5, dx = ARENA.x - BASE.x, dz = ARENA.z - BASE.z, len = Math.hypot(dx, dz) || 1;
+    const fx = dx / len, fz = dz / len, sx = -fz, sz = fx, u = t * 0.18, along = Math.sin(u) * 26, across = Math.sin(u) * Math.cos(u) * 26;
+    x = mx + fx * along + sx * across; z = mz + fz * along + sz * across;
+    yaw = Math.atan2(fx * Math.cos(u) * 26 + sx * Math.cos(2 * u) * 13, fz * Math.cos(u) * 26 + sz * Math.cos(2 * u) * 13);
+  }
+  const sand = w.height(x, z), y = Math.min(SURF - 8, sand + 8 + Math.sin(t * 0.6) * 1.5);
+  m.obj.position.set(x, y, z); m.obj.rotation.y = yaw; m.animate(dt, 6, {});
+  if (m.bubblesDue > 0 && w.game && w.game.bubbles) {
+    const mouth = m.socketPos('mouth', _fishP);
+    w.game.bubbles(mouth, m.bubblesDue, 1.4, 4); m.bubblesDue = 0;
+  }
+  if (w.game && w.game.fx && Math.random() < dt * 2 && m.veil) {
+    m.veil.getWorldPosition(_fishP);
+    w.game.fx.glow.spawn({ pos: { x: _fishP.x, y: _fishP.y, z: _fishP.z }, vel: { x: 0, y: 0.4, z: 0 }, size: 0.45, size1: 0, life: 0.35, r: 1.8, g: 1.35, b: 0.4, alpha: 1 });
+  }
+  if (Math.hypot(x - cam.x, z - cam.z) > 220) m.obj.visible = false; else m.obj.visible = true;
 }
