@@ -931,7 +931,12 @@ function loop(now) {
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
   sun.castShadow = true;
   const sk = map + '|' + sx + '|' + sy + '|' + sz + '|' + radius;
-  if (sk !== shadowKey) { shadowKey = sk; renderer.shadowMap.needsUpdate = true; }
+  // v5.17.1: shadowMap.autoUpdate is off, so the sun's shadow map is only drawn when this key changes. applyQuality()
+  // (auto-quality drops when the fps dips, e.g. during the Ricky & Bobby show) and the mapSize swap above dispose it and
+  // set it to null. With an unchanged key it was never redrawn, three.js bound an empty colour texture to the shadow
+  // sampler, and every shadow-receiving draw (terrain, palms, rocks, garage, the dino) failed with GL_INVALID_OPERATION.
+  // So a missing map always forces a redraw.
+  if (sk !== shadowKey || !sun.shadow.map) { shadowKey = sk; renderer.shadowMap.needsUpdate = true; }
   placeBlobs();
   fill.position.copy(camera.position); fill.target.position.set(P.x, P.y + 1.5, P.z);
   const c1 = performance.now(); cpuMs += ((c1 - c0) - cpuMs) * 0.05;
