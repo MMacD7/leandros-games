@@ -1,5 +1,21 @@
 # Leandro's Robo Dino Island
 
+## v5.17.0
+* Farty Poop Farm now has an optional Farm Fair chore loop: feed four animal kinds, collect eggs, help Ricky and Bobby herd a pig, and bounce on the castle. Each completed chore earns a ribbon and cycles to the next.
+* Farm Fair progress is shown in a compact, responsive HUD and only advances during roam play. Existing feeding goals, touch actions, pause behavior, and the country barnyard soundtrack remain in place.
+* Pig rescues now give Ricky and Bobby a short synchronized hop, bark and sparkle celebration; ribbon wins add a brief Leandro cheer and gold sparkles.
+
+## v5.16.1
+* Added the textured Jungle Island expedition beacon as a 3D prop beside the home pad. The GLB is 9,871 triangles with an embedded 2K texture; the service worker caches it for offline play.
+* Model generated with Meshy from Mike's expedition beacon brief.
+
+## v5.16.0
+* Jungle Island has an optional, saved expedition that cycles through three no-fail goals: collect energy cores, hatch an egg and visit landmarks. Explorer stamps are the reward; there are no purchases or required new controls.
+* The Battle Arena now ends its quick run after three cleared waves, with an option to keep battling endlessly or return to the island.
+* The egg counter and egg radar markers are limited to Jungle Island.
+* Ricky & Bobby's exact POOP line uses a compact speech banner to leave more of the underwater scene visible.
+* Dinos and mechs now crouch and lean into the start of an attack.
+
 An ad-free 3D browser game with five levels: a jungle island with a volcano, ruins and a sea; **Dragon Peak**, a volcanic mountain at dusk with a glowing lava sea, castle ruins and dragons; **Mega City Smash**, a sunset city full of buildings you can knock down; **Deep Sea Showdown**, an underwater level where you play as a sea creature; and **Farty Poop Farm**, a silly farm where Leandro feeds the animals and rides a horse. You play as either a **real dinosaur** (bite, roar, tail whip, horn charge, pounce) or a **robot mech dinosaur** (lasers, homing missiles, bite/stomp), or a **dragon** (fireballs, fire/frost/lightning breath, flight), and you battle a wild mix of both. A knocked-out robot falls over in a shower of sparks. A knocked-out real dino gets dizzy stars and limps off in a puff of dust. There is no gore or blood.
 
 * **No ads, purchases, external links, tracking or network calls.** Everything is static files from the same origin, and a CSP (`default-src 'self'`) enforces that.

@@ -28,9 +28,10 @@
     </div>
   </div>
   <div id="hud-tc" class="hidden"><div id="timer">01:30</div><div id="wave">Wave 1 · KOs 0</div></div>
+  <div id="expedition-box" class="hidden" role="status" aria-label="Jungle Island expedition"><span>🧭 ISLAND EXPEDITION</span><b id="expedition-text"></b><em id="expedition-progress"></em></div>
   <div id="hud-tr"><div id="bolts-box"><span class="nut">⬢</span> <b id="bolts">0</b></div><div id="eggs-box" aria-label="Dino eggs found">🥚 <b id="eggs-n">0/40</b><em id="eggs-pop"></em></div><canvas id="radar" width="220" height="220"></canvas></div>
   <div id="citybar" class="hidden" aria-label="City destruction"><div class="cb"><i id="city-fill"></i></div><b id="city-t">🏙️ 0% SMASHED</b></div>
-  <div id="farmbar" class="hidden" aria-label="Farm progress"><b>🌾 FED <span id="fb-fed">0/12</span></b><b id="fb-stars" aria-label="Stars">☆☆☆</b><b>💩 <span id="fb-poop">0</span></b><b>✨ <span id="fb-gold">0</span></b></div>
+  <div id="farmbar" class="hidden" aria-label="Farm progress"><b>🌾 FED <span id="fb-fed">0/12</span></b><b id="fb-stars" aria-label="Stars">☆☆☆</b><b>💩 <span id="fb-poop">0</span></b><b>✨ <span id="fb-gold">0</span></b><small id="fb-job" aria-live="polite">🎪 Farm Fair: feed 4 kinds · 0/4</small></div>
   <div id="boss" class="hidden"><b id="boss-name">BOSS</b><div class="bb"><i id="boss-hp"></i></div></div>
   <div id="ebars"></div>
   <div id="combo"></div>
@@ -76,7 +77,7 @@
     <button id="b-robo" class="btn small robo-tg" aria-pressed="true">🤖 Robo Dinos: ON</button>
   </div>
   <div class="title-foot"><button id="b-sound" class="icon-btn">🔊</button><button id="b-music" class="icon-btn" aria-label="Music on">🎵</button><button id="b-voice" class="icon-btn" aria-label="Announcer voice on">🗣️</button><span id="title-bolts"></span></div>
-  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: The Swing Boy!</button><span id="ver" aria-label="Version">v5.15.1</span></div>
+  <div id="ver-row"><button id="newcall" class="newcall">🆕 NEW: The Swing Boy!</button><span id="ver" aria-label="Version">v5.17.0</span></div>
 </div>
 
 <div id="garage" class="screen hidden">
@@ -147,7 +148,7 @@
 </div>
 
 <div id="results" class="screen dim hidden">
-  <div class="panel"><h2>Battle over!</h2><p id="r-text"></p><button id="r-ok" class="btn primary">OK</button></div>
+  <div class="panel"><h2 id="r-title">Battle over!</h2><p id="r-text"></p><button id="r-continue" class="btn primary">▶ Keep battling</button><button id="r-ok" class="btn">Back to Island</button></div>
 </div>
 
 <div id="egg-reset" class="screen dim hidden" role="dialog" aria-modal="true" aria-labelledby="egg-reset-title">
