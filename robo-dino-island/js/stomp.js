@@ -10,18 +10,18 @@ export const HOOP = { id: 'hoopster', name: 'The Swing Boy', kind: 'kid', farmKi
 export function rawHeightStomp() { return 1.6; }
 
 const TOWERS = [
-  { x: 0, z: 0, r: 6.4, h: 28, kind: 'pot', col: 0xf4e2c4 },
-  { x: 16, z: 3, r: 5.2, h: 34, kind: 'egg', col: 0x2f8f8a },
-  { x: 30, z: -8, r: 6.2, h: 44, kind: 'pot', col: 0xe36b58 },
-  { x: 46, z: 6, r: 5.4, h: 44, kind: 'crane', col: 0xf7e7cf },
-  { x: 12, z: -16, r: 5.8, h: 36, kind: 'egg', col: 0x3aa0a8 },
-  { x: 34, z: -22, r: 7.2, h: 76, kind: 'neck', col: 0xb8c4d2 },
-  { x: 52, z: -12, r: 5.6, h: 32, kind: 'dome', col: 0xe8b07a },
-  { x: -14, z: 8, r: 5.0, h: 40, kind: 'egg', col: 0x1f7a86 },
-  { x: -10, z: -12, r: 4.6, h: 38, kind: 'pot', col: 0xf6c7a8 },
-  { x: 8, z: 16, r: 5.5, h: 67, kind: 'egg', col: 0xd4554a },
-  { x: 22, z: 16, r: 4.4, h: 27, kind: 'pot', col: 0xf0e2c8 },
-  { x: -18, z: -2, r: 6.0, h: 60, kind: 'crane', col: 0x4aa3a0 },
+  { x: -4.1, z: 0.4, r: 6.4, h: 28, kind: 'pot', col: 0xf4e2c4 },
+  { x: 16.9, z: 6.1, r: 5.2, h: 34, kind: 'egg', col: 0x2f8f8a },
+  { x: 31.8, z: -10.7, r: 6.2, h: 44, kind: 'pot', col: 0xe36b58 },
+  { x: 44.8, z: 8.0, r: 5.4, h: 44, kind: 'crane', col: 0xf7e7cf },
+  { x: 10.3, z: -17.3, r: 5.8, h: 36, kind: 'egg', col: 0x3aa0a8 },
+  { x: 31.8, z: -34.6, r: 7.2, h: 76, kind: 'neck', col: 0xb8c4d2 },
+  { x: 52.8, z: -16.8, r: 5.6, h: 32, kind: 'dome', col: 0xe8b07a },
+  { x: -20.4, z: 15.8, r: 5.0, h: 40, kind: 'egg', col: 0x1f7a86 },
+  { x: -12.4, z: -18.9, r: 4.6, h: 38, kind: 'pot', col: 0xf6c7a8 },
+  { x: -2.3, z: 27.3, r: 5.5, h: 67, kind: 'egg', col: 0xd4554a },
+  { x: 18.1, z: 27.4, r: 4.4, h: 27, kind: 'pot', col: 0xf0e2c8 },
+  { x: -28.5, z: -4.6, r: 6.0, h: 60, kind: 'crane', col: 0x4aa3a0 },
 ];
 
 const M = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: o.roughness ?? 0.72, metalness: o.metalness ?? 0.04, emissive: o.emissive || 0x000000, emissiveIntensity: o.em || 0 });
@@ -75,13 +75,13 @@ export function buildStomp(W) {
   street.rotation.x = -Math.PI / 2; street.position.y = 1.5; street.receiveShadow = true; root.add(street);
   const park = new THREE.Mesh(new THREE.RingGeometry(70, 140, 40), M(0x4f8a40, { roughness: 0.95 }));
   park.rotation.x = -Math.PI / 2; park.position.y = 1.45; root.add(park);
-  const haze = new THREE.Mesh(new THREE.CircleGeometry(100, 28), new THREE.MeshBasicMaterial({ color: 0xc98a9a, transparent: true, opacity: 0.18, depthWrite: false }));
+  const haze = new THREE.Mesh(new THREE.CircleGeometry(100, 28), new THREE.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.22, depthWrite: false }));
   haze.rotation.x = -Math.PI / 2; haze.position.y = 3; root.add(haze);
   buildStreetKit(root);
   const sky = new THREE.Mesh(new THREE.SphereGeometry(380, 24, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, fog: false, depthWrite: false,
     vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: 'varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 c = mix(vec3(1.0,0.55,0.23), vec3(0.89,0.27,0.15), smoothstep(0.0,0.21,h)); c = mix(c, vec3(0.23,0.08,0.20), smoothstep(0.21,0.9,h)); gl_FragColor = vec4(c,1.0); }',
+    fragmentShader: 'varying vec3 vP; float puff(vec2 p, vec2 o, float r){ return smoothstep(1.0, 0.35, length(p - o) / r); } void main(){ vec3 d = normalize(vP); float h = clamp(d.y, 0.0, 1.0); vec3 hor = vec3(0.749, 0.902, 1.0); vec3 top = vec3(0.310, 0.659, 1.0); vec3 c = mix(hor, top, smoothstep(0.0, 0.62, h)); vec2 uv = d.xz / max(0.2, d.y + 0.35); float cl = puff(uv, vec2(-0.55, 0.15), 0.5) + puff(uv, vec2(0.62, -0.2), 0.42) + puff(uv, vec2(0.05, 0.72), 0.34); c = mix(c, vec3(1.0), clamp(cl, 0.0, 1.0) * smoothstep(0.0, 0.1, h) * 0.9); gl_FragColor = vec4(c, 1.0); }',
   }));
   sky.frustumCulled = false; root.add(sky);
   const towers = TOWERS.map(t => buildTower(root, t));
@@ -547,7 +547,7 @@ export class StompLife {
     this.hooked = false; this.anchor = null; this.state = 'air'; this.zipping = false;
     if (a && a.roof && p) {
       const R = a.roof, y = p.pos.y;
-      const apex = Math.max(y, R.h) + 1.5;
+      const apex = Math.max(y, R.h) + 2.6;
       const vy = Math.sqrt(2 * 20 * Math.max(0.05, apex - y));
       const T = vy / 20 + Math.sqrt(2 * Math.max(0, apex - R.h) / 20);
       const dx = R.x - p.pos.x, dz = R.z - p.pos.z, flat = Math.hypot(dx, dz) || 1;
@@ -574,7 +574,7 @@ export class StompLife {
       if (!hold && !this.zipping) { this.fling(); this.stepAir(p, dt, wish, mag); return; }
       this.stepSwing(p, dt, wish, mag); return;
     }
-    if (hold) { const a = this.bestAnchor(false); if (a) { this.hook(a); this.stepSwing(p, dt, wish, mag); return; } }
+    if (hold) { const a = this.bestAnchor(this.state === 'air'); if (a) { this.hook(a); this.stepSwing(p, dt, wish, mag); return; } }
     if (this.state === 'wall') { this.stepWall(p, dt, wish, mag); return; }
     if (this.state === 'roof') this.stepRoof(p, dt, wish, mag);
     else this.stepAir(p, dt, wish, mag);
@@ -587,8 +587,6 @@ export class StompLife {
   }
   stepSwing(p, dt, wish, mag) {
     const a = this.anchor; if (!a) { this.state = 'air'; return; }
-    this.vel.y -= 16 * dt;
-    if (mag > 0.08) { this.vel.x += wish.x * 16 * dt; this.vel.z += wish.z * 16 * dt; }
     if (this.zipping) {
       const dx = a.x - p.pos.x, dy = (a.y - 1.1) - p.pos.y, dz = a.z - p.pos.z, d = Math.hypot(dx, dy, dz) || 1;
       this.vel.set(dx / d * 26, dy / d * 26, dz / d * 26);
@@ -596,26 +594,37 @@ export class StompLife {
       p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
       p.speedNow = 16;
       if (this.vel.lengthSq() > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
+      this.keepOutside(p);
       return;
     }
+    this.vel.y -= 18 * dt;
+    if (mag > 0.08) { this.vel.x += wish.x * 10 * dt; this.vel.z += wish.z * 10 * dt; }
     p.pos.x += this.vel.x * dt; p.pos.y += this.vel.y * dt; p.pos.z += this.vel.z * dt;
+    const deck = a.roof ? a.roof.h : p.pos.y;
+    const minLen = Math.max(4.2, a.y - (deck + 1.2));
+    const natural = Math.hypot(p.pos.x - a.x, p.pos.y - a.y, p.pos.z - a.z) || minLen;
+    const reel = Math.max(minLen, Math.min(this.len, natural));
+    this.len += (reel - this.len) * (1 - Math.exp(-3.2 * dt));
     let dx = p.pos.x - a.x, dy = p.pos.y - a.y, dz = p.pos.z - a.z;
     const dist = Math.hypot(dx, dy, dz) || 1; dx /= dist; dy /= dist; dz /= dist;
-    const vr = this.vel.x * dx + this.vel.y * dy + this.vel.z * dz;
-    this.vel.x -= vr * dx; this.vel.y -= vr * dy; this.vel.z -= vr * dz;
     p.pos.set(a.x + dx * this.len, a.y + dy * this.len, a.z + dz * this.len);
-    const r0 = this.roofAt(p.pos.x, p.pos.z, p.pos.y + 1.5);
-    if (r0 && p.pos.y < r0.h) {
-      p.pos.y = r0.h;
-      if (this.vel.y < 0) this.vel.y = 0;
+    const vr = this.vel.x * dx + this.vel.y * dy + this.vel.z * dz;
+    if (vr > 0) { this.vel.x -= vr * dx; this.vel.y -= vr * dy; this.vel.z -= vr * dz; }
+    const age = (this.g.world.time || 0) - (this.hookT || 0);
+    if (age > 0.45) {
+      const next = this.bestAnchor(true);
+      if (next && next !== a) {
+        const flat = Math.hypot(next.x - p.pos.x, next.z - p.pos.z);
+        const fwd = Math.sin(p.yaw) * (next.x - p.pos.x) + Math.cos(p.yaw) * (next.z - p.pos.z);
+        if (flat > 6 && flat < 16 && fwd > 0) {
+          this.anchor = next; this.hookT = this.g.world.time;
+          this.len = Math.max(4.2, Math.hypot(next.x - p.pos.x, next.y - p.pos.y, next.z - p.pos.z));
+        }
+      }
     }
-    const deck = a.roof ? a.roof.h : p.pos.y;
-    const minLen = Math.max(3.5, a.y - (deck + 1.2));
-    if (this.len > minLen) this.len = Math.max(minLen, this.len - 8 * dt);
-    if (p.pos.y > a.y - 0.8) p.pos.y = a.y - 0.8;
-    const sp = this.vel.length(); if (sp > 24) this.vel.multiplyScalar(24 / sp);
-    if (this.vel.lengthSq() > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
-    p.speedNow = Math.min(8, sp);
+    const sp = this.vel.length(); if (sp > 28) this.vel.multiplyScalar(28 / sp);
+    if (sp > 1) p.yaw = Math.atan2(this.vel.x, this.vel.z);
+    p.speedNow = Math.min(10, sp);
     this.keepOutside(p);
   }
   keepOutside(p) {
@@ -708,10 +717,24 @@ export class StompLife {
     if (u >= 1) { this.state = 'roof'; this.bubble.visible = false; this.lastRoof = this.towers.find(t => t.x === this.bubbleTo.x && t.z === this.bubbleTo.z) || this.lastRoof; p.pos.copy(this.bubbleTo); }
   }
   tryWrap() {
-    if (this.won || this.david.wrapped) return false;
-    const p = this.g.player; if (!p) return false;
-    const dx = this.david.x - p.pos.x, dz = this.david.z - p.pos.z, dy = this.david.y - p.pos.y;
-    if (Math.hypot(dx, dz) > 6.8 || Math.abs(dy) > 5) return false;
+    const hint = (t) => { if (this.g.hud) this.g.hud.toast(t); };
+    if (this.won || this.david.wrapped) { hint(this.david.wrapped ? 'David is already wrapped!' : 'Pie returned!'); return false; }
+    const p = this.g.player; if (!p) { hint('Swing closer, then tap WRAP!'); return false; }
+    const REACH = 28, UP = 24;
+    let best = null, bestD = REACH + 1;
+    const consider = (x, y, z, kind, who) => {
+      const flat = Math.hypot(x - p.pos.x, z - p.pos.z), dy = y - p.pos.y;
+      if (flat > REACH || Math.abs(dy) > UP) return;
+      if (flat < bestD) { bestD = flat; best = { x, y, z, kind, who }; }
+    };
+    consider(this.david.x, this.david.y, this.david.z, 'david');
+    if (this.g.enemies) for (const e of this.g.enemies) if (e.alive && e.pos) consider(e.pos.x, e.pos.y, e.pos.z, 'enemy', e);
+    if (!best) { hint('Swing closer, then tap WRAP!'); return false; }
+    if (best.kind === 'enemy') {
+      hint('Wrapped!');
+      if (this.g.fx) this.g.fx.ring(best.who.pos, 3.2, 0xc6ff4a);
+      return true;
+    }
     this.david.wrapped = true; this.vel.set(0, 0, 0); this.state = 'roof'; this.hooked = false;
     if (!this.david.bundle) { this.david.bundle = yarnBall(); this.david.mesh.add(this.david.bundle); }
     this.david.bundle.visible = true;
@@ -912,7 +935,7 @@ export class StompLife {
       } else { this.rbQueued -= dt; if (this.rbQueued <= 0) this.rbQueued = 0; }
     }
     const p = this.g.player;
-    if (!this.david.wrapped) {
+    if (!this.david.wrapped && !this.freezeDavid) {
       let dist = 99;
       if (p) dist = Math.hypot(this.david.x - p.pos.x, this.david.z - p.pos.z);
       let sp = this.step < 1 ? 0 : dist < 6 ? 6.5 : dist > 12 ? 0 : dist > 10 ? 1.3 : 3.5;
