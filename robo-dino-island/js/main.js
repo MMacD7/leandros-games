@@ -342,6 +342,7 @@ function drawRadar(p) {
   rc.strokeStyle = 'rgba(255,255,255,.15)'; rc.lineWidth = 2 * u; rc.beginPath(); rc.arc(0, 0, R * 0.5, 0, 7); rc.stroke();
   if (game.farm) { dot(BASE.x, BASE.z + 18, '#ff6a5a', 12); for (const d of game.farm.radar()) dot(d.x, d.z, d.c, 4.5); } // v5.1 farm: the farmhouse, hungry (yellow) and fed (green) animals, golden poop
   else { if (!world.isCity) dot(VOLC.x, VOLC.z, world.ocean ? '#3affd8' : '#ff7a2a', 12); dot(ARENA.x, ARENA.z, '#ffd34a', 8); dot(BASE.x, BASE.z, '#3de8ff', 12); }
+  if (game.island && world.level === 'jungle') for (const d of game.island.radar()) dot(d.x, d.z, d.c, d.r); // v5.19.0: turbo rings, power shrine, rally beacon
   for (const k of game.pickups) if (k.alive && k.type === 'core') dot(k.x, k.z, 'rgba(120,240,255,.8)', 3);
   for (const e of game.enemies) if (e.alive) dot(e.pos.x, e.pos.z, '#ff3a2a', 6);
   const eggMarks = [], babyMarks = [];
@@ -435,7 +436,7 @@ tap('st-keep', () => { const w = $('stompwin'); if (w) w.classList.add('hidden')
 tap('st-ok', () => { const w = $('stompwin'); if (w) w.classList.add('hidden'); show('levels'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
-tap('newcall', () => travel('farm')); // v5.18.0: NEW badge points at the Farty Poop Farm expansion
+tap('newcall', () => travel('jungle')); // v5.19.0: NEW badge points at the core Jungle Island expansion
 tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean')); tap('lv-farm', () => travel('farm')); tap('lv-stomp', () => travel('stomp'));
 // v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
 let levelsFrom = 'play';

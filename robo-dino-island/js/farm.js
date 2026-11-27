@@ -716,7 +716,7 @@ export class FarmLife {
       this.fair.ribbons++; this.fair.index = (this.fair.index + 1) % FARM_FAIR_TASKS.length; this.fair.progress = 0; this.fair.kinds.clear(); this.fair.cheerT = 1.6;
       const p = this.kid; if (p) { p.mech.danceT = Math.max(p.mech.danceT || 0, 1.2); for (let i = 0; i < this.fx.n(14); i++) this.fx.glow.spawn({ pos: V(p.pos.x + (Math.random() - 0.5) * 3, p.pos.y + 1 + Math.random() * 2, p.pos.z + (Math.random() - 0.5) * 3), vel: { x: (Math.random() - 0.5) * 2, y: 1.5 + Math.random() * 2, z: (Math.random() - 0.5) * 2 }, size: 0.15, size1: 0.06, life: 0.8, r: 1.4, g: 1.05, b: 0.25, alpha: 0.95, grav: 1, drag: 2 }); }
       if (this.g.addBolts) this.g.addBolts(FARM_FAIR_REWARD); this.fair.bolts = (this.fair.bolts || 0) + FARM_FAIR_REWARD; // v5.18.0: every ribbon pays real bolts
-      this.g.hud.shout && this.g.hud.shout('🎪 FARM FAIR RIBBON! +25 🔩', 1.8); sfx.tada(0.7); sfx.coinChime && sfx.coinChime(3); this.toast(`🎪 FARM FAIR RIBBON! +25 🔩 (ribbon ${this.fair.ribbons})`);
+      this.g.hud.shout && this.g.hud.shout('🎪 FARM FAIR RIBBON! +25 🔩', 1.8); sfx.tada(0.7); sfx.coinChime && sfx.coinChime(3); this.toast(`🎀 Ribbon ${this.fair.ribbons}! Next: ${FARM_FAIR_TASKS[this.fair.index].label}`); // v5.19.0: no duplicate of the big shout
     }
     this.bar();
   }

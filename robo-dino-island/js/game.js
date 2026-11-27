@@ -35,6 +35,7 @@ import { ParaMech } from './para.js';
 import { Eggs } from './eggs.js';
 import { CostumeRex, COSTUME } from './costume.js';
 import { Expedition } from './expedition.js';
+import { IslandPlus } from './islandplus.js'; // v5.19.0 core Jungle Island expansion
 // v5.6 Robo Dinos OFF: each robot is swapped for its closest regular dino (enemies, bosses and the player's own pick)
 export const UNROBO = { rex: 'trex', raptor: 'velo', tri: 'trice', stego: 'stegos', ptero: 'para', spino: 'spinos', ankylo: 'ankys', bronto: 'brachio', gmech: 'giga', dblast: 'allo', tptero: 'pachy' };
 
@@ -183,9 +184,11 @@ export class Game {
     this.bindFarm(); this.bindStomp();
     this.eggs = new Eggs(this);
     this.expedition = new Expedition(this);
+    this.bindIsland();
   }
   // v5.1 Farty Poop Farm: the living farm (animals, poop, horse, Bad David) belongs to the farm world
   bindFarm() { const w = this.world; this.farm = w && w.farm ? (w.farmLife || (w.farmLife = new FarmLife(this, w))) : null; }
+  bindIsland() { const w = this.world; this.island = w && w.level === 'jungle' ? (w.islandPlus || (w.islandPlus = new IslandPlus(this, w))) : null; } // v5.19.0
   bindStomp() { const w = this.world; this.stomp = w && w.stomp ? (w.stompLife || (w.stompLife = new StompLife(this, w))) : null; }
   mountRider() { const R = this.rider, p = this.player; R.unmount(); R.reset(); if (p && p.def.costume) return; // Rex Costume already shows Leandro. The lion is a 3D cat, so Leandro sits on the seat.
     if (!(p && this.save.ride !== false && !p.def.westie && !p.def.sea && !p.def.farmKid && !(this.world && this.world.ocean))) return; // Leandro doesn't ride the dogs (or go under the sea without scuba gear)
@@ -278,13 +281,13 @@ export class Game {
   // switch level (Jungle Island <-> Dragon Peak)
   setWorld(w) {
     if (this.westies) this.westies.reset();
-    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); if (this.eggs) this.eggs.sync(); if (this.expedition) this.expedition.syncHud();
+    this.world = w; this.level = w.level; this.mh.setWorld(w); this.placePickups(); this.bolts = []; this.bindFarm(); this.bindStomp(); this.bindIsland(); if (this.eggs) this.eggs.sync(); if (this.expedition) this.expedition.syncHud();
     if (this.westies && !(w && w.stomp)) this.westies.leaveStomp();
   }
   dropBolts(pos, n) { for (let i = 0; i < n; i++) { const a = this.r() * 6.28, s = 4 + this.r() * 6; this.bolts.push({ x: pos.x, y: pos.y + 2, z: pos.z, vx: Math.cos(a) * s, vy: 8 + this.r() * 6, vz: Math.sin(a) * s, t: 0, v: 3 }); } }
 
   // ---------- modes ----------
-  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); if (this.stomp) this.stomp.reset(); this.spawnT = 0.5; this.battle = null; if (this.expedition) this.expedition.syncHud(); }
+  startRoam() { if (this.hype) this.hype.reset(); this.mode = 'roam'; this.clearEnemies(); if (this.farm) this.farm.reset(); this.spawnPlayer(false); if (this.stomp) this.stomp.reset(); if (this.island) this.island.reset(); this.spawnT = 0.5; this.battle = null; if (this.expedition) this.expedition.syncHud(); }
   startBattle() {
     if (this.world && this.world.farm) { this.hud.toast('🚜 No battles on the farm! Feed the animals instead 🐮'); return; }
     if (this.world && this.world.stomp) { this.hud.toast('Swing, zip, wrap! No battles in Stompolis.'); return; }
@@ -396,6 +399,7 @@ export class Game {
       for (let i = 0; i < 7; i++) this.later(0.15 + i * 0.22, () => { const q = c.clone().add(new THREE.Vector3((Math.random() - 0.5) * 5 * S, (Math.random() - 0.3) * 3 * S, (Math.random() - 0.5) * 5 * S)); this.fx.boom(q, 1.5 + Math.random(), { groundY: d.ground, shake: 1.2 }); sfx.bigBoom(1); });
       if (this.hud.leandroWins) this.hud.leandroWins('💥 Boss defeated!'); else this.hud.banner('💥 BOSS DEFEATED! 💥', 4); if (attacker === this.player || !attacker) { this.dropBolts(d.pos, 40); this.addBolts(25); } }
     this.mh.onKO(d, attacker);
+    if (this.island) this.island.onKO(d, attacker); // v5.19.0 Rally Challenger + expedition KOs
     if (d === this.player) { this.hud.knockedOut(d.real); this.respawnT = 3.2; this.rider.pop(); this.rider.popOf = d; return; }
     if (attacker === this.player) this.rider.cheer();
     if (attacker === this.player) {
@@ -1045,6 +1049,7 @@ export class Game {
     for (let i = this.timers.length - 1; i >= 0; i--) { const T = this.timers[i]; T.t -= dt; if (T.t <= 0) { this.timers.splice(i, 1); T.fn(); } }
     p.updateVisual(dt); this.rider.update(dt, p); if (this.eggs) this.eggs.update(dt);
     if (this.expedition && this.mode === 'roam' && p.alive) this.expedition.updatePlayer(p.pos.x, p.pos.z);
+    if (this.island) this.island.update(dt, p); // v5.19.0 turbo rings, power shrine, beacon rally
     if (this.level === 'jungle' && this.mode !== 'battle' && p.alive) {
       let hot = !!(p.act || p.breathT > 0);
       if (!hot) for (const e of this.enemies) if (e.alive && (e.boss || (e.radius || 0) >= 3 || (e.def && e.def.hp >= 180)) && e.pos.distanceTo(p.pos) < 80) hot = true;
@@ -1213,7 +1218,7 @@ export class Game {
     let nc = 0, ns = 0, nb = 0;
     const reach = (x, y, z) => (p.pos.x - x) ** 2 + (p.pos.z - z) ** 2 < (p.radius + 2.5) ** 2 && Math.abs(p.pos.y + 1 - y) < 6 + p.alt;
     for (const k of this.pickups) {
-      if (!k.alive) { k.t -= dt; if (k.t <= 0) k.alive = true; continue; }
+      if (!k.alive) { if (k.once) continue; k.t -= dt; if (k.t <= 0) k.alive = true; continue; } // v5.19.0: rally cores are one-shot
       const dx = k.x - p.pos.x, dz = k.z - p.pos.z; if (dx * dx + dz * dz > 160 * 160) continue;
       if (p.alive && reach(k.x, k.y + 1.2, k.z)) { k.alive = false; k.t = 60;
         if (k.type === 'core') { this.addBolts(10); p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.35); p.boostE = p.st.boost; this.save.cores++; if (this.expedition) this.expedition.onCoreCollected(); sfx.core(); this.hud.toast('+10 bolts  ⚡ Energy core!'); this.fx.sparks(v.set(k.x, k.y + 1.2, k.z), 20, { r: 0.3, g: 0.9, b: 1 }, 1); }
