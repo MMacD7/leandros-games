@@ -577,3 +577,6 @@ body.stomp #a-melee { width: 72px; height: 72px; right: 8px; bottom: 96px; backg
 @keyframes roboPulse { 50% { transform: scale(1.12); box-shadow: 0 0 22px rgba(255,255,255,.9); } }
 body.robos-off #t-robo { display: none; }
 @media (prefers-reduced-motion: reduce) { .robo-tg.pulse { animation: none; } }
+
+/* v5.18.0: Stompolis (The Swing Boy) hidden from the level pickers and the Dino Garage (code + assets kept) */
+#lv-stomp, #lvd-stomp, #jg-hoopster, .lv.card.stomp[hidden], .jg-card[hidden] { display: none !important; }
