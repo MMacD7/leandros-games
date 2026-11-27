@@ -214,7 +214,7 @@ function clearShout() {
   el.classList.remove('show'); el.textContent = ''; shoutT = 0;
 }
 function setLevel(lv) {
-  if (!['peak', 'city', 'ocean', 'farm', 'stomp'].includes(lv)) lv = 'jungle';
+  if (!['peak', 'city', 'ocean', 'farm'].includes(lv)) lv = 'jungle'; // v5.18.0: Stompolis (The Swing Boy) is hidden; anything else falls back to Jungle Island
   if (game && game.timers) game.timers.length = 0;
   clearShout();
   if (lv !== 'stomp') { const win = $('stompwin'); if (win) win.classList.add('hidden'); }
@@ -228,6 +228,7 @@ function setLevel(lv) {
   syncMusic();
 }
 function travel(lv) {
+  if (!['peak', 'city', 'ocean', 'farm'].includes(lv)) lv = 'jungle'; // v5.18.0: Stompolis hidden
   if (lv === level) return;
   voice.say(lv === 'peak' ? 'Welcome to Dragon Peak!' : lv === 'city' ? 'Welcome to Mega City Smash!' : lv === 'ocean' ? 'Welcome to Deep Sea Showdown!' : lv === 'farm' ? 'Welcome to Farty Poop Farm!' : lv === 'stomp' ? 'Welcome to Stompolis!' : 'Welcome to Jungle Island!', { prio: 2, cd: 1500, replace: true });
   const L = $('loading'); $('load-t').textContent = lv === 'peak' ? 'Flying to Dragon Peak… 🐉' : lv === 'city' ? 'Stomping into Mega City… 🏙️' : lv === 'ocean' ? 'Diving into the Deep Sea… 🌊🦈' : lv === 'farm' ? 'Driving the tractor to Farty Poop Farm… 🚜💩' : lv === 'stomp' ? 'Swinging into Stompolis…' : 'Sailing to Jungle Island… 🌴'; $('load-bar').style.width = '60%'; L.classList.remove('hidden');
@@ -434,7 +435,7 @@ tap('st-keep', () => { const w = $('stompwin'); if (w) w.classList.add('hidden')
 tap('st-ok', () => { const w = $('stompwin'); if (w) w.classList.add('hidden'); show('levels'); });
 tap('b-battle', () => { hypeStart(); game.startBattle(); show('play'); });
 tap('b-garage', () => { garageFrom = 'title'; show('garage'); });
-tap('newcall', () => { garageFrom = 'title'; gTab = 'lions'; show('garage'); });
+tap('newcall', () => travel('farm')); // v5.18.0: NEW badge points at the Farty Poop Farm expansion
 tap('lv-jungle', () => travel('jungle')); tap('lv-peak', () => travel('peak')); tap('lv-city', () => travel('city')); tap('lv-ocean', () => travel('ocean')); tap('lv-farm', () => travel('farm')); tap('lv-stomp', () => travel('stomp'));
 // v4.1: in-game level chooser (🗺️ in the HUD and the pause menu)
 let levelsFrom = 'play';

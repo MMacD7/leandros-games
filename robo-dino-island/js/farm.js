@@ -13,6 +13,7 @@ import { voice } from './voice.js';
 import { Rider } from './rider.js';
 import { LionMech, LION } from './lion.js';
 import { music } from './music.js';
+import { FarmPlus } from './farmplus.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const TAU = Math.PI * 2;
@@ -317,7 +318,13 @@ const FARM_FAIR_TASKS = [
   { key: 'eggs', label: 'Collect 2 chicken eggs', target: 2 },
   { key: 'herd', label: 'Help herd a pig home', target: 1 },
   { key: 'bounce', label: 'Bounce 3 times', target: 3 },
+  { key: 'harvest', label: 'Harvest 5 crops in the Pumpkin Patch', target: 5 }, // v5.18.0 expansion chores
+  { key: 'mud', label: 'Splash in the Stinky Mud Pit 3 times', target: 3 },
+  { key: 'shower', label: 'Trigger the Silo Grain Shower', target: 1 },
+  { key: 'tractor', label: 'Drive the Red Tractor & honk TOOT!', target: 1 },
 ];
+export const FARM_FAIR_REWARD = 25;
+export const FARM_FAIR_LIST = FARM_FAIR_TASKS;
 function part(parent, list, x = 0, y = 0, z = 0) { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); if (list && list.length) { const m = new THREE.Mesh(mergeGeometries(list), mats().vc); m.castShadow = true; g.add(m); g.userData.mesh = m; } return g; }
 function eyes(L, x, y, z, r = 0.06, white = true) { for (const s of [-1, 1]) { if (white) L.push(C(SPH(r, 8, 6), 0xffffff, s * x, y, z)); L.push(C(SPH(r * 0.6, 6, 5), 0x111111, s * (x + r * 0.15), y + r * 0.05, z + r * (white ? 0.55 : 0))); L.push(C(SPH(r * 0.18, 4, 3), 0xffffff, s * x + r * 0.2, y + r * 0.35, z + r * (white ? 0.95 : 0.5))); } }
 function leg(parent, x, y, z, col, len, rad, hoof = 0x3a2a20, sock = null) { const L = [C(CYL(rad, rad * 0.85, len, 8), col, 0, -len / 2, 0)]; if (sock) L.push(C(CYL(rad * 0.9, rad * 0.95, len * 0.22, 8), sock, 0, -len * 0.82, 0)); L.push(C(CYL(rad * 0.95, rad * 1.05, 0.12, 8), hoof, 0, -len - 0.02, 0)); return part(parent, L, x, y, z); }
@@ -576,7 +583,7 @@ export class FarmLife {
     this.driving = false;
     this.buildCastle(); this.nests = (W.farmData.coopNests || []).map(n => ({ ...n, egg: null, t: 0 })); this.eggs2 = 0; this.goldEggs = 0;
     this.stinkCD = 0; this.stink = null; this.strangers = []; this.stinkFlyM = [];
-    this.david = new BadDavid(this); this.reset();
+    this.david = new BadDavid(this); this.plus = new FarmPlus(this, W); this.reset();
   }
   camDist(p) { const c = this.g.camera.position; return Math.hypot(p.x - c.x, p.z - c.z); }
   toast(t, cd = 0) { if (cd && this.t - (this._toastAt || -99) < cd) return; this._toastAt = this.t; this.g.hud.toast(t); }
@@ -584,7 +591,7 @@ export class FarmLife {
   // everyone back home, poop swept up, new round
   reset() {
     for (const st of this.strangers || []) { this.root.remove(st.m.root); disposeStranger(st.m); } this.strangers = []; this.stink = null; this.stinkCD = 0; for (const f of this.stinkFlyM || []) f.visible = false;
-    if (this.riding) this.dismount(true); if (this.ridingLion) this.dismountLion(true); if (this.driving) this.hopOffTractor(true); this.parkTractor();
+    if (this.riding) this.dismount(true); if (this.ridingLion) this.dismountLion(true); if (this.driving) this.hopOffTractor(true); this.parkTractor(); if (this.plus) this.plus.reset();
     for (const a of this.animals) { a.free = null; a.path = null; a.cream && (a.cream.visible = false); const p = a.homePoint(); a.place(p.x, p.z); a.set('idle', Math.random() * 2); a.fullT = 0; }
     this.poops.length = 0; this.prints.length = 0; for (const e of this.eggs || []) this.root.remove(e.m); if (this.eggs) this.eggs.length = 0; this.turboT = 0; this.fed.clear(); this.round = 1; this.david.stop(); this.syncPoop(); this.bar();
     for (const b of this.W.farmData.bales) { b.fallen = false; b.roll = null; b.x = b.x0 ?? b.x; b.z = b.z0 ?? b.z; b.x0 = b.x; b.z0 = b.z; b.m.position.set(b.x, b.y, b.z); b.m.rotation.order = 'XYZ'; b.m.rotation.set(0, b.yaw, 0); b.col.x = b.x; b.col.z = b.z; }
@@ -600,7 +607,7 @@ export class FarmLife {
     if (this.riding && p) this.syncHorse(p, dt);
     if (this.farmLion && this.farmLion.obj.visible) this.syncFarmLion(p, dt, title);
     this.updateTractor(dt, p); this.updateCastle(dt, this.active ? p : null); this.updateCoop(dt, this.active ? p : null); this.updateStink(dt, p);
-    this.updateFoods(dt); this.updateSprites(dt); this.updatePoops(dt); this.updateBales(dt); this.david.update(dt);
+    if (this.plus) this.plus.update(dt, p, this.active); this.updateFoods(dt); this.updateSprites(dt); this.updatePoops(dt); this.updateBales(dt); this.david.update(dt);
     if (this.active) this.kidStuff(p, dt);
     if (this.toastT > 0) this.toastT -= dt;
   }
@@ -625,8 +632,8 @@ export class FarmLife {
     // button labels
     const near = this.nearFood(p), fl = near ? FOOD_EMOJI[near.K.food] : '🌽'; if (fl !== this._fl) { this._fl = fl; const b = document.querySelector('#a-laser span'); if (b) b.innerHTML = fl + '<br>FEED'; }
     const ride = this.riding ? 'off' : this.ridingLion ? 'loff' : this.driving ? 'toff' : (this.onCastle(p.pos.x, p.pos.z) || this.castleHop) ? 'jump' : this.lionNear(p) && !this.horseNear(p) ? 'lnear' : this.horseNear(p) ? 'near' : this.tractorNear(p) ? 'tnear' : 'far'; if (ride !== this._rl) { this._rl = ride; const b = document.querySelector('#a-missile span'), el = $('a-missile');
-      if (b) b.innerHTML = ride === 'off' ? '🐴<br>HOP OFF' : ride === 'loff' ? '🦁<br>HOP OFF' : ride === 'toff' ? '🚜<br>HOP OFF' : ride === 'tnear' ? '🚜<br>DRIVE' : ride === 'jump' ? '🤸<br>JUMP' : ride === 'lnear' ? '🦁<br>RIDE' : '🐴<br>RIDE'; if (el) el.classList.toggle('glow', ride === 'near' || ride === 'lnear' || ride === 'tnear' || ride === 'jump'); const bb = document.querySelector('#a-boost span'); if (bb) bb.innerHTML = (this.riding || this.ridingLion) ? 'GALLOP' : this.driving ? 'FAST' : 'RUN';
-      const tb = document.querySelector('#a-melee span'); if (tb) tb.innerHTML = this.driving ? '📯<br>HONK' : this.ridingLion ? '⚡<br>WAR' : '💨<br>TOOT'; }
+      if (b) b.innerHTML = ride === 'off' ? '🐴<br>HOP OFF' : ride === 'loff' ? '🦁<br>HOP OFF' : ride === 'toff' ? '🚜<br>HOP OFF' : ride === 'tnear' ? '🚜<br>RIDE' : ride === 'jump' ? '🤸<br>JUMP' : ride === 'lnear' ? '🦁<br>RIDE' : '🐴<br>RIDE'; if (el) el.classList.toggle('glow', ride === 'near' || ride === 'lnear' || ride === 'tnear' || ride === 'jump'); const bb = document.querySelector('#a-boost span'); if (bb) bb.innerHTML = (this.riding || this.ridingLion) ? 'GALLOP' : this.driving ? 'FAST' : 'RUN';
+      const tb = document.querySelector('#a-melee span'); if (tb) tb.innerHTML = this.driving ? '📯<br>TOOT' : this.ridingLion ? '⚡<br>WAR' : '💨<br>TOOT'; }
     if (this.ridingLion) { const cb = document.querySelector('#a-laser span'); if (cb) cb.innerHTML = '🦷<br>CHOMP'; }
     if (this.hintT > 0) this.hintT -= dt;
   }
@@ -637,11 +644,11 @@ export class FarmLife {
   // ---------- controls (called from Game.update on the farm) ----------
   controls(p, inp, nL, nM, nB) {
     p.boostE = p.st.boost; // Leandro never runs out of puff
-    if (nL && this.ridingLion) { if (inp && inp.pressed && inp.pressed.laser) this.lionChomp(p); } else if (nL) this.feed(p); if (nM && !this.riding && !this.ridingLion && !this.driving && (this.onCastle(p.pos.x, p.pos.z) || this.castleHop)) { this.castleJump(p); nM = 0; } // v5.6.1: on the castle JUMP always wins (a horse or tractor parked nearby used to steal it)
+    if (nL && this.ridingLion) { if (inp && inp.pressed && inp.pressed.laser) this.lionChomp(p); } else if (nL) { if (this.plus && !this.riding && !this.driving && this.plus.nearHopper(p) && !this.nearFood(p, 3)) this.plus.grainShower(p, 'feed'); else this.feed(p); } if (nM && !this.riding && !this.ridingLion && !this.driving && (this.onCastle(p.pos.x, p.pos.z) || this.castleHop)) { this.castleJump(p); nM = 0; } // v5.6.1: on the castle JUMP always wins (a horse or tractor parked nearby used to steal it)
     // v5.6.1: RIDE / HOP OFF / DRIVE only on a fresh press (plus a short cooldown). Holding the button used to auto-repeat every
     // 0.22 s, so a kid keeping a finger on HOP OFF got off and straight back on the horse (or tractor) and could never get down.
     if (nM && (!(inp && inp.pressed && inp.pressed.missile) || this.t < (this.rideCdT || 0))) nM = 0;
-    if (nM) { this.rideCdT = this.t + 0.6; if (this.riding) this.dismount(); else if (this.ridingLion) this.dismountLion(); else if (this.driving) this.hopOffTractor(); else if (this.lionNear(p) && !this.horseNear(p)) this.mountLion(p); else if (this.horseNear(p)) this.tryMount(p); else if (this.tractorNear(p)) this.driveTractor(p); else if (this.g.save && this.g.save.farmLion) { if (this.hintT <= 0) { this.hintT = 1.6; this.toast('🦁 Walk up to the lion in the yard, or the horse, then tap RIDE!'); } } else this.tryMount(p); } if (nB) { if (this.driving) this.honk(); else if (this.ridingLion) this.g.thunderButt(p); else this.toot(p); }
+    if (nM) { this.rideCdT = this.t + 0.6; if (this.riding) this.dismount(); else if (this.ridingLion) this.dismountLion(); else if (this.driving) this.hopOffTractor(); else if (this.lionNear(p) && !this.horseNear(p)) this.mountLion(p); else if (this.horseNear(p)) this.tryMount(p); else if (this.tractorNear(p)) this.driveTractor(p); else if (this.g.save && this.g.save.farmLion) { if (this.hintT <= 0) { this.hintT = 1.6; this.toast('🦁 Walk up to the lion in the yard, or the horse, then tap RIDE!'); } } else this.tryMount(p); } if (nB) { if (this.driving) { this.honk(); if (this.plus) this.plus.tractorToot(); } else if (this.ridingLion) this.g.thunderButt(p); else this.toot(p); }
   }
   edible(a) {
     if (!a || a.gulp || a.state === 'ridden' || a.state === 'gulp') return false;
@@ -708,7 +715,8 @@ export class FarmLife {
     if (this.fair.progress >= task.target) {
       this.fair.ribbons++; this.fair.index = (this.fair.index + 1) % FARM_FAIR_TASKS.length; this.fair.progress = 0; this.fair.kinds.clear(); this.fair.cheerT = 1.6;
       const p = this.kid; if (p) { p.mech.danceT = Math.max(p.mech.danceT || 0, 1.2); for (let i = 0; i < this.fx.n(14); i++) this.fx.glow.spawn({ pos: V(p.pos.x + (Math.random() - 0.5) * 3, p.pos.y + 1 + Math.random() * 2, p.pos.z + (Math.random() - 0.5) * 3), vel: { x: (Math.random() - 0.5) * 2, y: 1.5 + Math.random() * 2, z: (Math.random() - 0.5) * 2 }, size: 0.15, size1: 0.06, life: 0.8, r: 1.4, g: 1.05, b: 0.25, alpha: 0.95, grav: 1, drag: 2 }); }
-      this.g.hud.shout && this.g.hud.shout('🎪 FARM FAIR RIBBON!', 1.5); sfx.tada(0.7); this.toast(`🎪 Farm Fair! You earned ribbon ${this.fair.ribbons}!`);
+      if (this.g.addBolts) this.g.addBolts(FARM_FAIR_REWARD); this.fair.bolts = (this.fair.bolts || 0) + FARM_FAIR_REWARD; // v5.18.0: every ribbon pays real bolts
+      this.g.hud.shout && this.g.hud.shout('🎪 FARM FAIR RIBBON! +25 🔩', 1.8); sfx.tada(0.7); sfx.coinChime && sfx.coinChime(3); this.toast(`🎪 FARM FAIR RIBBON! +25 🔩 (ribbon ${this.fair.ribbons})`);
     }
     this.bar();
   }
@@ -756,7 +764,7 @@ export class FarmLife {
     this.toast(pick(['💩 SQUISH! Ewww! 😂', '💩 SPLAT! Stinky shoes!', '💩 Oops! Stepped in poop!', '💩 SQUELCH! Gross! 😂']), 2.5); }
   collectGold(q) { const i = this.poops.indexOf(q); if (i >= 0) this.poops.splice(i, 1); this.n.gold++; this.bar(); sfx.tada(1); sfx.sparkle(1); sfx.coin && sfx.coin(); this.emote('sparkle', null, 4, V(q.x, q.y + 0.6, q.z));
     for (let k = 0; k < this.fx.n(24); k++) this.fx.glow.spawn({ pos: V(q.x, q.y + 0.4, q.z), vel: { x: (Math.random() - 0.5) * 7, y: 3 + Math.random() * 5, z: (Math.random() - 0.5) * 7 }, size: 0.25, size1: 0.05, life: 0.9, r: 3, g: 2.4, b: 0.6, alpha: 1, grav: 8 });
-    this.toast(`✨ GOLDEN POOP! ✨ You have ${this.n.gold}!`); try { this.g.save.farmGold = (this.g.save.farmGold || 0) + 1; this.g.persist && this.g.persist(); } catch (e) { } }
+    if (this.g.addBolts) this.g.addBolts(10); this.toast(`✨ GOLDEN POOP! +10 🔩 ✨ You have ${this.n.gold}!`); try { this.g.save.farmGold = (this.g.save.farmGold || 0) + 1; this.g.persist && this.g.persist(); } catch (e) { } }
   splat(p, n, s = 1) { for (let i = 0; i < this.fx.n(n); i++) this.fx.smoke.spawn({ pos: { x: p.x, y: p.y + 0.2, z: p.z }, vel: { x: (Math.random() - 0.5) * 5 * s, y: 2 + Math.random() * 3, z: (Math.random() - 0.5) * 5 * s }, size: 0.25 * s, size1: 0.5 * s, life: 0.6, r: 0.32, g: 0.2, b: 0.09, alpha: 0.95, grav: 14, rv: 2 }); }
   updatePoops(dt) {
     for (const q of this.poops) { q.t += dt; if (!q.landed && q.t >= 0.3) { q.landed = true; this.n.boings++; const v = clamp(1.2 - this.camDist(q) / 40, 0, 0.7); if (v > 0.02) sfx.boing(v, q.gold ? 1.4 : 0.9 + Math.random() * 0.3); }
@@ -992,9 +1000,9 @@ export class FarmLife {
   // ---------- v5.3 the tractor ----------
   parkTractor() { const T = this.tractor, t = FARM.tractor; T.pos.set(t.x, this.W.height(t.x, t.z), t.z); T.yaw = 0.7; T.speed = 0; this.placeTractor(0); }
   tractorNear(p) { const T = this.tractor; return T && !this.driving && Math.hypot(T.pos.x - p.pos.x, T.pos.z - p.pos.z) < 4.8; }
-  driveTractor(p = this.kid) { if (!p || this.riding || this.ridingLion) return false; const T = this.tractor; if (Math.hypot(T.pos.x - p.pos.x, T.pos.z - p.pos.z) > 4.8) { this.toast('🚜 Walk up to the tractor, then tap DRIVE!'); return false; }
+  driveTractor(p = this.kid) { if (!p || this.riding || this.ridingLion) return false; const T = this.tractor; if (Math.hypot(T.pos.x - p.pos.x, T.pos.z - p.pos.z) > 4.8) { this.toast('🚜 Walk up to the tractor, then tap RIDE!'); return false; }
     this.driving = true; this.n.drives++; this.kidSpeed = this.kidSpeed || p.st.speed; p.st.speed = 6.2; p.radius = 2.0; p.pos.set(T.pos.x, p.pos.y, T.pos.z); p.yaw = T.yaw; p.speedNow = 0; p.groundY(); p.mech.setRide(true); p.mech.R.obj.position.set(0, 2.05, -0.95);
-    sfx.putt(1, 0); this.g.later(0.15, () => sfx.putt(1, 0.3)); this.honk(0.7); this.toast('🚜 VROOM! Leandro is driving the tractor! Tap HONK! Hold FAST to go faster.'); voice.say('Vroom vroom!', { prio: 2, cd: 2000 }); this.fx.dust(p.pos, 8, 1.5, 4); this._rl = null; return true; }
+    sfx.putt(1, 0); this.g.later(0.15, () => sfx.putt(1, 0.3)); this.honk(0.7); this.toast('🚜 VROOM! Leandro is driving the tractor! Tap TOOT to honk! Hold FAST to go faster.'); voice.say('Vroom vroom!', { prio: 2, cd: 2000 }); this.fx.dust(p.pos, 8, 1.5, 4); this._rl = null; return true; }
   hopOffTractor(quiet = false) { const p = this.kid, T = this.tractor; this.driving = false; if (!p) return; p.st.speed = this.kidSpeed || 6.5; p.radius = 0.7; p.mech.setRide(false); p.mech.R.obj.position.set(0, 0, 0);
     T.pos.set(p.pos.x, this.W.height(p.pos.x, p.pos.z), p.pos.z); T.yaw = p.yaw; T.speed = 0; const side = V(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
     for (const s of [1, -1]) { const x = T.pos.x + side.x * s * 3.0, z = T.pos.z + side.z * s * 3.0; if (this.W.height(x, z) > -1.2) { p.pos.set(x, 0, z); break; } } p.groundY(); p.speedNow = 0; this._rl = null; this.n.hopOffs++;
@@ -1043,8 +1051,8 @@ export class FarmLife {
       b.m.position.set(b.x, this.W.height(b.x, b.z) + 0.85 + (r.t < 0.4 ? Math.sin(r.t / 0.4 * Math.PI) * 1.2 : 0), b.z); b.m.rotation.order = 'YXZ'; b.m.rotation.set(r.spin, Math.atan2(r.dir.x, r.dir.z), 0);
       if (r.v <= 0) b.roll = null; } }
   // radar dots: hungry animals (yellow), fed ones (green), the horse (brown), golden poop (gold)
-  radar() { const out = []; for (const a of this.animals) out.push({ x: a.pos.x, z: a.pos.z, c: a === this.horse ? '#c08040' : this.fed.has(a) ? '#5fe06a' : '#ffd23a' }); for (const q of this.poops) if (q.gold) out.push({ x: q.x, z: q.z, c: '#fff27a' }); return out; }
-  stats() { return { ...this.n, fedNow: this.fed.size, goal: this.goal, round: this.round, riding: this.riding, poopsOnGround: this.poops.length, goldOnGround: this.poops.filter(q => q.gold).length, david: this.david.log.slice() }; }
+  radar() { const out = []; for (const a of this.animals) out.push({ x: a.pos.x, z: a.pos.z, c: a === this.horse ? '#c08040' : this.fed.has(a) ? '#5fe06a' : '#ffd23a' }); for (const q of this.poops) if (q.gold) out.push({ x: q.x, z: q.z, c: '#fff27a' }); if (this.plus) out.push(...this.plus.radar()); return out; }
+  stats() { return { ...this.n, fedNow: this.fed.size, goal: this.goal, round: this.round, riding: this.riding, poopsOnGround: this.poops.length, plus: this.plus ? { ...this.plus.n } : null, fair: { index: this.fair.index, progress: this.fair.progress, ribbons: this.fair.ribbons, bolts: this.fair.bolts || 0 }, goldOnGround: this.poops.filter(q => q.gold).length, david: this.david.log.slice() }; }
 }
 
 // ---------------- Leandro on foot (the farm "dino": a walking kid built from the rider model) ----------------
