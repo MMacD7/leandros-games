@@ -580,3 +580,35 @@ body.robos-off #t-robo { display: none; }
 
 /* v5.18.0: Stompolis (The Swing Boy) hidden from the level pickers and the Dino Garage (code + assets kept) */
 #lv-stomp, #lvd-stomp, #jg-hoopster, .lv.card.stomp[hidden], .jg-card[hidden] { display: none !important; }
+/* ---- v5.19.0: core Jungle Island expansion + iPad / iPhone polish ---- */
+#banner.ip { font-size: clamp(24px, min(7vh, 5.2vw), 62px); letter-spacing: 1px; }
+/* title + level cards: never break inside a word (no "SHOWDO / WN"); the type scales with the card instead */
+.lv.card b, #title #lv-farm b, .lv.card small { overflow-wrap: normal; word-break: keep-all; -webkit-hyphens: manual; hyphens: manual; }
+@media (orientation: landscape) {
+  .lv.card b, #title #lv-farm b { font-size: clamp(12px, min(3.1vh, 2.05vw), 25px); overflow-wrap: normal; }
+  .lv.card small { font-size: clamp(10px, min(1.7vh, 1.3vw), 14px); line-height: 1.15; padding: 1px 6px; border-radius: 8px; background: rgba(0,0,0,.38); }
+  .lv.card .txt { max-width: 100%; position: relative; z-index: 1; }
+  .lv.card .tag { top: 6px; bottom: auto; right: 6px; font-size: 10px; padding: 2px 7px; z-index: 2; }
+}
+@media (orientation: landscape) and (max-height: 430px) { .lv.card b, #title #lv-farm b { font-size: 14px; } }
+@media (orientation: portrait) and (min-width: 700px) {
+  #title .levels { flex-wrap: nowrap; flex-direction: column; width: min(88vw, 600px); }
+  #title .levels .lv.card, #title .levels #lv-farm { flex: none; height: clamp(62px, 7.2vh, 90px); min-height: 0; flex-direction: row; text-align: left; }
+  #title .levels .lv.card .art, #title #lv-farm .art { font-size: clamp(30px, 4.4vh, 52px); }
+  #title .levels .lv.card b, #title .levels #lv-farm b { font-size: clamp(18px, 2.5vh, 28px); white-space: nowrap; }
+  #title .lv.card .txt { flex: 1; min-width: 0; align-items: flex-start; } #title .lv.card small { display: block; white-space: normal; }
+}
+/* pause panel: compact two-column grid in landscape + a visible scroll thumb, so the bottom toggles are always reachable */
+#pause .panel { overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255,226,122,.85) transparent; grid-auto-flow: dense; }
+#pause .panel::-webkit-scrollbar { width: 8px; } #pause .panel::-webkit-scrollbar-thumb { background: rgba(255,226,122,.8); border-radius: 8px; }
+@media (orientation: landscape) and (min-height: 431px) and (max-height: 900px) {
+  #pause .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 14px 20px; width: min(92vw, 760px); max-height: calc(100dvh - 24px); }
+  #pause .panel h2 { grid-column: 1 / -1; font-size: 24px; margin: 0; }
+  #pause .panel .btn { padding: 10px 12px; font-size: 17px; }
+}
+/* Ricky & Bobby cooldown: a small pill over the (dimmed) pup icon, never on top of "BOBBY" */
+.rb-btn em { top: 9%; bottom: auto; left: 50%; transform: translateX(-50%); padding: 1px 7px; border-radius: 999px; background: rgba(0,0,0,.62); font-size: 14px; line-height: 1.25; z-index: 2; }
+.rb-btn em:empty { display: none; }
+.rb-btn.cool .rb-ic { opacity: .35; }
+/* iPhone landscape: the Farm Fair toast drops below the big "FARM FAIR RIBBON! +25" shout instead of sitting on it */
+@media (max-height: 430px) { body:has(#shout.show:not(.rb-line)) #toast { top: calc(var(--sat) + 56%); } }
