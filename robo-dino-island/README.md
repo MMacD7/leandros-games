@@ -1,5 +1,11 @@
 # Leandro's Robo Dino Island
 
+## v5.18.0
+* Farty Poop Farm expansion: a fenced Pumpkin & Corn Harvest Patch beside the barn (walk through ripe crops to pop them for +5 bolts, Golden Pumpkins +15, crops regrow in about 14 seconds), the bubbly Stinky Mud Pit by the pig pen (mud splats, bubbly toots, happy oinking pigs and the odd bonus Golden Poop), and a glowing Silo Grain Hopper (step on it or tap FEED next to it for a Mega Hay & Corn Shower that feeds the hungry animals at once and starts a Barnyard Toot Chorus, +10 bolts, 15 s cooldown).
+* The Red Tractor: tap RIDE next to it to drive; TOOT now plays a jolly tractor horn and puffs a stinky hay-exhaust cloud that makes nearby animals giggle-fart.
+* Farm Fair now cycles through 8 chores (feed, eggs, herd with Ricky and Bobby, bounce, harvest, mud splash, grain shower, tractor toot) and every ribbon pays +25 bolts. Golden Poops now also pay +10 bolts.
+* Stompolis (The Swing Boy) is hidden from the level pickers and the Dino Garage for now; a saved Stompolis level falls back to Jungle Island.
+
 ## v5.17.1
 * Fixed Jungle Island (and every level) vanishing after tapping Ricky & Bobby: when the busy dog show made the game drop to a lower graphics tier, the sun's shadow map was thrown away and never redrawn while you stood still, so the ground, trees, garage and your dino stopped drawing. The shadow map is now redrawn whenever it is missing.
 
