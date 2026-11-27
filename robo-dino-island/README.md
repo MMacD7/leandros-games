@@ -1,5 +1,12 @@
 # Leandro's Robo Dino Island
 
+## v5.19.0
+* Core Jungle Island expansion (js/islandplus.js). Volcano Turbo Boost Rings: 6 glowing fiery-gold rings climb the volcano's lower west slope. Dash through one for a whoosh, fiery sparks, a short speed burst and +8 bolts. Clear all 6 for a VOLCANO TURBO RUN (+30 bolts). The rings come back 18 seconds later so you can run it again, and the radar shows the active ones in orange.
+* Waterfall Dino Power Shrine: a glowing turquoise pad under a crystal arch beside the waterfall pool. Step on it for a 12-second Super Dino Surge (full heal, unlimited boost, turquoise aura, +15 bolts). It recharges for 20 seconds.
+* Jungle Dino Rally: the 3D expedition beacon beside the home pad is now interactive. Step into its glowing base ring to fire a sky-pulse beam. A trail of 5 bonus energy cores leads to a Rally Challenger, and knocking it out pays +40 bolts (DINO RALLY VICTORY). The beacon has a 25-second cooldown.
+* Island Expeditions now cycle through 6 missions: energy cores, turbo rings, power shrine, hatch an egg, visit landmarks, and beacon rally (or KO 2 wild dinos). Every Explorer Stamp now pays +25 bolts.
+* iPad and iPhone polish: level-card titles never break mid-word (no more "SHOWDO / WN"), subtitles sit on a readable backing over the city skyline, the iPad portrait title stacks all 5 cards cleanly, the pause menu uses a compact 2-column layout with a visible scroll thumb so Leandro rides, Robo Dinos and Graphics are always reachable, the Ricky and Bobby cooldown shows as a small pill above "BOBBY", and on iPhone the Farm Fair toast drops below the big ribbon shout instead of overlapping it.
+
 ## v5.18.0
 * Farty Poop Farm expansion: a fenced Pumpkin & Corn Harvest Patch beside the barn (walk through ripe crops to pop them for +5 bolts, Golden Pumpkins +15, crops regrow in about 14 seconds), the bubbly Stinky Mud Pit by the pig pen (mud splats, bubbly toots, happy oinking pigs and the odd bonus Golden Poop), and a glowing Silo Grain Hopper (step on it or tap FEED next to it for a Mega Hay & Corn Shower that feeds the hungry animals at once and starts a Barnyard Toot Chorus, +10 bolts, 15 s cooldown).
 * The Red Tractor: tap RIDE next to it to drive; TOOT now plays a jolly tractor horn and puffs a stinky hay-exhaust cloud that makes nearby animals giggle-fart.
